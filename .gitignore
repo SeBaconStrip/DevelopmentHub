@@ -52,3 +52,10 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+# DevelopmentHub — local secrets and generated files
+backend/appsettings.local.json
+backend/data/
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/

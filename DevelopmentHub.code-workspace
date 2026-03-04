@@ -1,0 +1,169 @@
+{
+  "folders": [
+    {
+      "path": "."
+    }
+  ],
+  "settings": {
+    "files.exclude": {
+      "**/bin": true,
+      "**/obj": true,
+      "**/node_modules": true,
+      "**/dist": true,
+      "**/.git": true
+    },
+    "editor.formatOnSave": true,
+    "editor.rulers": [120],
+    "dotnet.defaultSolution": "DevelopmentHub.sln"
+  },
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "backend: run",
+        "type": "shell",
+        "command": "dotnet run",
+        "options": {
+          "cwd": "${workspaceFolder}/backend"
+        },
+        "isBackground": true,
+        "problemMatcher": {
+          "pattern": {
+            "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
+            "file": 1,
+            "line": 2,
+            "column": 3,
+            "severity": 4,
+            "message": 5
+          },
+          "background": {
+            "activeOnStart": true,
+            "beginsPattern": "Building\\.\\.\\.",
+            "endsPattern": "Now listening on:"
+          }
+        },
+        "presentation": {
+          "group": "devservers",
+          "reveal": "always",
+          "panel": "dedicated",
+          "label": "Backend (dotnet run)"
+        }
+      },
+      {
+        "label": "frontend: dev",
+        "type": "shell",
+        "command": "npm run dev",
+        "options": {
+          "cwd": "${workspaceFolder}/frontend"
+        },
+        "isBackground": true,
+        "problemMatcher": {
+          "pattern": {
+            "regexp": "^$",
+            "file": 1,
+            "line": 2,
+            "message": 3
+          },
+          "background": {
+            "activeOnStart": true,
+            "beginsPattern": "VITE",
+            "endsPattern": "Local:"
+          }
+        },
+        "presentation": {
+          "group": "devservers",
+          "reveal": "always",
+          "panel": "dedicated",
+          "label": "Frontend (vite dev)"
+        }
+      },
+      {
+        "label": "dev: start all",
+        "dependsOn": ["backend: run", "frontend: dev"],
+        "dependsOrder": "parallel",
+        "group": {
+          "kind": "build",
+          "isDefault": true
+        },
+        "problemMatcher": [],
+        "presentation": {
+          "reveal": "silent"
+        }
+      },
+      {
+        "label": "backend: build",
+        "type": "shell",
+        "command": "dotnet build",
+        "options": {
+          "cwd": "${workspaceFolder}/backend"
+        },
+        "group": "build",
+        "problemMatcher": "$msCompile",
+        "presentation": {
+          "reveal": "always",
+          "panel": "shared"
+        }
+      },
+      {
+        "label": "frontend: install",
+        "type": "shell",
+        "command": "npm install",
+        "options": {
+          "cwd": "${workspaceFolder}/frontend"
+        },
+        "problemMatcher": [],
+        "presentation": {
+          "reveal": "always",
+          "panel": "shared"
+        }
+      },
+      {
+        "label": "frontend: type-check",
+        "type": "shell",
+        "command": "npx tsc --noEmit",
+        "options": {
+          "cwd": "${workspaceFolder}/frontend"
+        },
+        "problemMatcher": "$tsc",
+        "presentation": {
+          "reveal": "always",
+          "panel": "shared"
+        }
+      },
+      {
+        "label": "frontend: build",
+        "type": "shell",
+        "command": "npm run build",
+        "options": {
+          "cwd": "${workspaceFolder}/frontend"
+        },
+        "group": "build",
+        "problemMatcher": "$tsc",
+        "presentation": {
+          "reveal": "always",
+          "panel": "shared"
+        }
+      }
+    ]
+  },
+  "launch": {
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Attach to Backend",
+        "type": "coreclr",
+        "request": "attach",
+        "processId": "${command:pickProcess}"
+      }
+    ]
+  },
+  "extensions": {
+    "recommendations": [
+      "ms-dotnettools.csdevkit",
+      "ms-dotnettools.csharp",
+      "dbaeumer.vscode-eslint",
+      "esbenp.prettier-vscode",
+      "mongodb.mongodb-vscode"
+    ]
+  }
+}
