@@ -1,0 +1,320 @@
+/* ── page ── */
+.dash-page {
+  min-height: 100vh;
+  padding: 28px 24px 48px;
+}
+
+/* ── header ── */
+.dash-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  gap: 12px;
+}
+
+.dash-title {
+  font-size: 26px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.dash-subtitle {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.65);
+  margin: 3px 0 0;
+}
+
+.dash-header-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+/* ── header buttons ── */
+.btn-ghost {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 10px;
+  padding: 8px 16px;
+  color: #fff;
+  font-weight: 500;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.btn-edit-layout {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 10px;
+  padding: 8px 18px;
+  color: #7c3aed;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.btn-edit-done {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #6b7fd4, #8b5ea8);
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 8px 18px;
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+/* ── edit mode bars ── */
+.dash-hidden-panels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.dash-hidden-label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+  align-self: center;
+  margin-right: 4px;
+}
+
+.btn-add-panel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1.5px dashed rgba(255, 255, 255, 0.4);
+  border-radius: 8px;
+  padding: 5px 14px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.dash-edit-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 10px;
+  padding: 8px 16px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 13px;
+}
+
+/* ── empty state ── */
+.dash-empty-card {
+  padding: 48px;
+  text-align: center;
+  color: #6b7280;
+}
+
+.dash-empty-card p:first-child {
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+
+.dash-empty-card p:last-child {
+  font-size: 14px;
+}
+
+/* ── grid item wrapper ── */
+.panel-wrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Panel card ── */
+.panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.2s;
+}
+
+.panel--editing {
+  box-shadow: 0 0 0 2px #7c6bb5, 0 8px 32px rgba(0, 0, 0, 0.14);
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  padding: 11px 14px;
+  background: linear-gradient(135deg, #6b7fd4 0%, #8b5ea8 100%);
+  user-select: none;
+  cursor: default;
+}
+
+.panel-header--draggable {
+  cursor: grab;
+}
+
+.panel-grip {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 14px;
+}
+
+.panel-icon {
+  font-size: 17px;
+}
+
+.panel-title {
+  flex: 1;
+  font-weight: 700;
+  font-size: 14px;
+  color: #fff;
+}
+
+.panel-close-btn {
+  background: rgba(255, 255, 255, 0.22);
+  border: none;
+  border-radius: 6px;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  color: #fff;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.panel-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+}
+
+/* ── item rows (shared by all panel bodies) ── */
+.item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 14px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.item-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.item-name-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.item-fav {
+  font-size: 11px;
+}
+
+.item-name {
+  font-weight: 600;
+  font-size: 13px;
+  color: #111827;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.item-branch {
+  display: inline-block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: #6366f1;
+  background: #eef2ff;
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+
+.item-chips {
+  display: flex;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.item-meta {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.item-pr-top {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 2px;
+}
+
+.item-pr-title {
+  font-size: 13px;
+  color: #1f2937;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.item-text {
+  flex: 1;
+  font-size: 13px;
+  color: #374151;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.item-script-name {
+  font-weight: 600;
+  font-size: 13px;
+  color: #111827;
+}
+
+.item-desc {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-top: 1px;
+}
+
+/* ── chip (background/color are data-driven, kept as inline style) ── */
+.chip {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 5px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── empty message ── */
+.empty-msg {
+  color: #9ca3af;
+  font-size: 13px;
+  text-align: center;
+  padding: 24px 16px;
+  margin: 0;
+}

@@ -4,7 +4,6 @@ using DevelopmentHub.Api.Hubs;
 using DevelopmentHub.Api.Models;
 using DevelopmentHub.Api.Models.Dtos;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using System.Collections.Concurrent;
 using System.Diagnostics;
@@ -13,7 +12,7 @@ namespace DevelopmentHub.Api.Services;
 
 public interface IScriptService
 {
-    List<ScriptDto> GetAllDefinitions();
+    Task<List<ScriptDto>> GetAllDefinitions();
     Task<ExecutionDto> ExecuteAsync(string scriptId, CancellationToken requestCancellationToken);
     bool CancelExecution(string executionId);
     Task<List<ExecutionDto>> GetExecutionHistoryAsync(int limit = 50);
@@ -22,16 +21,16 @@ public interface IScriptService
 
 public class ScriptService(
     DashboardDatabase db,
-    IOptions<AppSettings> settings,
+    IUserConfigService userConfigService,
     IHubContext<LogHub> hubContext,
     ILogger<ScriptService> logger) : IScriptService
 {
-    private readonly AppSettings _settings = settings.Value;
     private readonly ConcurrentDictionary<string, (Process Process, CancellationTokenSource Cts)> _running = new();
 
-    public List<ScriptDto> GetAllDefinitions()
+    public async Task<List<ScriptDto>> GetAllDefinitions()
     {
-        return _settings.Scripts.Select(s => new ScriptDto
+        var cfg = await userConfigService.GetAsync();
+        return cfg.Scripts.Select(s => new ScriptDto
         {
             Id = s.Id,
             Name = s.Name,
@@ -44,7 +43,8 @@ public class ScriptService(
 
     public async Task<ExecutionDto> ExecuteAsync(string scriptId, CancellationToken requestCancellationToken)
     {
-        var scriptDef = _settings.Scripts.FirstOrDefault(s => s.Id == scriptId)
+        var cfg = await userConfigService.GetAsync();
+        var scriptDef = cfg.Scripts.FirstOrDefault(s => s.Id == scriptId)
             ?? throw new KeyNotFoundException($"Script '{scriptId}' not found.");
 
         var execution = new ScriptExecutionDao

@@ -29,16 +29,9 @@ builder.Services.AddSingleton<DashboardDatabase>(sp =>
 });
 
 // ── HttpClient for Azure DevOps ───────────────────────────────────────────────
+// Auth header is applied per-request inside AzureDevOpsService using the PAT stored in MongoDB.
 builder.Services.AddHttpClient("AzureDevOps", client =>
 {
-    var pat = appSettings.AzureDevOps?.Pat ?? string.Empty;
-    if (!string.IsNullOrWhiteSpace(pat))
-    {
-        var encoded = Convert.ToBase64String(Encoding.ASCII.GetBytes($":{pat}"));
-        client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Basic", encoded);
-    }
-
     client.DefaultRequestHeaders.Accept.Add(
         new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
 });
@@ -50,6 +43,7 @@ builder.Services.AddScoped<ILauncherService, LauncherService>();
 builder.Services.AddScoped<IRepositoryService, RepositoryService>();
 builder.Services.AddSingleton<IScriptService, ScriptService>();
 builder.Services.AddScoped<IAzureDevOpsService, AzureDevOpsService>();
+builder.Services.AddSingleton<IUserConfigService, UserConfigService>();
 
 // ── Background Services ───────────────────────────────────────────────────────
 builder.Services.AddHostedService<RepositoryScannerService>();

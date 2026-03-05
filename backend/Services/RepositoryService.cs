@@ -1,8 +1,6 @@
-using DevelopmentHub.Api.Configuration;
 using DevelopmentHub.Api.Data;
 using DevelopmentHub.Api.Models;
 using DevelopmentHub.Api.Models.Dtos;
-using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 
 namespace DevelopmentHub.Api.Services;
@@ -20,10 +18,9 @@ public class RepositoryService(
     DashboardDatabase db,
     IGitService gitService,
     ILauncherService launcher,
-    IOptions<AppSettings> settings,
+    IUserConfigService userConfigService,
     ILogger<RepositoryService> logger) : IRepositoryService
 {
-    private readonly AppSettings _settings = settings.Value;
 
     public async Task<List<RepositoryDto>> GetAllAsync()
     {
@@ -38,11 +35,12 @@ public class RepositoryService(
 
     public async Task<List<RepositoryDto>> ScanAsync()
     {
-        logger.LogInformation("Starting repository scan across {Count} root(s)", _settings.RepositoryRoots.Length);
+        var cfg = await userConfigService.GetAsync();
+        logger.LogInformation("Starting repository scan across {Count} root(s)", cfg.RepositoryRoots.Length);
 
         var discovered = await gitService.ScanDirectoriesAsync(
-            _settings.RepositoryRoots,
-            _settings.EntryPointMaxDepth);
+            cfg.RepositoryRoots,
+            cfg.EntryPointMaxDepth);
 
         var now = DateTime.UtcNow;
 
@@ -92,7 +90,8 @@ public class RepositoryService(
         var entity = await db.Repositories.Find(filter).FirstOrDefaultAsync();
         if (entity is null) return null;
 
-        if (!IsUnderKnownRoot(entity.Path))
+        var cfg = await userConfigService.GetAsync();
+        if (!IsUnderKnownRoot(entity.Path, cfg.RepositoryRoots))
         {
             logger.LogWarning("Blocked open for path outside known roots: {Path}", entity.Path);
             return null;
@@ -133,7 +132,8 @@ public class RepositoryService(
         var entity = await db.Repositories.Find(filter).FirstOrDefaultAsync();
         if (entity is null) return (false, "Repository not found.");
 
-        if (!IsUnderKnownRoot(entity.Path))
+        var cfg = await userConfigService.GetAsync();
+        if (!IsUnderKnownRoot(entity.Path, cfg.RepositoryRoots))
             return (false, "Path is outside known repository roots.");
 
         var (success, output) = await gitService.SyncRepositoryAsync(entity.Path, cancellationToken);
@@ -152,9 +152,9 @@ public class RepositoryService(
         return (success, output);
     }
 
-    private bool IsUnderKnownRoot(string path)
+    private static bool IsUnderKnownRoot(string path, string[] roots)
     {
-        return _settings.RepositoryRoots.Any(root =>
+        return roots.Any(root =>
             path.StartsWith(root, StringComparison.OrdinalIgnoreCase));
     }
 

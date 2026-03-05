@@ -9,9 +9,9 @@ namespace DevelopmentHub.Api.Controllers;
 public class ScriptsController(IScriptService scriptService) : ControllerBase
 {
     [HttpGet]
-    public ActionResult<List<ScriptDto>> GetAll()
+    public async Task<ActionResult<List<ScriptDto>>> GetAll()
     {
-        return Ok(scriptService.GetAllDefinitions());
+        return Ok(await scriptService.GetAllDefinitions());
     }
 
     [HttpPost("{scriptId}/execute")]
