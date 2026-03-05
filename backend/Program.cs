@@ -60,6 +60,10 @@ builder.Services.AddSignalR();
 // ── MVC / Controllers ─────────────────────────────────────────────────────────
 builder.Services.AddControllers();
 
+// ── Swagger ───────────────────────────────────────────────────────────────────
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
 // ── CORS ──────────────────────────────────────────────────────────────────────
 builder.Services.AddCors(options =>
 {
@@ -75,6 +79,9 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // ── Middleware pipeline ───────────────────────────────────────────────────────
+app.UseSwagger();
+app.UseSwaggerUI();
+
 app.UseRouting();
 app.UseCors("LocalDev");
 

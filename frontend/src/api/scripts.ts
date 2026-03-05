@@ -26,3 +26,6 @@ export const scriptsApi = {
   getDetail: (executionId: string): Promise<ExecutionDetail> =>
     fetch(`${BASE}/executions/${executionId}`).then(r => handleResponse(r)),
 };
+
+export const fetchScripts = (): Promise<Script[]> => scriptsApi.getAll();
+export const fetchExecutions = (limit?: number): Promise<Execution[]> => scriptsApi.getHistory(limit);

@@ -6,16 +6,16 @@ namespace DevelopmentHub.Api.Services;
 
 public interface IGitService
 {
-    Task<List<RepositoryEntity>> ScanDirectoriesAsync(string[] rootPaths, int maxEntryPointDepth);
+    Task<List<RepositoryDao>> ScanDirectoriesAsync(string[] rootPaths, int maxEntryPointDepth);
     Task<(string? Branch, int AheadBy, int BehindBy)> GetBranchStatusAsync(string repoPath);
     Task<(bool Success, string Output)> SyncRepositoryAsync(string repoPath, CancellationToken cancellationToken);
 }
 
 public class GitService(ILogger<GitService> logger) : IGitService
 {
-    public Task<List<RepositoryEntity>> ScanDirectoriesAsync(string[] rootPaths, int maxEntryPointDepth)
+    public Task<List<RepositoryDao>> ScanDirectoriesAsync(string[] rootPaths, int maxEntryPointDepth)
     {
-        var repos = new List<RepositoryEntity>();
+        var repos = new List<RepositoryDao>();
 
         foreach (var root in rootPaths)
         {
@@ -31,7 +31,7 @@ public class GitService(ILogger<GitService> logger) : IGitService
         return Task.FromResult(repos);
     }
 
-    private void ScanDirectory(string directory, List<RepositoryEntity> results, int maxEntryPointDepth)
+    private void ScanDirectory(string directory, List<RepositoryDao> results, int maxEntryPointDepth)
     {
         try
         {
@@ -64,10 +64,10 @@ public class GitService(ILogger<GitService> logger) : IGitService
         }
     }
 
-    private RepositoryEntity BuildRepositoryEntity(string repoPath, int maxEntryPointDepth)
+    private RepositoryDao BuildRepositoryEntity(string repoPath, int maxEntryPointDepth)
     {
         var name = System.IO.Path.GetFileName(repoPath);
-        var entity = new RepositoryEntity
+        var entity = new RepositoryDao
         {
             Name = name,
             Path = repoPath,

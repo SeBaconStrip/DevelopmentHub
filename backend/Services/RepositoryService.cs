@@ -48,7 +48,7 @@ public class RepositoryService(
 
         foreach (var found in discovered)
         {
-            var filter = Builders<RepositoryEntity>.Filter.Eq(r => r.Path, found.Path);
+            var filter = Builders<RepositoryDao>.Filter.Eq(r => r.Path, found.Path);
             var existing = await db.Repositories.Find(filter).FirstOrDefaultAsync();
 
             if (existing is null)
@@ -59,7 +59,7 @@ public class RepositoryService(
             }
             else
             {
-                var update = Builders<RepositoryEntity>.Update
+                var update = Builders<RepositoryDao>.Update
                     .Set(r => r.Name, found.Name)
                     .Set(r => r.CurrentBranch, found.CurrentBranch)
                     .Set(r => r.AheadBy, found.AheadBy)
@@ -76,11 +76,11 @@ public class RepositoryService(
 
     public async Task<RepositoryDto?> ToggleFavoriteAsync(string id)
     {
-        var filter = Builders<RepositoryEntity>.Filter.Eq(r => r.Id, id);
+        var filter = Builders<RepositoryDao>.Filter.Eq(r => r.Id, id);
         var entity = await db.Repositories.Find(filter).FirstOrDefaultAsync();
         if (entity is null) return null;
 
-        var update = Builders<RepositoryEntity>.Update.Set(r => r.IsFavorite, !entity.IsFavorite);
+        var update = Builders<RepositoryDao>.Update.Set(r => r.IsFavorite, !entity.IsFavorite);
         await db.Repositories.UpdateOneAsync(filter, update);
         entity.IsFavorite = !entity.IsFavorite;
         return MapToDto(entity);
@@ -88,7 +88,7 @@ public class RepositoryService(
 
     public async Task<RepositoryDto?> OpenAsync(string id, OpenRepositoryRequest request)
     {
-        var filter = Builders<RepositoryEntity>.Filter.Eq(r => r.Id, id);
+        var filter = Builders<RepositoryDao>.Filter.Eq(r => r.Id, id);
         var entity = await db.Repositories.Find(filter).FirstOrDefaultAsync();
         if (entity is null) return null;
 
@@ -116,7 +116,7 @@ public class RepositoryService(
         if (launched)
         {
             var now = DateTime.UtcNow;
-            var update = Builders<RepositoryEntity>.Update
+            var update = Builders<RepositoryDao>.Update
                 .Inc(r => r.OpenCount, 1)
                 .Set(r => r.LastOpenedAt, now);
             await db.Repositories.UpdateOneAsync(filter, update);
@@ -129,7 +129,7 @@ public class RepositoryService(
 
     public async Task<(bool Success, string Output)> SyncAsync(string id, CancellationToken cancellationToken)
     {
-        var filter = Builders<RepositoryEntity>.Filter.Eq(r => r.Id, id);
+        var filter = Builders<RepositoryDao>.Filter.Eq(r => r.Id, id);
         var entity = await db.Repositories.Find(filter).FirstOrDefaultAsync();
         if (entity is null) return (false, "Repository not found.");
 
@@ -141,7 +141,7 @@ public class RepositoryService(
         if (success)
         {
             var (branch, ahead, behind) = await gitService.GetBranchStatusAsync(entity.Path);
-            var update = Builders<RepositoryEntity>.Update
+            var update = Builders<RepositoryDao>.Update
                 .Set(r => r.LastSyncedAt, DateTime.UtcNow)
                 .Set(r => r.CurrentBranch, branch)
                 .Set(r => r.AheadBy, ahead)
@@ -158,7 +158,7 @@ public class RepositoryService(
             path.StartsWith(root, StringComparison.OrdinalIgnoreCase));
     }
 
-    private static RepositoryDto MapToDto(RepositoryEntity entity)
+    private static RepositoryDto MapToDto(RepositoryDao entity)
     {
         var entryPoints = entity.EntryPoints.Select(p => new EntryPointDto
         {

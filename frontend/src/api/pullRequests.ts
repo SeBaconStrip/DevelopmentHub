@@ -8,6 +8,9 @@ async function handleResponse<T>(res: Response): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+export const fetchPullRequests = (): Promise<PullRequest[]> =>
+  fetch('/api/pullrequests').then(r => handleResponse(r));
+
 export const pullRequestsApi = {
   getOpen: (): Promise<PullRequest[]> =>
     fetch('/api/pullrequests').then(r => handleResponse(r)),

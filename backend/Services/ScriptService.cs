@@ -47,7 +47,7 @@ public class ScriptService(
         var scriptDef = _settings.Scripts.FirstOrDefault(s => s.Id == scriptId)
             ?? throw new KeyNotFoundException($"Script '{scriptId}' not found.");
 
-        var execution = new ScriptExecution
+        var execution = new ScriptExecutionDao
         {
             ScriptDefinitionId = scriptId,
             ScriptName = scriptDef.Name,
@@ -86,7 +86,7 @@ public class ScriptService(
 
     public async Task<ExecutionDetailDto?> GetExecutionDetailAsync(string executionId)
     {
-        var filter = Builders<ScriptExecution>.Filter.Eq(e => e.Id, executionId);
+        var filter = Builders<ScriptExecutionDao>.Filter.Eq(e => e.Id, executionId);
         var execution = await db.ScriptExecutions.Find(filter).FirstOrDefaultAsync();
         if (execution is null) return null;
 
@@ -185,8 +185,8 @@ public class ScriptService(
     {
         try
         {
-            var filter = Builders<ScriptExecution>.Filter.Eq(e => e.Id, executionId);
-            var update = Builders<ScriptExecution>.Update
+            var filter = Builders<ScriptExecutionDao>.Filter.Eq(e => e.Id, executionId);
+            var update = Builders<ScriptExecutionDao>.Update
                 .Set(e => e.ExitCode, exitCode)
                 .Set(e => e.Status, status)
                 .Set(e => e.FinishedAt, DateTime.UtcNow)
@@ -202,7 +202,7 @@ public class ScriptService(
         }
     }
 
-    private static ExecutionDto MapToDto(ScriptExecution e) => new()
+    private static ExecutionDto MapToDto(ScriptExecutionDao e) => new()
     {
         Id = e.Id,
         ScriptDefinitionId = e.ScriptDefinitionId,

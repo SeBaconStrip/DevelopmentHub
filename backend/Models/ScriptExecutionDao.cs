@@ -11,7 +11,7 @@ public enum ExecutionStatus
     Cancelled
 }
 
-public class ScriptExecution
+public class ScriptExecutionDao
 {
     [BsonId]
     [BsonRepresentation(BsonType.ObjectId)]

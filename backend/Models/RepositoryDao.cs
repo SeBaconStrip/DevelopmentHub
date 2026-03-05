@@ -3,7 +3,7 @@ using MongoDB.Bson.Serialization.Attributes;
 
 namespace DevelopmentHub.Api.Models;
 
-public class RepositoryEntity
+public class RepositoryDao
 {
     [BsonId]
     [BsonRepresentation(BsonType.ObjectId)]
