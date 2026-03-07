@@ -401,6 +401,79 @@
   transform: scale(1.12);
 }
 
+/* ── repositories data grid ── */
+.repo-grid {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto auto;
+  align-items: center;
+}
+
+.repo-grid-header {
+  font-size: 11px;
+  font-weight: 600;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 6px 10px;
+  border-bottom: 2px solid #f3f4f6;
+}
+
+.repo-cell {
+  display: flex;
+  align-items: center;
+  padding: 7px 10px;
+  border-bottom: 1px solid #f3f4f6;
+  min-width: 0;
+}
+
+.repo-col-name {
+  min-width: 0;
+}
+
+.repo-col-name .item-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.repo-col-branch {
+  white-space: nowrap;
+}
+
+.repo-col-icon {
+  justify-content: center;
+  width: 38px;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+.repo-col-fav {
+  justify-content: center;
+  width: 36px;
+  padding-left: 4px;
+  padding-right: 8px;
+}
+
+.repo-fav-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: #d1d5db;
+  padding: 0;
+  line-height: 1;
+  transition: color 0.15s, transform 0.1s;
+}
+
+.repo-fav-btn:hover {
+  color: #f9c74f;
+  transform: scale(1.2);
+}
+
+.repo-fav-btn--active {
+  color: #f9c74f;
+}
+
 /* ── empty message ── */
 .empty-msg {
   color: #9ca3af;

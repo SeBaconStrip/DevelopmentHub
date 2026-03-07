@@ -46,6 +46,11 @@ export default function DashboardPage() {
       openWith: "VsCode" | "VisualStudio";
     }) => repositoriesApi.open(id, { openWith }),
   });
+
+  const toggleFav = useMutation({
+    mutationFn: (id: string) => repositoriesApi.toggleFavorite(id),
+    onSuccess: () => refetchRepos(),
+  });
   const { data: prs = [] } = useQuery<PullRequest[]>({
     queryKey: ["pullrequests"],
     queryFn: fetchPullRequests,
@@ -84,6 +89,7 @@ export default function DashboardPage() {
         <RepositoriesBody
           repos={repos}
           onOpen={(id, openWith) => openRepo.mutate({ id, openWith })}
+          onToggleFav={(id) => toggleFav.mutate(id)}
         />
       ),
       badge: repos.length,
@@ -270,20 +276,32 @@ function Panel({
 function RepositoriesBody({
   repos,
   onOpen,
+  onToggleFav,
 }: {
   repos: Repository[];
   onOpen: (id: string, openWith: "VsCode" | "VisualStudio") => void;
+  onToggleFav: (id: string) => void;
 }) {
   if (repos.length === 0) return <Empty text="No repositories found" />;
   return (
-    <div>
+    <div className="repo-grid">
+      {/* header */}
+      <div className="repo-grid-header repo-col-name">Repository</div>
+      <div className="repo-grid-header repo-col-branch">Branch</div>
+      <div className="repo-grid-header repo-col-icon" />
+      <div className="repo-grid-header repo-col-icon" />
+      <div className="repo-grid-header repo-col-fav" />
+
+      {/* rows */}
       {repos.map((r) => (
-        <div key={r.id} className="item-row">
-          <div className="item-main">
-            <div className="item-name-row">
-              {r.isFavorite && <span className="item-fav">⭐</span>}
-              <span className="item-name">{r.name}</span>
-            </div>
+        <>
+          {/* name */}
+          <div key={r.id + "-name"} className="repo-cell repo-col-name">
+            <span className="item-name">{r.name}</span>
+          </div>
+
+          {/* branch + ahead/behind */}
+          <div key={r.id + "-branch"} className="repo-cell repo-col-branch">
             {r.currentBranch && (
               <div className="item-branch-row">
                 <span className="item-branch">{r.currentBranch}</span>
@@ -296,8 +314,9 @@ function RepositoriesBody({
               </div>
             )}
           </div>
-          <div className="item-chips" />
-          <div className="item-open-btns">
+
+          {/* VS Code */}
+          <div key={r.id + "-vscode"} className="repo-cell repo-col-icon">
             {r.entryPoints.some(
               (ep) => ep.type === "CodeWorkspace" || ep.type === "Folder",
             ) && (
@@ -308,13 +327,17 @@ function RepositoriesBody({
               >
                 <img
                   src={vscodeIconUrl}
-                  width="26"
-                  height="26"
+                  width="24"
+                  height="24"
                   alt="VS Code"
                   draggable={false}
                 />
               </button>
             )}
+          </div>
+
+          {/* Visual Studio */}
+          <div key={r.id + "-vs"} className="repo-cell repo-col-icon">
             {r.entryPoints.some((ep) => ep.type === "Solution") && (
               <button
                 className="item-open-icon"
@@ -323,15 +346,28 @@ function RepositoriesBody({
               >
                 <img
                   src={visualStudioIconUrl}
-                  width="26"
-                  height="26"
+                  width="24"
+                  height="24"
                   alt="Visual Studio"
                   draggable={false}
                 />
               </button>
             )}
           </div>
-        </div>
+
+          {/* Favourite */}
+          <div key={r.id + "-fav"} className="repo-cell repo-col-fav">
+            <button
+              className={`repo-fav-btn${r.isFavorite ? " repo-fav-btn--active" : ""}`}
+              onClick={() => onToggleFav(r.id)}
+              title={
+                r.isFavorite ? "Favorit entfernen" : "Als Favorit markieren"
+              }
+            >
+              ★
+            </button>
+          </div>
+        </>
       ))}
     </div>
   );
