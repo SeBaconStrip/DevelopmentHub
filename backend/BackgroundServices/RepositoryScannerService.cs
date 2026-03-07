@@ -12,7 +12,7 @@ public class RepositoryScannerService(
         logger.LogInformation("Repository scanner background service started.");
 
         // Initial scan on startup
-        await RunScanAsync();
+        await RunScanAsync(stoppingToken);
 
         var cfg = await userConfigService.GetAsync();
         var interval = TimeSpan.FromMinutes(cfg.ScanIntervalMinutes > 0 ? cfg.ScanIntervalMinutes : 30);
@@ -24,7 +24,7 @@ public class RepositoryScannerService(
             try
             {
                 await timer.WaitForNextTickAsync(stoppingToken);
-                await RunScanAsync();
+                await RunScanAsync(stoppingToken);
             }
             catch (OperationCanceledException)
             {
@@ -33,13 +33,13 @@ public class RepositoryScannerService(
         }
     }
 
-    private async Task RunScanAsync()
+    private async Task RunScanAsync(CancellationToken cancellationToken)
     {
         try
         {
             using var scope = scopeFactory.CreateScope();
             var service = scope.ServiceProvider.GetRequiredService<IRepositoryService>();
-            var repos = await service.ScanAsync();
+            var repos = await service.ScanAsync(cancellationToken);
             logger.LogInformation("Background scan complete: {Count} repositories found.", repos.Count);
         }
         catch (Exception ex)

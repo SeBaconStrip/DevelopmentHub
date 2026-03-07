@@ -16,5 +16,6 @@ public class UserConfigDao
     public AzureDevOpsSettings AzureDevOps { get; set; } = new();
     public ScriptDefinitionConfig[] Scripts { get; set; } = [];
     public int ScanIntervalMinutes { get; set; } = 30;
-    public int EntryPointMaxDepth { get; set; } = 2;
+    public int RepoScanDepth { get; set; } = 5;
+    public int EntryPointScanDepth { get; set; } = 2;
 }

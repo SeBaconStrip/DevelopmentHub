@@ -8,7 +8,7 @@ namespace DevelopmentHub.Api.Services;
 public interface IRepositoryService
 {
     Task<List<RepositoryDto>> GetAllAsync();
-    Task<List<RepositoryDto>> ScanAsync();
+    Task<List<RepositoryDto>> ScanAsync(CancellationToken cancellationToken = default);
     Task<RepositoryDto?> ToggleFavoriteAsync(string id);
     Task<RepositoryDto?> OpenAsync(string id, OpenRepositoryRequest request);
     Task<(bool Success, string Output)> SyncAsync(string id, CancellationToken cancellationToken);
@@ -33,19 +33,30 @@ public class RepositoryService(
             .ToList();
     }
 
-    public async Task<List<RepositoryDto>> ScanAsync()
+    public async Task<List<RepositoryDto>> ScanAsync(CancellationToken cancellationToken = default)
     {
         var cfg = await userConfigService.GetAsync();
         logger.LogInformation("Starting repository scan across {Count} root(s)", cfg.RepositoryRoots.Length);
 
         var discovered = await gitService.ScanDirectoriesAsync(
             cfg.RepositoryRoots,
-            cfg.EntryPointMaxDepth);
+            cfg.RepoScanDepth,
+            cfg.EntryPointScanDepth);
+
+        // Fetch from remote so AheadBy/BehindBy reflects the current remote state
+        foreach (var repo in discovered)
+            await gitService.FetchAsync(repo.Path, cancellationToken);
 
         var now = DateTime.UtcNow;
 
         foreach (var found in discovered)
         {
+            // Re-read branch status now that fetch has updated remote tracking refs
+            var (branch, ahead, behind) = await gitService.GetBranchStatusAsync(found.Path);
+            found.CurrentBranch = branch ?? found.CurrentBranch;
+            found.AheadBy = ahead;
+            found.BehindBy = behind;
+
             var filter = Builders<RepositoryDao>.Filter.Eq(r => r.Path, found.Path);
             var existing = await db.Repositories.Find(filter).FirstOrDefaultAsync();
 

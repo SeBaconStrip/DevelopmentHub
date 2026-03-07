@@ -37,7 +37,8 @@ public class ConfigController(
                 EnvironmentVariables = sc.EnvironmentVariables
             }).ToArray(),
             ScanIntervalMinutes = cfg.ScanIntervalMinutes,
-            EntryPointMaxDepth = cfg.EntryPointMaxDepth
+            RepoScanDepth = cfg.RepoScanDepth,
+            EntryPointScanDepth = cfg.EntryPointScanDepth
         });
     }
 
@@ -50,7 +51,8 @@ public class ConfigController(
 
             current.RepositoryRoots = dto.RepositoryRoots;
             current.ScanIntervalMinutes = dto.ScanIntervalMinutes;
-            current.EntryPointMaxDepth = dto.EntryPointMaxDepth;
+            current.RepoScanDepth = dto.RepoScanDepth;
+            current.EntryPointScanDepth = dto.EntryPointScanDepth;
             current.AzureDevOps = new AzureDevOpsSettings
             {
                 Organization = dto.AzureDevOps.Organization,

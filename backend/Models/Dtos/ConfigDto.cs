@@ -6,7 +6,8 @@ public class ConfigDto
     public AzureDevOpsConfigDto AzureDevOps { get; set; } = new();
     public ScriptConfigDto[] Scripts { get; set; } = [];
     public int ScanIntervalMinutes { get; set; }
-    public int EntryPointMaxDepth { get; set; }
+    public int RepoScanDepth { get; set; }
+    public int EntryPointScanDepth { get; set; }
 }
 
 public class AzureDevOpsConfigDto
