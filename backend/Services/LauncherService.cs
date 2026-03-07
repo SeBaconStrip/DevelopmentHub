@@ -29,12 +29,10 @@ public class LauncherService(ILogger<LauncherService> logger) : ILauncherService
             var psi = new System.Diagnostics.ProcessStartInfo
             {
                 FileName = command,
-                UseShellExecute = false,
-                CreateNoWindow = true
+                UseShellExecute = true,
+                // Build a quoted argument string — ArgumentList is not supported with UseShellExecute = true
+                Arguments = string.Join(" ", args.Select(a => a.Contains(' ') ? $"\"{a}\"" : a))
             };
-
-            foreach (var arg in args)
-                psi.ArgumentList.Add(arg);
 
             using var process = new System.Diagnostics.Process { StartInfo = psi };
             process.Start();
