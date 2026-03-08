@@ -154,6 +154,11 @@ function SettingsTab({ onClose }: { onClose: () => void }) {
       form.repositoryRoots.map((r, idx) => (idx === i ? val : r)),
     );
 
+  const browseRoot = async (i: number) => {
+    const path = await configApi.pickFolder();
+    if (path) updateRoot(i, path);
+  };
+
   const handleHotkeyCapture = (e: React.KeyboardEvent<HTMLInputElement>) => {
     e.preventDefault();
     const ignored = [
@@ -185,8 +190,15 @@ function SettingsTab({ onClose }: { onClose: () => void }) {
               className="settings-input"
               value={root}
               onChange={(e) => updateRoot(i, e.target.value)}
-              placeholder="C:\Projects"
             />
+            <button
+              type="button"
+              className="btn-ghost"
+              title="Browse…"
+              onClick={() => browseRoot(i)}
+            >
+              📁
+            </button>
             <button className="btn-remove" onClick={() => removeRoot(i)}>
               ✕
             </button>

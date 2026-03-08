@@ -18,6 +18,11 @@ export const configApi = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(config),
     }).then(r => handleResponse(r)),
+
+  pickFolder: (): Promise<string | null> =>
+    fetch('/api/folder-picker')
+      .then(r => handleResponse<{ cancelled: boolean; path: string | null }>(r))
+      .then(res => res.cancelled ? null : res.path),
 };
 
 export const dashboardConfigApi = {

@@ -34,6 +34,26 @@ public partial class App : Application
 
             _host = DevelopmentHub.Api.BackendHost.Create([]);
 
+            // Wire native folder picker so the frontend can call /api/folder-picker
+            DevelopmentHub.Api.Services.FolderPickerBridge.Picker = () =>
+            {
+                var tcs = new TaskCompletionSource<string?>();
+                Dispatcher.Invoke(() =>
+                {
+                    using var dlg = new System.Windows.Forms.FolderBrowserDialog
+                    {
+                        Description = "Select repository root directory",
+                        UseDescriptionForTitle = true,
+                        ShowNewFolderButton = false
+                    };
+                    tcs.SetResult(
+                        dlg.ShowDialog() == System.Windows.Forms.DialogResult.OK
+                            ? dlg.SelectedPath
+                            : null);
+                });
+                return tcs.Task;
+            };
+
             var window = new MainWindow();
 
             // Start Kestrel on a background thread so it never blocks the UI thread

@@ -9,7 +9,10 @@ namespace DevelopmentHub.App;
 
 public partial class MainWindow : Window
 {
-    private const string AppUrl = "http://localhost:6131";
+    private static readonly bool _isDev =
+        Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development";
+    private static readonly string AppUrl =
+        _isDev ? "http://localhost:5173" : "http://localhost:6131";
     private const int HotkeyId = 1;
     private const uint MOD_CTRL = 0x0002, MOD_SHIFT = 0x0004, VK_D = 0x44;
 
@@ -95,14 +98,18 @@ public partial class MainWindow : Window
         var env = await CoreWebView2Environment.CreateAsync(null, userDataFolder);
         await WebView.EnsureCoreWebView2Async(env);
 
-        WebView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
-        WebView.CoreWebView2.Settings.AreDevToolsEnabled = false;
+        WebView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = _isDev;
+        WebView.CoreWebView2.Settings.AreDevToolsEnabled = _isDev;
 
-        // Show a loading page while Kestrel is starting up
-        WebView.NavigateToString("<html><body style='font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#1e1e2e;color:#cdd6f4'><p>Starting...</p></body></html>");
+        if (!_isDev)
+        {
+            // Show a loading page while Kestrel is starting up
+            WebView.NavigateToString("<html><body style='font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#1e1e2e;color:#cdd6f4'><p>Starting...</p></body></html>");
 
-        // Wait until the backend is ready (up to 30 seconds)
-        await WaitForBackendAsync();
+            // Wait until the backend is ready (up to 30 seconds)
+            await WaitForBackendAsync();
+        }
+
         WebView.Source = new Uri(AppUrl);
     }
 
