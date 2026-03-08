@@ -8,6 +8,7 @@ import "./DashboardPage.css";
 import { fetchRepositories, repositoriesApi } from "../../api/repositories";
 import vscodeIconUrl from "../../assets/icons/vscode.svg";
 import visualStudioIconUrl from "../../assets/icons/visualstudio.svg";
+import explorerIconUrl from "../../assets/icons/windows-explorer.svg";
 import { fetchPullRequests } from "../../api/pullRequests";
 import { dashboardConfigApi } from "../../api/config";
 import {
@@ -74,7 +75,7 @@ export default function DashboardPage() {
       openWith,
     }: {
       id: string;
-      openWith: "VsCode" | "VisualStudio";
+      openWith: "VsCode" | "VisualStudio" | "Explorer";
     }) => repositoriesApi.open(id, { openWith }),
   });
 
@@ -312,7 +313,10 @@ function RepositoriesBody({
   onToggleFav,
 }: {
   repos: Repository[];
-  onOpen: (id: string, openWith: "VsCode" | "VisualStudio") => void;
+  onOpen: (
+    id: string,
+    openWith: "VsCode" | "VisualStudio" | "Explorer",
+  ) => void;
   onToggleFav: (id: string) => void;
 }) {
   if (repos.length === 0) return <Empty text="No repositories found" />;
@@ -321,6 +325,7 @@ function RepositoriesBody({
       {/* header */}
       <div className="repo-grid-header repo-col-name">Repository</div>
       <div className="repo-grid-header repo-col-branch">Branch</div>
+      <div className="repo-grid-header repo-col-icon" />
       <div className="repo-grid-header repo-col-icon" />
       <div className="repo-grid-header repo-col-icon" />
       <div className="repo-grid-header repo-col-fav" />
@@ -386,6 +391,23 @@ function RepositoriesBody({
                 />
               </button>
             )}
+          </div>
+
+          {/* Explorer */}
+          <div key={r.id + "-explorer"} className="repo-cell repo-col-icon">
+            <button
+              className="item-open-icon"
+              onClick={() => onOpen(r.id, "Explorer")}
+              title="In Explorer öffnen"
+            >
+              <img
+                src={explorerIconUrl}
+                width="24"
+                height="24"
+                alt="Explorer"
+                draggable={false}
+              />
+            </button>
           </div>
 
           {/* Favourite */}

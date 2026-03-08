@@ -110,7 +110,11 @@ public class RepositoryService(
 
         bool launched;
 
-        if (request.OpenWith == OpenWith.VisualStudio && request.EntryPointPath is not null)
+        if (request.OpenWith == OpenWith.Explorer)
+        {
+            launched = await launcher.OpenWithExplorerAsync(entity.Path);
+        }
+        else if (request.OpenWith == OpenWith.VisualStudio && request.EntryPointPath is not null)
         {
             launched = await launcher.OpenWithVisualStudioAsync(request.EntryPointPath);
         }

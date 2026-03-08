@@ -21,7 +21,7 @@ export interface Repository {
 
 export interface OpenRepositoryRequest {
   entryPointPath?: string;
-  openWith: 'VisualStudio' | 'VsCode';
+  openWith: 'VisualStudio' | 'VsCode' | 'Explorer';
 }
 
 export interface Execution {
