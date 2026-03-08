@@ -2,7 +2,7 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useUiStore, type DashboardWidget } from "../store/uiStore";
 import { configApi } from "../api/config";
-import type { AppConfig, ScriptConfig } from "../types";
+import type { AppConfig } from "../types";
 import "./DashboardSettingsModal.css";
 
 type Tab = "dashboard" | "settings";
