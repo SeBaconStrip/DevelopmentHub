@@ -76,6 +76,7 @@ export interface AppConfig {
   azureDevOps: AzureDevOpsConfig;
   scanIntervalMinutes: number;
   entryPointMaxDepth: number;
+  hotkeyBinding: string;
 }
 
 export interface LayoutItem {

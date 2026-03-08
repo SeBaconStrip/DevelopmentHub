@@ -28,7 +28,8 @@ public class ConfigController(
             },
             ScanIntervalMinutes = cfg.ScanIntervalMinutes,
             RepoScanDepth = cfg.RepoScanDepth,
-            EntryPointScanDepth = cfg.EntryPointScanDepth
+            EntryPointScanDepth = cfg.EntryPointScanDepth,
+            HotkeyBinding = cfg.HotkeyBinding
         });
     }
 
@@ -51,8 +52,12 @@ public class ConfigController(
                 // Only update PAT if a real value was sent (not the redacted placeholder)
                 Pat = dto.AzureDevOps.Pat is "***" or "" ? current.AzureDevOps.Pat : dto.AzureDevOps.Pat
             };
+            current.HotkeyBinding = dto.HotkeyBinding;
 
             await userConfigService.SaveAsync(current);
+
+            if (!string.IsNullOrWhiteSpace(dto.HotkeyBinding))
+                HotkeyChangedNotifier.Notify(dto.HotkeyBinding);
 
             logger.LogInformation("Configuration saved to MongoDB.");
             return Ok(new { message = "Configuration saved." });

@@ -20,6 +20,8 @@ public class UserConfigDao
 
     public List<DashboardWidgetConfig> DashboardWidgets { get; set; } = [];
     public Dictionary<string, List<LayoutItemConfig>> GridLayouts { get; set; } = new();
+
+    public string HotkeyBinding { get; set; } = "Ctrl+Shift+D";
 }
 
 public class DashboardWidgetConfig

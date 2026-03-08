@@ -18,16 +18,57 @@ public partial class MainWindow : Window
 
     public Action? RequestExit { get; set; }
 
+    private string _hotkeyBinding = "Ctrl+Shift+D";
+    private bool _hotkeyInitialized = false;
+
     public MainWindow()
     {
         InitializeComponent();
         SourceInitialized += (_, _) =>
         {
-            var hwnd = new WindowInteropHelper(this).Handle;
-            RegisterHotKey(hwnd, HotkeyId, MOD_CTRL | MOD_SHIFT, VK_D);
-            HwndSource.FromHwnd(hwnd).AddHook(WndProc);
+            _hotkeyInitialized = true;
+            ApplyHotkeyRegistration();
+            HwndSource.FromHwnd(new WindowInteropHelper(this).Handle).AddHook(WndProc);
         };
-        Closing += (_, _) => UnregisterHotKey(new WindowInteropHelper(this).Handle, HotkeyId);
+    }
+
+    public void UpdateHotkey(string binding)
+    {
+        _hotkeyBinding = binding;
+        if (_hotkeyInitialized)
+            ApplyHotkeyRegistration();
+    }
+
+    private void ApplyHotkeyRegistration()
+    {
+        var hwnd = new WindowInteropHelper(this).Handle;
+        UnregisterHotKey(hwnd, HotkeyId);
+        var (mods, vk) = ParseHotkey(_hotkeyBinding);
+        if (vk != 0) RegisterHotKey(hwnd, HotkeyId, mods, vk);
+    }
+
+    private static (uint Mods, uint Vk) ParseHotkey(string binding)
+    {
+        uint mods = 0, vk = 0;
+        foreach (var raw in binding.Split('+'))
+        {
+            switch (raw.Trim().ToLowerInvariant())
+            {
+                case "ctrl":  mods |= 0x0002; break;
+                case "shift": mods |= 0x0004; break;
+                case "alt":   mods |= 0x0001; break;
+                case "win":   mods |= 0x0008; break;
+                default:
+                    var part = raw.Trim();
+                    if (part.Length == 1)
+                        vk = (uint)char.ToUpperInvariant(part[0]);
+                    else if (part.StartsWith("F", StringComparison.OrdinalIgnoreCase) &&
+                             int.TryParse(part[1..], out var fNum) && fNum is >= 1 and <= 12)
+                        vk = (uint)(0x6F + fNum); // VK_F1=0x70
+                    break;
+            }
+        }
+        return (mods, vk);
     }
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)

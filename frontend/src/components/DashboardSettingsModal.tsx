@@ -118,6 +118,7 @@ function SettingsTab({ onClose }: { onClose: () => void }) {
   });
   const save = useMutation({ mutationFn: configApi.save });
   const [form, setForm] = useState<AppConfig | null>(null);
+  const [isCapturingHotkey, setIsCapturingHotkey] = useState(false);
 
   useEffect(() => {
     if (data) setForm(JSON.parse(JSON.stringify(data)));
@@ -152,6 +153,28 @@ function SettingsTab({ onClose }: { onClose: () => void }) {
       "repositoryRoots",
       form.repositoryRoots.map((r, idx) => (idx === i ? val : r)),
     );
+
+  const handleHotkeyCapture = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const ignored = [
+      "Control",
+      "Shift",
+      "Alt",
+      "Meta",
+      "CapsLock",
+      "Tab",
+      "Escape",
+    ];
+    if (ignored.includes(e.key)) return;
+    const mods: string[] = [];
+    if (e.ctrlKey) mods.push("Ctrl");
+    if (e.shiftKey) mods.push("Shift");
+    if (e.altKey) mods.push("Alt");
+    const key = e.key.length === 1 ? e.key.toUpperCase() : e.key;
+    mods.push(key);
+    setField("hotkeyBinding", mods.join("+"));
+    setIsCapturingHotkey(false);
+  };
 
   return (
     <>
@@ -224,6 +247,36 @@ function SettingsTab({ onClose }: { onClose: () => void }) {
             />
           </Field>
         </div>
+      </Section>
+
+      <Section title="Hotkey">
+        <Field label="Open window shortcut">
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <input
+              readOnly
+              className={`settings-input${isCapturingHotkey ? " settings-input--focus" : ""}`}
+              style={{ width: 160, cursor: "pointer" }}
+              value={
+                isCapturingHotkey
+                  ? "Press keys…"
+                  : form.hotkeyBinding || "Ctrl+Shift+D"
+              }
+              onKeyDown={isCapturingHotkey ? handleHotkeyCapture : undefined}
+              onBlur={() => setIsCapturingHotkey(false)}
+              onClick={() => setIsCapturingHotkey(true)}
+            />
+            <button
+              type="button"
+              className={isCapturingHotkey ? "btn-primary" : "btn-ghost"}
+              onClick={() => setIsCapturingHotkey((v) => !v)}
+            >
+              {isCapturingHotkey ? "Cancel" : "Record"}
+            </button>
+          </div>
+          <span className="settings-field-hint">
+            Click the field or "Record", then press your combination.
+          </span>
+        </Field>
       </Section>
 
       <div className="settings-save-bar">

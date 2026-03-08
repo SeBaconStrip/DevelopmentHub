@@ -7,6 +7,7 @@ public class ConfigDto
     public int ScanIntervalMinutes { get; set; }
     public int RepoScanDepth { get; set; }
     public int EntryPointScanDepth { get; set; }
+    public string HotkeyBinding { get; set; } = "Ctrl+Shift+D";
 }
 
 public class AzureDevOpsConfigDto

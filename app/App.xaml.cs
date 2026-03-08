@@ -1,8 +1,10 @@
 ﻿using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
 using System.IO;
 using System.Windows;
 using Application = System.Windows.Application;
 using MessageBox = System.Windows.MessageBox;
+using DevelopmentHub.Api.Services;
 
 namespace DevelopmentHub.App;
 
@@ -10,6 +12,7 @@ public partial class App : Application
 {
     private WebApplication? _host;
     private System.Windows.Forms.NotifyIcon? _trayIcon;
+    private string _currentHotkey = "Ctrl+Shift+D";
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -31,12 +34,23 @@ public partial class App : Application
 
             _host = DevelopmentHub.Api.BackendHost.Create([]);
 
+            var window = new MainWindow();
+
             // Start Kestrel on a background thread so it never blocks the UI thread
             _ = Task.Run(async () =>
             {
                 try
                 {
                     await _host.StartAsync();
+
+                    // Load saved hotkey from config and apply it
+                    var configSvc = _host.Services.GetRequiredService<IUserConfigService>();
+                    var cfg = await configSvc.GetAsync();
+                    Dispatcher.Invoke(() =>
+                    {
+                        _currentHotkey = cfg.HotkeyBinding;
+                        window.UpdateHotkey(cfg.HotkeyBinding);
+                    });
                 }
                 catch (Exception ex)
                 {
@@ -45,13 +59,27 @@ public partial class App : Application
                 }
             });
 
-            var window = new MainWindow();
+            // When hotkey changes via settings, re-register it live
+            HotkeyChangedNotifier.HotkeyChanged += binding => Dispatcher.Invoke(() =>
+            {
+                _currentHotkey = binding;
+                window.UpdateHotkey(binding);
+            });
 
             // Hide to tray instead of closing
+            var firstHide = true;
             window.Closing += (_, args) =>
             {
                 args.Cancel = true;
                 window.Hide();
+                if (firstHide)
+                {
+                    firstHide = false;
+                    _trayIcon!.BalloonTipIcon = System.Windows.Forms.ToolTipIcon.Info;
+                    _trayIcon.BalloonTipTitle = "DevelopmentHub";
+                    _trayIcon.BalloonTipText = $"Läuft im Hintergrund. {_currentHotkey} drücken zum Öffnen.";
+                    _trayIcon.ShowBalloonTip(5000);
+                }
             };
 
             // Tray icon
