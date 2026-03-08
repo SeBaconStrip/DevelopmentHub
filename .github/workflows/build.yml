@@ -51,7 +51,7 @@ jobs:
         run: dotnet publish -c Release -r win-x64 --self-contained -o ../publish
 
       - name: Install Inno Setup
-        run: winget install JRSoftware.InnoSetup --silent --accept-package-agreements --accept-source-agreements
+        run: choco install innosetup --yes --no-progress
 
       - name: Update installer version
         shell: pwsh
@@ -64,7 +64,7 @@ jobs:
       - name: Build installer
         shell: pwsh
         run: |
-          $iscc = "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe"
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
           & $iscc installer\DevelopmentHub.iss
 
       - name: Create GitHub Release
