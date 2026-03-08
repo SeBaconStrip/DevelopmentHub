@@ -4,7 +4,6 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import DashboardPage from "./features/dashboard/DashboardPage";
 import RepositoriesPage from "./features/repositories/RepositoriesPage";
 import PullRequestsPage from "./features/pullRequests/PullRequestsPage";
-import ScriptsPage from "./features/scripts/ScriptsPage";
 import SettingsPage from "./features/settings/SettingsPage";
 
 const queryClient = new QueryClient();
@@ -19,7 +18,6 @@ export default function App() {
               <Route path="/" element={<DashboardPage />} />
               <Route path="/repositories" element={<RepositoriesPage />} />
               <Route path="/pull-requests" element={<PullRequestsPage />} />
-              <Route path="/scripts" element={<ScriptsPage />} />
               <Route path="/settings" element={<SettingsPage />} />
             </Routes>
           </main>

@@ -26,16 +26,6 @@ public class ConfigController(
                 UserEmail = cfg.AzureDevOps.UserEmail,
                 Pat = string.IsNullOrEmpty(cfg.AzureDevOps.Pat) ? "" : "***" // redacted
             },
-            Scripts = cfg.Scripts.Select(sc => new ScriptConfigDto
-            {
-                Id = sc.Id,
-                Name = sc.Name,
-                Description = sc.Description,
-                WorkingDirectory = sc.WorkingDirectory,
-                Command = sc.Command,
-                Arguments = sc.Arguments,
-                EnvironmentVariables = sc.EnvironmentVariables
-            }).ToArray(),
             ScanIntervalMinutes = cfg.ScanIntervalMinutes,
             RepoScanDepth = cfg.RepoScanDepth,
             EntryPointScanDepth = cfg.EntryPointScanDepth
@@ -61,16 +51,6 @@ public class ConfigController(
                 // Only update PAT if a real value was sent (not the redacted placeholder)
                 Pat = dto.AzureDevOps.Pat is "***" or "" ? current.AzureDevOps.Pat : dto.AzureDevOps.Pat
             };
-            current.Scripts = dto.Scripts.Select(sc => new ScriptDefinitionConfig
-            {
-                Id = sc.Id,
-                Name = sc.Name,
-                Description = sc.Description,
-                WorkingDirectory = sc.WorkingDirectory,
-                Command = sc.Command,
-                Arguments = sc.Arguments,
-                EnvironmentVariables = sc.EnvironmentVariables
-            }).ToArray();
 
             await userConfigService.SaveAsync(current);
 

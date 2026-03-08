@@ -9,14 +9,13 @@ import { fetchRepositories, repositoriesApi } from "../../api/repositories";
 import vscodeIconUrl from "../../assets/icons/vscode.svg";
 import visualStudioIconUrl from "../../assets/icons/visualstudio.svg";
 import { fetchPullRequests } from "../../api/pullRequests";
-import { fetchScripts, fetchExecutions } from "../../api/scripts";
 import {
   useUiStore,
   type BreakpointLayouts,
   type WidgetId,
 } from "../../store/uiStore";
 import { DashboardSettingsModal } from "../../components/DashboardSettingsModal";
-import type { Repository, PullRequest, Script, Execution } from "../../types";
+import type { Repository, PullRequest } from "../../types";
 
 /* ─────────────────────────────────────────────────────────────── layout ── */
 
@@ -56,27 +55,6 @@ export default function DashboardPage() {
     queryFn: fetchPullRequests,
     refetchInterval: 120_000,
   });
-  const { data: scripts = [] } = useQuery<Script[]>({
-    queryKey: ["scripts"],
-    queryFn: fetchScripts,
-  });
-  const { data: executions = [] } = useQuery<Execution[]>({
-    queryKey: ["executions"],
-    queryFn: () => fetchExecutions(),
-    refetchInterval: 5_000,
-  });
-
-  const enabled = dashboardWidgets.filter((w) => w.enabled);
-  const disabled = dashboardWidgets.filter((w) => !w.enabled);
-
-  const filteredLayouts: BreakpointLayouts = Object.fromEntries(
-    Object.entries(gridLayouts).map(([bp, items]) => [
-      bp,
-      items.filter((item) => enabled.some((w) => w.id === item.i)),
-    ]),
-  );
-
-  const { containerRef, width: containerWidth } = useContainerWidth();
 
   type WidgetConfig = {
     body: React.ReactNode;
@@ -104,11 +82,23 @@ export default function DashboardPage() {
       ),
     },
     pullRequests: { body: <PullRequestsBody prs={prs} /> },
-    scripts: {
-      body: <ScriptsBody scripts={scripts} executions={executions} />,
-    },
-    executions: { body: <ExecutionsBody executions={executions} /> },
   };
+
+  const enabled = dashboardWidgets.filter(
+    (w) => w.enabled && w.id in widgetMap,
+  );
+  const disabled = dashboardWidgets.filter(
+    (w) => !w.enabled && w.id in widgetMap,
+  );
+
+  const filteredLayouts: BreakpointLayouts = Object.fromEntries(
+    Object.entries(gridLayouts).map(([bp, items]) => [
+      bp,
+      items.filter((item) => enabled.some((w) => w.id === item.i)),
+    ]),
+  );
+
+  const { containerRef, width: containerWidth } = useContainerWidth();
 
   function handleLayoutChange(_: unknown, layouts: unknown) {
     setGridLayouts(layouts as BreakpointLayouts);
@@ -408,73 +398,6 @@ function PullRequestsBody({ prs }: { prs: PullRequest[] }) {
                 {vote.label}
               </Chip>
             )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-/* ──────────────────────────────────────────────────────── Scripts body ── */
-
-const STATUS_CHIP: Record<string, { bg: string; fg: string }> = {
-  Running: { bg: "#dbeafe", fg: "#1d4ed8" },
-  Success: { bg: "#dcfce7", fg: "#16a34a" },
-  Failed: { bg: "#fee2e2", fg: "#dc2626" },
-  Cancelled: { bg: "#f3f4f6", fg: "#6b7280" },
-};
-
-function ScriptsBody({
-  scripts,
-  executions,
-}: {
-  scripts: Script[];
-  executions: Execution[];
-}) {
-  if (scripts.length === 0) return <Empty text="No scripts configured" />;
-  return (
-    <div>
-      {scripts.map((s) => {
-        const last = [...executions]
-          .reverse()
-          .find((e) => e.scriptDefinitionId === s.id);
-        const chip = last
-          ? (STATUS_CHIP[last.status] ?? STATUS_CHIP.Cancelled)
-          : null;
-        return (
-          <div key={s.id} className="item-row">
-            <div className="item-main">
-              <div className="item-script-name">{s.name}</div>
-              {s.description && (
-                <div className="item-desc">{s.description}</div>
-              )}
-            </div>
-            {chip && last && (
-              <Chip bg={chip.bg} fg={chip.fg}>
-                {last.status}
-              </Chip>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-/* ─────────────────────────────────────────────────────── Executions body ── */
-
-function ExecutionsBody({ executions }: { executions: Execution[] }) {
-  if (executions.length === 0) return <Empty text="No executions yet" />;
-  return (
-    <div>
-      {executions.slice(0, 30).map((e) => {
-        const s = STATUS_CHIP[e.status] ?? STATUS_CHIP.Cancelled;
-        return (
-          <div key={e.id} className="item-row">
-            <span className="item-text">{e.scriptName}</span>
-            <Chip bg={s.bg} fg={s.fg}>
-              {e.status}
-            </Chip>
           </div>
         );
       })}

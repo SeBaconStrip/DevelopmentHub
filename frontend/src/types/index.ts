@@ -24,15 +24,6 @@ export interface OpenRepositoryRequest {
   openWith: 'VisualStudio' | 'VsCode';
 }
 
-export interface Script {
-  id: string;
-  name: string;
-  description: string;
-  workingDirectory: string;
-  command: string;
-  arguments: string[];
-}
-
 export interface Execution {
   id: string;
   scriptDefinitionId: string;
@@ -83,7 +74,6 @@ export interface ScriptConfig {
 export interface AppConfig {
   repositoryRoots: string[];
   azureDevOps: AzureDevOpsConfig;
-  scripts: ScriptConfig[];
   scanIntervalMinutes: number;
   entryPointMaxDepth: number;
 }

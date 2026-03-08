@@ -41,7 +41,6 @@ builder.Services.AddMemoryCache();
 builder.Services.AddScoped<IGitService, GitService>();
 builder.Services.AddScoped<ILauncherService, LauncherService>();
 builder.Services.AddScoped<IRepositoryService, RepositoryService>();
-builder.Services.AddSingleton<IScriptService, ScriptService>();
 builder.Services.AddScoped<IAzureDevOpsService, AzureDevOpsService>();
 builder.Services.AddSingleton<IUserConfigService, UserConfigService>();
 

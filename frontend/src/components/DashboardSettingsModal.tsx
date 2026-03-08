@@ -16,14 +16,21 @@ export function DashboardSettingsModal({ onClose }: Props) {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-card settings-modal" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="modal-card settings-modal"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="settings-modal-header">
           <div className="settings-modal-title-row">
             <div>
               <h2 className="settings-modal-title">Settings</h2>
-              <p className="settings-modal-sub">Manage panels and application configuration</p>
+              <p className="settings-modal-sub">
+                Manage panels and application configuration
+              </p>
             </div>
-            <button className="settings-modal-close" onClick={onClose}>×</button>
+            <button className="settings-modal-close" onClick={onClose}>
+              ×
+            </button>
           </div>
           <div className="settings-tabs">
             {(["dashboard", "settings"] as Tab[]).map((t) => (
@@ -56,15 +63,22 @@ function DashboardTab({ onClose }: { onClose: () => void }) {
   return (
     <>
       <p className="dash-tab-hint">
-        Toggle panels on or off. Use <strong>✎ Edit Layout</strong> on the dashboard to reposition them freely.
+        Toggle panels on or off. Use <strong>✎ Edit Layout</strong> on the
+        dashboard to reposition them freely.
       </p>
       <div className="widget-list">
         {dashboardWidgets.map((widget) => (
-          <WidgetRow key={widget.id} widget={widget} onToggle={() => toggleWidget(widget.id)} />
+          <WidgetRow
+            key={widget.id}
+            widget={widget}
+            onToggle={() => toggleWidget(widget.id)}
+          />
         ))}
       </div>
       <div className="dash-tab-footer">
-        <button className="btn-primary" onClick={onClose}>Done</button>
+        <button className="btn-primary" onClick={onClose}>
+          Done
+        </button>
       </div>
     </>
   );
@@ -77,7 +91,9 @@ interface RowProps {
 
 function WidgetRow({ widget, onToggle }: RowProps) {
   return (
-    <div className={`widget-row${widget.enabled ? " widget-row--enabled" : ""}`}>
+    <div
+      className={`widget-row${widget.enabled ? " widget-row--enabled" : ""}`}
+    >
       <span className="widget-row-icon">{widget.icon}</span>
       <span className="widget-row-label">{widget.label}</span>
       <button
@@ -85,7 +101,9 @@ function WidgetRow({ widget, onToggle }: RowProps) {
         onClick={onToggle}
         title={widget.enabled ? "Disable" : "Enable"}
       >
-        <span className={`toggle-knob${widget.enabled ? " toggle-knob--on" : ""}`} />
+        <span
+          className={`toggle-knob${widget.enabled ? " toggle-knob--on" : ""}`}
+        />
       </button>
     </div>
   );
@@ -94,7 +112,10 @@ function WidgetRow({ widget, onToggle }: RowProps) {
 /* ──────────────────────────────────────────────────── App Settings tab ── */
 
 function SettingsTab({ onClose }: { onClose: () => void }) {
-  const { data, isLoading } = useQuery({ queryKey: ["config"], queryFn: configApi.get });
+  const { data, isLoading } = useQuery({
+    queryKey: ["config"],
+    queryFn: configApi.get,
+  });
   const save = useMutation({ mutationFn: configApi.save });
   const [form, setForm] = useState<AppConfig | null>(null);
 
@@ -109,34 +130,28 @@ function SettingsTab({ onClose }: { onClose: () => void }) {
   const setField = <K extends keyof AppConfig>(key: K, value: AppConfig[K]) =>
     setForm((prev) => (prev ? { ...prev, [key]: value } : prev));
 
-  const setAzDO = <K extends keyof AppConfig["azureDevOps"]>(key: K, value: string) =>
+  const setAzDO = <K extends keyof AppConfig["azureDevOps"]>(
+    key: K,
+    value: string,
+  ) =>
     setForm((prev) =>
-      prev ? { ...prev, azureDevOps: { ...prev.azureDevOps, [key]: value } } : prev,
+      prev
+        ? { ...prev, azureDevOps: { ...prev.azureDevOps, [key]: value } }
+        : prev,
     );
 
-  const addRoot = () => setField("repositoryRoots", [...form.repositoryRoots, ""]);
+  const addRoot = () =>
+    setField("repositoryRoots", [...form.repositoryRoots, ""]);
   const removeRoot = (i: number) =>
-    setField("repositoryRoots", form.repositoryRoots.filter((_, idx) => idx !== i));
+    setField(
+      "repositoryRoots",
+      form.repositoryRoots.filter((_, idx) => idx !== i),
+    );
   const updateRoot = (i: number, val: string) =>
-    setField("repositoryRoots", form.repositoryRoots.map((r, idx) => (idx === i ? val : r)));
-
-  const addScript = () =>
-    setField("scripts", [
-      ...form.scripts,
-      {
-        id: crypto.randomUUID(),
-        name: "",
-        description: "",
-        workingDirectory: "",
-        command: "",
-        arguments: [],
-        environmentVariables: {},
-      } satisfies ScriptConfig,
-    ]);
-  const removeScript = (i: number) =>
-    setField("scripts", form.scripts.filter((_, idx) => idx !== i));
-  const updateScript = <K extends keyof ScriptConfig>(i: number, key: K, value: ScriptConfig[K]) =>
-    setField("scripts", form.scripts.map((s, idx) => (idx === i ? { ...s, [key]: value } : s)));
+    setField(
+      "repositoryRoots",
+      form.repositoryRoots.map((r, idx) => (idx === i ? val : r)),
+    );
 
   return (
     <>
@@ -149,18 +164,22 @@ function SettingsTab({ onClose }: { onClose: () => void }) {
               onChange={(e) => updateRoot(i, e.target.value)}
               placeholder="C:\Projects"
             />
-            <button className="btn-remove" onClick={() => removeRoot(i)}>✕</button>
+            <button className="btn-remove" onClick={() => removeRoot(i)}>
+              ✕
+            </button>
           </div>
         ))}
         <AddLink onClick={addRoot}>+ Add directory</AddLink>
       </Section>
 
       <Section title="Azure DevOps">
-        {([
-          ["Organization", "organization", "myorg"],
-          ["Project", "project", "MyProject"],
-          ["User Email", "userEmail", "you@example.com"],
-        ] as const).map(([label, key, placeholder]) => (
+        {(
+          [
+            ["Organization", "organization", "myorg"],
+            ["Project", "project", "MyProject"],
+            ["User Email", "userEmail", "you@example.com"],
+          ] as const
+        ).map(([label, key, placeholder]) => (
           <Field key={key} label={label}>
             <input
               className="settings-input"
@@ -189,7 +208,9 @@ function SettingsTab({ onClose }: { onClose: () => void }) {
               type="number"
               className="settings-input settings-input--narrow"
               value={form.scanIntervalMinutes}
-              onChange={(e) => setField("scanIntervalMinutes", Number(e.target.value))}
+              onChange={(e) =>
+                setField("scanIntervalMinutes", Number(e.target.value))
+              }
             />
           </Field>
           <Field label="Entry point search depth">
@@ -197,59 +218,27 @@ function SettingsTab({ onClose }: { onClose: () => void }) {
               type="number"
               className="settings-input settings-input--narrow"
               value={form.entryPointMaxDepth}
-              onChange={(e) => setField("entryPointMaxDepth", Number(e.target.value))}
+              onChange={(e) =>
+                setField("entryPointMaxDepth", Number(e.target.value))
+              }
             />
           </Field>
         </div>
       </Section>
 
-      <Section title="Scripts">
-        {form.scripts.map((script, i) => (
-          <div key={script.id} className="script-card">
-            <div className="script-card-header">
-              <span className="script-card-label">Script #{i + 1}</span>
-              <button className="btn-remove btn-remove--small" onClick={() => removeScript(i)}>
-                Remove
-              </button>
-            </div>
-            {([
-              ["Name", "name", "Reset Database"],
-              ["Description", "description", "Drops and recreates the local DB"],
-              ["Working Directory", "workingDirectory", "C:\\Projects\\MyApp"],
-              ["Command", "command", "dotnet"],
-            ] as const).map(([label, key, placeholder]) => (
-              <Field key={key} label={label}>
-                <input
-                  className="settings-input"
-                  value={script[key]}
-                  onChange={(e) => updateScript(i, key, e.target.value)}
-                  placeholder={placeholder}
-                />
-              </Field>
-            ))}
-            <Field label="Arguments (one per line)">
-              <textarea
-                className="settings-input settings-input--mono"
-                value={script.arguments.join("\n")}
-                onChange={(e) =>
-                  updateScript(i, "arguments", e.target.value.split("\n").filter(Boolean))
-                }
-                placeholder={"ef\ndatabase\ndrop"}
-                rows={3}
-              />
-            </Field>
-          </div>
-        ))}
-        <AddLink onClick={addScript}>+ Add script</AddLink>
-      </Section>
-
       <div className="settings-save-bar">
-        <button className="btn-primary" onClick={() => save.mutate(form)} disabled={save.isPending}>
+        <button
+          className="btn-primary"
+          onClick={() => save.mutate(form)}
+          disabled={save.isPending}
+        >
           {save.isPending ? "Saving…" : "💾 Save Configuration"}
         </button>
         {save.isSuccess && <span className="settings-save-ok">✓ Saved</span>}
         {save.isError && <span className="settings-save-err">✗ Failed</span>}
-        <button className="btn-close" onClick={onClose}>Close</button>
+        <button className="btn-close" onClick={onClose}>
+          Close
+        </button>
       </div>
     </>
   );
@@ -257,7 +246,13 @@ function SettingsTab({ onClose }: { onClose: () => void }) {
 
 /* ──────────────────────────────────────────────────────────── helpers ── */
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="settings-section">
       <h3 className="settings-section-title">{title}</h3>
@@ -266,7 +261,13 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
     <label className="settings-field">
       <span className="settings-field-label">{label}</span>
@@ -275,7 +276,13 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function AddLink({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+function AddLink({
+  onClick,
+  children,
+}: {
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
   return (
     <button className="btn-add-link" onClick={onClick}>
       {children}

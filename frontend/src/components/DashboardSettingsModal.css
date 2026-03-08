@@ -220,26 +220,6 @@
   margin-bottom: 8px;
 }
 
-/* ── script cards ── */
-.script-card {
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  padding: 16px;
-  margin-bottom: 12px;
-}
-
-.script-card-header {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
-
-.script-card-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: #374151;
-}
-
 /* ── action buttons ── */
 .btn-remove {
   background: none;

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { configApi } from "../../api/config";
-import type { AppConfig, ScriptConfig } from "../../types";
+import type { AppConfig } from "../../types";
 
 export default function SettingsPage() {
   const { data, isLoading } = useQuery({
@@ -46,36 +46,6 @@ export default function SettingsPage() {
     setField(
       "repositoryRoots",
       form.repositoryRoots.map((r, idx) => (idx === i ? val : r)),
-    );
-
-  const addScript = () =>
-    setField("scripts", [
-      ...form.scripts,
-      {
-        id: crypto.randomUUID(),
-        name: "",
-        description: "",
-        workingDirectory: "",
-        command: "",
-        arguments: [],
-        environmentVariables: {},
-      } satisfies ScriptConfig,
-    ]);
-
-  const removeScript = (i: number) =>
-    setField(
-      "scripts",
-      form.scripts.filter((_, idx) => idx !== i),
-    );
-
-  const updateScript = <K extends keyof ScriptConfig>(
-    i: number,
-    key: K,
-    value: ScriptConfig[K],
-  ) =>
-    setField(
-      "scripts",
-      form.scripts.map((s, idx) => (idx === i ? { ...s, [key]: value } : s)),
     );
 
   return (
@@ -173,79 +143,6 @@ export default function SettingsPage() {
             className="border border-gray-300 rounded-md px-3 py-1.5 text-sm w-32"
           />
         </label>
-      </section>
-
-      {/* Scripts */}
-      <section className="flex flex-col gap-4">
-        <h2 className="text-base font-semibold text-gray-800">Scripts</h2>
-        {form.scripts.map((script, i) => (
-          <div
-            key={script.id}
-            className="border border-gray-200 rounded-lg p-4 flex flex-col gap-3"
-          >
-            <div className="flex justify-between">
-              <span className="text-sm font-medium text-gray-700">
-                Script #{i + 1}
-              </span>
-              <button
-                onClick={() => removeScript(i)}
-                className="text-red-500 hover:text-red-700 text-sm"
-              >
-                Remove
-              </button>
-            </div>
-            {(
-              [
-                ["Name", "name", "Reset Database"],
-                [
-                  "Description",
-                  "description",
-                  "Drops and recreates the local DB",
-                ],
-                [
-                  "Working Directory",
-                  "workingDirectory",
-                  "C:\\Projects\\MyApp",
-                ],
-                ["Command", "command", "dotnet"],
-              ] as const
-            ).map(([label, key, placeholder]) => (
-              <label key={key} className="flex flex-col gap-1">
-                <span className="text-xs text-gray-500">{label}</span>
-                <input
-                  value={script[key]}
-                  onChange={(e) => updateScript(i, key, e.target.value)}
-                  placeholder={placeholder}
-                  className="border border-gray-300 rounded-md px-3 py-1.5 text-sm"
-                />
-              </label>
-            ))}
-            <label className="flex flex-col gap-1">
-              <span className="text-xs text-gray-500">
-                Arguments (one per line)
-              </span>
-              <textarea
-                value={script.arguments.join("\n")}
-                onChange={(e) =>
-                  updateScript(
-                    i,
-                    "arguments",
-                    e.target.value.split("\n").filter(Boolean),
-                  )
-                }
-                placeholder="ef&#10;database&#10;drop"
-                rows={3}
-                className="border border-gray-300 rounded-md px-3 py-1.5 text-sm font-mono"
-              />
-            </label>
-          </div>
-        ))}
-        <button
-          onClick={addScript}
-          className="text-sm text-blue-600 hover:underline w-fit"
-        >
-          + Add script
-        </button>
       </section>
 
       <div className="flex items-center gap-3">

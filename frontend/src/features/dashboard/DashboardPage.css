@@ -1,7 +1,11 @@
 /* ── page ── */
 .dash-page {
   min-height: 100vh;
-  padding: 28px 24px 48px;
+  margin: 48px;
+  /* background-color: rgba(255, 255, 255, 0.6); */
+  background-color: #e5dcfb;
+  border-radius: 20px;
+  padding: 24px;
 }
 
 /* ── header ── */
@@ -11,14 +15,14 @@
   justify-content: space-between;
   margin-bottom: 24px;
   gap: 12px;
+  padding: 24px;
 }
 
 .dash-title {
   font-size: 26px;
   font-weight: 700;
-  color: #fff;
+  color: #474747;
   margin: 0;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
 
 .dash-subtitle {
@@ -146,8 +150,9 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: #fff;
-  border-radius: 16px;
+  background-color: rgba(255, 255, 255, 0.80);
+  border-radius: 20px;
+  padding: 24px;
   overflow: hidden;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
   transition: box-shadow 0.2s;
@@ -162,11 +167,9 @@
   align-items: center;
   gap: 10px;
   flex-shrink: 0;
-  padding: 11px 14px;
-  background: #fff;
+  padding-bottom: 10px;
   user-select: none;
   cursor: default;
-  border-bottom: 1px solid #f3f4f6;
 }
 
 .panel-header--draggable {
@@ -406,23 +409,27 @@
   display: grid;
   grid-template-columns: 1fr auto auto auto auto;
   align-items: center;
+  border-radius: 12px;
+  border: 1px solid #e6e1f7;
 }
 
 .repo-grid-header {
-  font-size: 11px;
+  font-size: 16px;
   font-weight: 600;
   color: #9ca3af;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  padding: 6px 10px;
-  border-bottom: 2px solid #f3f4f6;
+  padding: 10px 10px;
+  border-bottom: 2px solid #e6e1f7;
+  height: 50px;
 }
 
 .repo-cell {
   display: flex;
   align-items: center;
   padding: 7px 10px;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 2px solid #e6e1f7;
+  height: 50px;
   min-width: 0;
 }
 
