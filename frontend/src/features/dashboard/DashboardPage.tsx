@@ -149,9 +149,9 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="dash-page">
-      {/* page header */}
-      <div className="dash-header">
+    <div className="dash-root">
+      {/* top header bar */}
+      <header className="dash-header">
         <div>
           <h1 className="dash-title">Development Hub</h1>
           <p className="dash-subtitle">
@@ -178,78 +178,80 @@ export default function DashboardPage() {
             {isEditMode ? "✓ Done" : "✎ Edit Layout"}
           </button>
         </div>
-      </div>
+      </header>
 
-      {/* edit mode: re-add hidden panels */}
-      {isEditMode && disabled.length > 0 && (
-        <div className="dash-hidden-panels">
-          <span className="dash-hidden-label">Hidden panels:</span>
-          {disabled.map((w) => (
-            <button
-              key={w.id}
-              className="btn-add-panel"
-              onClick={() => handleToggleWidget(w.id)}
-            >
-              {w.icon} + {w.label}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {isEditMode && (
-        <div className="dash-edit-hint">
-          <span>✋</span>
-          Drag panels by their header · resize from any edge · click ✕ to hide
-        </div>
-      )}
-
-      {enabled.length === 0 ? (
-        <div className="card dash-empty-card">
-          <p>No panels visible</p>
-          <p>
-            Open <strong>⚙ Settings</strong> or use{" "}
-            <strong>✎ Edit Layout</strong> to add panels.
-          </p>
-        </div>
-      ) : (
-        <div ref={containerRef}>
-          <Responsive
-            width={containerWidth}
-            layouts={filteredLayouts}
-            breakpoints={{ lg: 1200, md: 900, sm: 600, xs: 0 }}
-            cols={{ lg: 12, md: 10, sm: 6, xs: 4 }}
-            rowHeight={54}
-            dragConfig={
-              { enabled: isEditMode, handle: ".drag-handle" } as object
-            }
-            resizeConfig={
-              { enabled: isEditMode, handles: ["se", "s", "e"] } as object
-            }
-            onLayoutChange={handleLayoutChange}
-            margin={[16, 16]}
-            containerPadding={[0, 0]}
-          >
-            {enabled.map((w) => (
-              <div key={w.id} className="panel-wrapper">
-                <Panel
-                  icon={w.icon}
-                  title={w.label}
-                  badge={widgetMap[w.id].badge}
-                  headerActions={widgetMap[w.id].headerActions}
-                  isEditMode={isEditMode}
-                  onClose={() => handleToggleWidget(w.id)}
-                >
-                  {widgetMap[w.id].body}
-                </Panel>
-              </div>
+      <div className="dash-page">
+        {/* edit mode: re-add hidden panels */}
+        {isEditMode && disabled.length > 0 && (
+          <div className="dash-hidden-panels">
+            <span className="dash-hidden-label">Hidden panels:</span>
+            {disabled.map((w) => (
+              <button
+                key={w.id}
+                className="btn-add-panel"
+                onClick={() => handleToggleWidget(w.id)}
+              >
+                {w.icon} + {w.label}
+              </button>
             ))}
-          </Responsive>
-        </div>
-      )}
+          </div>
+        )}
 
-      {showSettings && (
-        <DashboardSettingsModal onClose={() => setShowSettings(false)} />
-      )}
+        {isEditMode && (
+          <div className="dash-edit-hint">
+            <span>✋</span>
+            Drag panels by their header · resize from any edge · click ✕ to hide
+          </div>
+        )}
+
+        {enabled.length === 0 ? (
+          <div className="card dash-empty-card">
+            <p>No panels visible</p>
+            <p>
+              Open <strong>⚙ Settings</strong> or use{" "}
+              <strong>✎ Edit Layout</strong> to add panels.
+            </p>
+          </div>
+        ) : (
+          <div ref={containerRef}>
+            <Responsive
+              width={containerWidth}
+              layouts={filteredLayouts}
+              breakpoints={{ lg: 1200, md: 900, sm: 600, xs: 0 }}
+              cols={{ lg: 12, md: 10, sm: 6, xs: 4 }}
+              rowHeight={54}
+              dragConfig={
+                { enabled: isEditMode, handle: ".drag-handle" } as object
+              }
+              resizeConfig={
+                { enabled: isEditMode, handles: ["se", "s", "e"] } as object
+              }
+              onLayoutChange={handleLayoutChange}
+              margin={[16, 16]}
+              containerPadding={[0, 0]}
+            >
+              {enabled.map((w) => (
+                <div key={w.id} className="panel-wrapper">
+                  <Panel
+                    icon={w.icon}
+                    title={w.label}
+                    badge={widgetMap[w.id].badge}
+                    headerActions={widgetMap[w.id].headerActions}
+                    isEditMode={isEditMode}
+                    onClose={() => handleToggleWidget(w.id)}
+                  >
+                    {widgetMap[w.id].body}
+                  </Panel>
+                </div>
+              ))}
+            </Responsive>
+          </div>
+        )}
+
+        {showSettings && (
+          <DashboardSettingsModal onClose={() => setShowSettings(false)} />
+        )}
+      </div>
     </div>
   );
 }

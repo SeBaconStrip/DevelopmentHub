@@ -76,7 +76,7 @@ button:focus-visible {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #6b7fd4, #8b5ea8);
+  background: #7b6ebe;
   color: white;
   border: none;
   border-radius: 8px;

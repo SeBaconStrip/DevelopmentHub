@@ -135,7 +135,7 @@
 }
 
 .toggle-btn--on {
-  background: linear-gradient(135deg, #6b7fd4, #8b5ea8);
+  background: #7b6ebe;
 }
 
 .toggle-knob {
@@ -267,11 +267,11 @@
 
 .btn-close {
   margin-left: auto;
-  background: #f3f4f6;
+  background: #7b6ebe;
   border: none;
   border-radius: 8px;
   padding: 8px 18px;
   cursor: pointer;
   font-size: 14px;
-  color: #374151;
+  color: #fff;
 }
