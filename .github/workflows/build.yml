@@ -1,0 +1,84 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version (e.g. 1.0.0)"
+        required: true
+        default: "1.0.0"
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Determine version
+        id: version
+        shell: pwsh
+        run: |
+          if ("${{ github.event_name }}" -eq "push") {
+            $ver = "${{ github.ref_name }}" -replace '^v', ''
+          } else {
+            $ver = "${{ github.event.inputs.version }}"
+          }
+          echo "VERSION=$ver" >> $env:GITHUB_OUTPUT
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Publish app (builds frontend + .NET)
+        working-directory: app
+        run: dotnet publish -c Release -r win-x64 --self-contained -o ../publish
+
+      - name: Install Inno Setup
+        run: winget install JRSoftware.InnoSetup --silent --accept-package-agreements --accept-source-agreements
+        env:
+          WINGET_SETTINGS: '{"$schema":"https://aka.ms/winget-settings.schema.json","telemetry":{"disable":true}}'
+
+      - name: Update installer version
+        shell: pwsh
+        run: |
+          $ver = "${{ steps.version.outputs.VERSION }}"
+          (Get-Content installer\DevelopmentHub.iss) `
+            -replace '#define MyAppVersion ".*"', "#define MyAppVersion `"$ver`"" |
+            Set-Content installer\DevelopmentHub.iss
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          $iscc = "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe"
+          & $iscc installer\DevelopmentHub.iss
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DevelopmentHub-Setup-${{ steps.version.outputs.VERSION }}
+          path: installer/output/DevelopmentHub-Setup-*.exe
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: installer/output/DevelopmentHub-Setup-*.exe
+          name: DevelopmentHub v${{ steps.version.outputs.VERSION }}
+          generate_release_notes: true
