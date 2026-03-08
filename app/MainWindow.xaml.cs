@@ -1,17 +1,43 @@
 ﻿using Microsoft.Web.WebView2.Core;
 using System.IO;
 using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Interop;
 
 namespace DevelopmentHub.App;
 
 public partial class MainWindow : Window
 {
     private const string AppUrl = "http://localhost:6131";
+    private const int HotkeyId = 1;
+    private const uint MOD_CTRL = 0x0002, MOD_SHIFT = 0x0004, VK_D = 0x44;
+
+    [DllImport("user32.dll")] static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
+    [DllImport("user32.dll")] static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+
+    public Action? RequestExit { get; set; }
 
     public MainWindow()
     {
         InitializeComponent();
+        SourceInitialized += (_, _) =>
+        {
+            var hwnd = new WindowInteropHelper(this).Handle;
+            RegisterHotKey(hwnd, HotkeyId, MOD_CTRL | MOD_SHIFT, VK_D);
+            HwndSource.FromHwnd(hwnd).AddHook(WndProc);
+        };
+        Closing += (_, _) => UnregisterHotKey(new WindowInteropHelper(this).Handle, HotkeyId);
+    }
+
+    private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        if (msg == 0x0312 && wParam.ToInt32() == HotkeyId) // WM_HOTKEY
+        {
+            Show();
+            Activate();
+        }
+        return IntPtr.Zero;
     }
 
     private async void Window_Loaded(object sender, RoutedEventArgs e)
