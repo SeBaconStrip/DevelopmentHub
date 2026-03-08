@@ -11,6 +11,8 @@ on:
 jobs:
   build:
     runs-on: windows-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout
@@ -33,10 +35,11 @@ jobs:
         shell: pwsh
         run: |
           $base = (Get-Content version.txt).Trim()
-          $ver = "$base.${{ github.run_number }}"
           if ("${{ github.event_name }}" -eq "pull_request") {
+            $ver = "$base.${{ github.run_number }}-ci"
             $prerelease = "true"
           } else {
+            $ver = "$base.${{ github.run_number }}"
             $prerelease = "false"
           }
           echo "VERSION=$ver" >> $env:GITHUB_OUTPUT
