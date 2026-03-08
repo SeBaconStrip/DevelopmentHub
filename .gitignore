@@ -58,7 +58,8 @@ nunit-*.xml
 
 # DevelopmentHub — local secrets and generated files
 backend/appsettings.local.json
-backend/data/
+backend/data/*.db
+backend/data/*.sqlite
 frontend/node_modules/
 frontend/dist/
 frontend/.vite/
