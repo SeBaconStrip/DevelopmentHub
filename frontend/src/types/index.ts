@@ -77,3 +77,18 @@ export interface AppConfig {
   scanIntervalMinutes: number;
   entryPointMaxDepth: number;
 }
+
+export interface LayoutItem {
+  i: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  minW?: number;
+  minH?: number;
+}
+
+export interface DashboardConfig {
+  widgets: { id: string; enabled: boolean }[];
+  gridLayouts: Record<string, LayoutItem[]>;
+}

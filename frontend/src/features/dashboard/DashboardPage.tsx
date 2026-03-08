@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+﻿import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Responsive, useContainerWidth } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
@@ -9,6 +9,7 @@ import { fetchRepositories, repositoriesApi } from "../../api/repositories";
 import vscodeIconUrl from "../../assets/icons/vscode.svg";
 import visualStudioIconUrl from "../../assets/icons/visualstudio.svg";
 import { fetchPullRequests } from "../../api/pullRequests";
+import { dashboardConfigApi } from "../../api/config";
 import {
   useUiStore,
   type BreakpointLayouts,
@@ -29,7 +30,38 @@ export default function DashboardPage() {
     gridLayouts,
     setGridLayouts,
     resetGridLayouts,
+    hydrate,
   } = useUiStore();
+
+  // Load dashboard config from backend and hydrate the store
+  const { data: dashboardConfig } = useQuery({
+    queryKey: ["dashboardConfig"],
+    queryFn: dashboardConfigApi.get,
+    staleTime: Infinity,
+  });
+  useEffect(() => {
+    if (dashboardConfig) {
+      hydrate(
+        dashboardConfig.widgets,
+        dashboardConfig.gridLayouts as BreakpointLayouts,
+      );
+    }
+  }, [dashboardConfig, hydrate]);
+
+  // Save dashboard config to backend (debounced for layout changes)
+  const saveMutation = useMutation({ mutationFn: dashboardConfigApi.save });
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function scheduleSave(delay = 1500) {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      const { dashboardWidgets: w, gridLayouts: g } = useUiStore.getState();
+      saveMutation.mutate({
+        widgets: w.map(({ id, enabled }) => ({ id, enabled })),
+        gridLayouts: g,
+      });
+    }, delay);
+  }
 
   const { data: repos = [], refetch: refetchRepos } = useQuery<Repository[]>({
     queryKey: ["repositories"],
@@ -102,6 +134,17 @@ export default function DashboardPage() {
 
   function handleLayoutChange(_: unknown, layouts: unknown) {
     setGridLayouts(layouts as BreakpointLayouts);
+    scheduleSave();
+  }
+
+  function handleToggleWidget(id: WidgetId) {
+    toggleWidget(id);
+    scheduleSave(0);
+  }
+
+  function handleResetGridLayouts() {
+    resetGridLayouts();
+    scheduleSave(0);
   }
 
   return (
@@ -118,7 +161,7 @@ export default function DashboardPage() {
           {isEditMode && (
             <button
               className="btn-ghost"
-              onClick={resetGridLayouts}
+              onClick={handleResetGridLayouts}
               title="Reset panel positions to defaults"
             >
               ↺ Reset
@@ -144,7 +187,7 @@ export default function DashboardPage() {
             <button
               key={w.id}
               className="btn-add-panel"
-              onClick={() => toggleWidget(w.id)}
+              onClick={() => handleToggleWidget(w.id)}
             >
               {w.icon} + {w.label}
             </button>
@@ -193,7 +236,7 @@ export default function DashboardPage() {
                   badge={widgetMap[w.id].badge}
                   headerActions={widgetMap[w.id].headerActions}
                   isEditMode={isEditMode}
-                  onClose={() => toggleWidget(w.id)}
+                  onClose={() => handleToggleWidget(w.id)}
                 >
                   {widgetMap[w.id].body}
                 </Panel>

@@ -1,17 +1,9 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import type { LayoutItem } from '../types';
 
 export type WidgetId = 'repositories' | 'pullRequests';
 
-export interface LayoutItem {
-  i: string;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  minW?: number;
-  minH?: number;
-}
+export type { LayoutItem };
 
 export type BreakpointLayouts = Record<string, LayoutItem[]>;
 
@@ -48,22 +40,26 @@ interface UiStore {
   gridLayouts: BreakpointLayouts;
   setGridLayouts: (layouts: BreakpointLayouts) => void;
   resetGridLayouts: () => void;
+  hydrate: (widgets: { id: string; enabled: boolean }[], layouts: BreakpointLayouts) => void;
 }
 
-export const useUiStore = create<UiStore>()(
-  persist(
-    (set) => ({
-      dashboardWidgets: defaultWidgets,
-      toggleWidget: (id) =>
-        set((state) => ({
-          dashboardWidgets: state.dashboardWidgets.map((w) =>
-            w.id === id ? { ...w, enabled: !w.enabled } : w
-          ),
-        })),
-      gridLayouts: DEFAULT_LAYOUTS,
-      setGridLayouts: (layouts) => set({ gridLayouts: layouts }),
-      resetGridLayouts: () => set({ gridLayouts: DEFAULT_LAYOUTS }),
-    }),
-    { name: 'devhub-ui' }
-  )
-);
+export const useUiStore = create<UiStore>()((set) => ({
+  dashboardWidgets: defaultWidgets,
+  toggleWidget: (id) =>
+    set((state) => ({
+      dashboardWidgets: state.dashboardWidgets.map((w) =>
+        w.id === id ? { ...w, enabled: !w.enabled } : w
+      ),
+    })),
+  gridLayouts: DEFAULT_LAYOUTS,
+  setGridLayouts: (layouts) => set({ gridLayouts: layouts }),
+  resetGridLayouts: () => set({ gridLayouts: DEFAULT_LAYOUTS }),
+  hydrate: (serverWidgets, layouts) =>
+    set((state) => ({
+      dashboardWidgets: state.dashboardWidgets.map((w) => {
+        const match = serverWidgets.find((sw) => sw.id === w.id);
+        return match !== undefined ? { ...w, enabled: match.enabled } : w;
+      }),
+      gridLayouts: Object.keys(layouts).length > 0 ? layouts : DEFAULT_LAYOUTS,
+    })),
+}));
