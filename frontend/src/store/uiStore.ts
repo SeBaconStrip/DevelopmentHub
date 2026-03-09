@@ -46,6 +46,13 @@ interface UiStore {
   setTheme: (theme: ThemeId) => void;
 }
 
+const THEME_IDS: ThemeId[] = ['violet', 'dark', 'ocean', 'orange', 'nature'];
+
+function loadTheme(): ThemeId {
+  const stored = localStorage.getItem('dh-theme');
+  return THEME_IDS.includes(stored as ThemeId) ? (stored as ThemeId) : 'violet';
+}
+
 export const useUiStore = create<UiStore>()((set) => ({
   dashboardWidgets: defaultWidgets,
   toggleWidget: (id) =>
@@ -65,7 +72,7 @@ export const useUiStore = create<UiStore>()((set) => ({
       }),
       gridLayouts: Object.keys(layouts).length > 0 ? layouts : DEFAULT_LAYOUTS,
     })),
-  theme: (localStorage.getItem('dh-theme') as ThemeId) ?? 'violet',
+  theme: loadTheme(),
   setTheme: (theme) => {
     localStorage.setItem('dh-theme', theme);
     document.documentElement.setAttribute('data-theme', theme);
