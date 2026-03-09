@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { LayoutItem } from '../types';
 
 export type WidgetId = 'repositories' | 'pullRequests';
+export type ThemeId = 'violet' | 'dark' | 'ocean' | 'orange' | 'nature';
 
 export type { LayoutItem };
 
@@ -41,6 +42,8 @@ interface UiStore {
   setGridLayouts: (layouts: BreakpointLayouts) => void;
   resetGridLayouts: () => void;
   hydrate: (widgets: { id: string; enabled: boolean }[], layouts: BreakpointLayouts) => void;
+  theme: ThemeId;
+  setTheme: (theme: ThemeId) => void;
 }
 
 export const useUiStore = create<UiStore>()((set) => ({
@@ -62,4 +65,10 @@ export const useUiStore = create<UiStore>()((set) => ({
       }),
       gridLayouts: Object.keys(layouts).length > 0 ? layouts : DEFAULT_LAYOUTS,
     })),
+  theme: (localStorage.getItem('dh-theme') as ThemeId) ?? 'violet',
+  setTheme: (theme) => {
+    localStorage.setItem('dh-theme', theme);
+    document.documentElement.setAttribute('data-theme', theme);
+    set({ theme });
+  },
 }));

@@ -1,6 +1,10 @@
 ﻿import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useUiStore, type DashboardWidget } from "../store/uiStore";
+import {
+  useUiStore,
+  type DashboardWidget,
+  type ThemeId,
+} from "../store/uiStore";
 import { configApi } from "../api/config";
 import type { AppConfig } from "../types";
 import "./DashboardSettingsModal.css";
@@ -112,6 +116,7 @@ function WidgetRow({ widget, onToggle }: RowProps) {
 /* ──────────────────────────────────────────────────── App Settings tab ── */
 
 function SettingsTab({ onClose }: { onClose: () => void }) {
+  const { theme, setTheme } = useUiStore();
   const { data, isLoading } = useQuery({
     queryKey: ["config"],
     queryFn: configApi.get,
@@ -268,6 +273,30 @@ function SettingsTab({ onClose }: { onClose: () => void }) {
               }
             />
           </Field>
+        </div>
+      </Section>
+
+      <Section title="Appearance">
+        <div className="theme-picker">
+          {(
+            [
+              ["violet", "Violet"],
+              ["dark", "Dark"],
+              ["ocean", "Ocean"],
+              ["orange", "Orange"],
+              ["nature", "Nature"],
+            ] as [ThemeId, string][]
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              className={`theme-option${theme === id ? " theme-option--active" : ""}`}
+              onClick={() => setTheme(id)}
+            >
+              <div className={`theme-swatch theme-swatch--${id}`} />
+              {label}
+            </button>
+          ))}
         </div>
       </Section>
 
