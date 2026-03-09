@@ -248,13 +248,23 @@ function SettingsTab({ onClose }: { onClose: () => void }) {
               }
             />
           </Field>
-          <Field label="Entry point search depth">
+          <Field label="Repository scan depth">
             <input
               type="number"
               className="settings-input settings-input--narrow"
-              value={form.entryPointMaxDepth}
+              value={form.repoScanDepth}
               onChange={(e) =>
-                setField("entryPointMaxDepth", Number(e.target.value))
+                setField("repoScanDepth", Number(e.target.value))
+              }
+            />
+          </Field>
+          <Field label="Entry point scan depth">
+            <input
+              type="number"
+              className="settings-input settings-input--narrow"
+              value={form.entryPointScanDepth}
+              onChange={(e) =>
+                setField("entryPointScanDepth", Number(e.target.value))
               }
             />
           </Field>

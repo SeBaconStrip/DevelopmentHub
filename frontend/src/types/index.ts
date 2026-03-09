@@ -24,19 +24,6 @@ export interface OpenRepositoryRequest {
   openWith: 'VisualStudio' | 'VsCode' | 'Explorer';
 }
 
-export interface Execution {
-  id: string;
-  scriptDefinitionId: string;
-  scriptName: string;
-  startedAt: string;
-  finishedAt: string | null;
-  exitCode: number | null;
-  status: 'Running' | 'Success' | 'Failed' | 'Cancelled';
-}
-
-export interface ExecutionDetail extends Execution {
-  outputLog: string;
-}
 
 export interface PullRequest {
   prId: number;
@@ -61,21 +48,12 @@ export interface AzureDevOpsConfig {
   pat: string;
 }
 
-export interface ScriptConfig {
-  id: string;
-  name: string;
-  description: string;
-  workingDirectory: string;
-  command: string;
-  arguments: string[];
-  environmentVariables: Record<string, string>;
-}
-
 export interface AppConfig {
   repositoryRoots: string[];
   azureDevOps: AzureDevOpsConfig;
   scanIntervalMinutes: number;
-  entryPointMaxDepth: number;
+  repoScanDepth: number;
+  entryPointScanDepth: number;
   hotkeyBinding: string;
 }
 

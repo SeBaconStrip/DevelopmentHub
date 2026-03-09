@@ -1,4 +1,4 @@
-﻿import { useState, useRef, useEffect } from "react";
+﻿import { useState, useRef, useEffect, Fragment } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Responsive, useContainerWidth } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
@@ -52,10 +52,23 @@ export default function DashboardPage() {
   // Save dashboard config to backend (debounced for layout changes)
   const saveMutation = useMutation({ mutationFn: dashboardConfigApi.save });
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isMounted = useRef(true);
+
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+      if (saveTimer.current) {
+        clearTimeout(saveTimer.current);
+        saveTimer.current = null;
+      }
+    };
+  }, []);
 
   function scheduleSave(delay = 1500) {
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
+      if (!isMounted.current) return;
       const { dashboardWidgets: w, gridLayouts: g } = useUiStore.getState();
       saveMutation.mutate({
         widgets: w.map(({ id, enabled }) => ({ id, enabled })),
@@ -334,14 +347,14 @@ function RepositoriesBody({
 
       {/* rows */}
       {repos.map((r) => (
-        <>
+        <Fragment key={r.id}>
           {/* name */}
-          <div key={r.id + "-name"} className="repo-cell repo-col-name">
+          <div className="repo-cell repo-col-name">
             <span className="item-name">{r.name}</span>
           </div>
 
           {/* branch + ahead/behind */}
-          <div key={r.id + "-branch"} className="repo-cell repo-col-branch">
+          <div className="repo-cell repo-col-branch">
             {r.currentBranch && (
               <div className="item-branch-row">
                 <span className="item-branch">{r.currentBranch}</span>
@@ -356,7 +369,7 @@ function RepositoriesBody({
           </div>
 
           {/* VS Code */}
-          <div key={r.id + "-vscode"} className="repo-cell repo-col-icon">
+          <div className="repo-cell repo-col-icon">
             {r.entryPoints.some(
               (ep) => ep.type === "CodeWorkspace" || ep.type === "Folder",
             ) && (
@@ -377,7 +390,7 @@ function RepositoriesBody({
           </div>
 
           {/* Visual Studio */}
-          <div key={r.id + "-vs"} className="repo-cell repo-col-icon">
+          <div className="repo-cell repo-col-icon">
             {r.entryPoints.some((ep) => ep.type === "Solution") && (
               <button
                 className="item-open-icon"
@@ -396,7 +409,7 @@ function RepositoriesBody({
           </div>
 
           {/* Explorer */}
-          <div key={r.id + "-explorer"} className="repo-cell repo-col-icon">
+          <div className="repo-cell repo-col-icon">
             <button
               className="item-open-icon"
               onClick={() => onOpen(r.id, "Explorer")}
@@ -413,7 +426,7 @@ function RepositoriesBody({
           </div>
 
           {/* Favourite */}
-          <div key={r.id + "-fav"} className="repo-cell repo-col-fav">
+          <div className="repo-cell repo-col-fav">
             <button
               className={`repo-fav-btn${r.isFavorite ? " repo-fav-btn--active" : ""}`}
               onClick={() => onToggleFav(r.id)}
@@ -424,7 +437,7 @@ function RepositoriesBody({
               ★
             </button>
           </div>
-        </>
+        </Fragment>
       ))}
     </div>
   );
