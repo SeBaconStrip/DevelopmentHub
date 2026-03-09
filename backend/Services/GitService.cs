@@ -6,16 +6,17 @@ namespace DevelopmentHub.Api.Services;
 
 public interface IGitService
 {
-    Task<List<RepositoryEntity>> ScanDirectoriesAsync(string[] rootPaths, int maxEntryPointDepth);
+    Task<List<RepositoryDao>> ScanDirectoriesAsync(string[] rootPaths, int repoScanDepth, int entryPointScanDepth);
+    Task FetchAsync(string repoPath, CancellationToken cancellationToken);
     Task<(string? Branch, int AheadBy, int BehindBy)> GetBranchStatusAsync(string repoPath);
     Task<(bool Success, string Output)> SyncRepositoryAsync(string repoPath, CancellationToken cancellationToken);
 }
 
 public class GitService(ILogger<GitService> logger) : IGitService
 {
-    public Task<List<RepositoryEntity>> ScanDirectoriesAsync(string[] rootPaths, int maxEntryPointDepth)
+    public Task<List<RepositoryDao>> ScanDirectoriesAsync(string[] rootPaths, int repoScanDepth, int entryPointScanDepth)
     {
-        var repos = new List<RepositoryEntity>();
+        var repos = new List<RepositoryDao>();
 
         foreach (var root in rootPaths)
         {
@@ -25,21 +26,23 @@ public class GitService(ILogger<GitService> logger) : IGitService
                 continue;
             }
 
-            ScanDirectory(root, repos, maxEntryPointDepth);
+            ScanDirectory(root, repos, 0, repoScanDepth, entryPointScanDepth);
         }
 
         return Task.FromResult(repos);
     }
 
-    private void ScanDirectory(string directory, List<RepositoryEntity> results, int maxEntryPointDepth)
+    private void ScanDirectory(string directory, List<RepositoryDao> results, int depth, int repoScanDepth, int entryPointScanDepth)
     {
+        if (depth > repoScanDepth) return;
+
         try
         {
             var gitDir = System.IO.Path.Combine(directory, ".git");
             if (Directory.Exists(gitDir) || File.Exists(gitDir))
             {
                 // This is a repo — don't recurse further into it
-                var entity = BuildRepositoryEntity(directory, maxEntryPointDepth);
+                var entity = BuildRepositoryEntity(directory, entryPointScanDepth);
                 results.Add(entity);
                 return;
             }
@@ -51,7 +54,7 @@ public class GitService(ILogger<GitService> logger) : IGitService
                 if (dirName.StartsWith('.') || dirName.Equals("node_modules", StringComparison.OrdinalIgnoreCase))
                     continue;
 
-                ScanDirectory(subDir, results, maxEntryPointDepth);
+                ScanDirectory(subDir, results, depth + 1, repoScanDepth, entryPointScanDepth);
             }
         }
         catch (UnauthorizedAccessException ex)
@@ -64,10 +67,10 @@ public class GitService(ILogger<GitService> logger) : IGitService
         }
     }
 
-    private RepositoryEntity BuildRepositoryEntity(string repoPath, int maxEntryPointDepth)
+    private RepositoryDao BuildRepositoryEntity(string repoPath, int maxEntryPointDepth)
     {
         var name = System.IO.Path.GetFileName(repoPath);
-        var entity = new RepositoryEntity
+        var entity = new RepositoryDao
         {
             Name = name,
             Path = repoPath,
@@ -125,6 +128,13 @@ public class GitService(ILogger<GitService> logger) : IGitService
             }
         }
         catch { /* ignore inaccessible dirs */ }
+    }
+
+    public async Task FetchAsync(string repoPath, CancellationToken cancellationToken)
+    {
+        var (success, output) = await RunGitCommandAsync(repoPath, ["fetch", "--prune"], cancellationToken);
+        if (!success)
+            logger.LogWarning("git fetch --prune failed for {Path}: {Output}", repoPath, output);
     }
 
     public Task<(string? Branch, int AheadBy, int BehindBy)> GetBranchStatusAsync(string repoPath)

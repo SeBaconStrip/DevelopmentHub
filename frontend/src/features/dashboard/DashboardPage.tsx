@@ -1,79 +1,508 @@
-import { useQuery } from '@tanstack/react-query';
-import { repositoriesApi } from '../api/repositories';
-import { pullRequestsApi } from '../api/pullRequests';
-import { scriptsApi } from '../api/scripts';
-import { Link } from 'react-router-dom';
+﻿import { useState, useRef, useEffect, Fragment } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { Responsive, useContainerWidth } from "react-grid-layout";
+import "react-grid-layout/css/styles.css";
+import "react-resizable/css/styles.css";
+import "./DashboardPage.css";
 
-function StatCard({ label, value, to }: { label: string; value: string | number; to: string }) {
+import { fetchRepositories, repositoriesApi } from "../../api/repositories";
+import vscodeIconUrl from "../../assets/icons/vscode.svg";
+import visualStudioIconUrl from "../../assets/icons/visualstudio.svg";
+import explorerIconUrl from "../../assets/icons/windows-explorer.svg";
+import { fetchPullRequests } from "../../api/pullRequests";
+import { dashboardConfigApi } from "../../api/config";
+import {
+  useUiStore,
+  type BreakpointLayouts,
+  type WidgetId,
+} from "../../store/uiStore";
+import { DashboardSettingsModal } from "../../components/DashboardSettingsModal";
+import type { Repository, PullRequest } from "../../types";
+
+/* ─────────────────────────────────────────────────────────────── layout ── */
+
+export default function DashboardPage() {
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+
+  const {
+    dashboardWidgets,
+    toggleWidget,
+    gridLayouts,
+    setGridLayouts,
+    resetGridLayouts,
+    hydrate,
+  } = useUiStore();
+
+  // Load dashboard config from backend and hydrate the store
+  const { data: dashboardConfig } = useQuery({
+    queryKey: ["dashboardConfig"],
+    queryFn: dashboardConfigApi.get,
+    staleTime: Infinity,
+  });
+  useEffect(() => {
+    if (dashboardConfig) {
+      hydrate(
+        dashboardConfig.widgets,
+        dashboardConfig.gridLayouts as BreakpointLayouts,
+      );
+    }
+  }, [dashboardConfig, hydrate]);
+
+  // Save dashboard config to backend (debounced for layout changes)
+  const saveMutation = useMutation({ mutationFn: dashboardConfigApi.save });
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isMounted = useRef(true);
+
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+      if (saveTimer.current) {
+        clearTimeout(saveTimer.current);
+        saveTimer.current = null;
+      }
+    };
+  }, []);
+
+  function scheduleSave(delay = 1500) {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      if (!isMounted.current) return;
+      const { dashboardWidgets: w, gridLayouts: g } = useUiStore.getState();
+      saveMutation.mutate({
+        widgets: w.map(({ id, enabled }) => ({ id, enabled })),
+        gridLayouts: g,
+      });
+    }, delay);
+  }
+
+  const { data: repos = [], refetch: refetchRepos } = useQuery<Repository[]>({
+    queryKey: ["repositories"],
+    queryFn: fetchRepositories,
+  });
+
+  const openRepo = useMutation({
+    mutationFn: ({
+      id,
+      openWith,
+    }: {
+      id: string;
+      openWith: "VsCode" | "VisualStudio" | "Explorer";
+    }) => repositoriesApi.open(id, { openWith }),
+  });
+
+  const toggleFav = useMutation({
+    mutationFn: (id: string) => repositoriesApi.toggleFavorite(id),
+    onSuccess: () => refetchRepos(),
+  });
+  const { data: prs = [] } = useQuery<PullRequest[]>({
+    queryKey: ["pullrequests"],
+    queryFn: fetchPullRequests,
+    refetchInterval: 120_000,
+  });
+
+  type WidgetConfig = {
+    body: React.ReactNode;
+    badge?: number;
+    headerActions?: React.ReactNode;
+  };
+  const widgetMap: Record<WidgetId, WidgetConfig> = {
+    repositories: {
+      body: (
+        <RepositoriesBody
+          repos={repos}
+          onOpen={(id, openWith) => openRepo.mutate({ id, openWith })}
+          onToggleFav={(id) => toggleFav.mutate(id)}
+        />
+      ),
+      badge: repos.length,
+      headerActions: (
+        <button
+          className="panel-action-btn"
+          onClick={() => refetchRepos()}
+          title="Repositories aktualisieren"
+        >
+          ↻
+        </button>
+      ),
+    },
+    pullRequests: { body: <PullRequestsBody prs={prs} /> },
+  };
+
+  const enabled = dashboardWidgets.filter(
+    (w) => w.enabled && w.id in widgetMap,
+  );
+  const disabled = dashboardWidgets.filter(
+    (w) => !w.enabled && w.id in widgetMap,
+  );
+
+  const filteredLayouts: BreakpointLayouts = Object.fromEntries(
+    Object.entries(gridLayouts).map(([bp, items]) => [
+      bp,
+      items.filter((item) => enabled.some((w) => w.id === item.i)),
+    ]),
+  );
+
+  const { containerRef, width: containerWidth } = useContainerWidth();
+
+  function handleLayoutChange(_: unknown, layouts: unknown) {
+    setGridLayouts(layouts as BreakpointLayouts);
+    scheduleSave();
+  }
+
+  function handleToggleWidget(id: WidgetId) {
+    toggleWidget(id);
+    scheduleSave(0);
+  }
+
+  function handleResetGridLayouts() {
+    resetGridLayouts();
+    scheduleSave(0);
+  }
+
   return (
-    <Link to={to} className="bg-white border border-gray-200 rounded-xl p-5 flex flex-col gap-1 hover:shadow-md transition-shadow">
-      <span className="text-3xl font-bold text-gray-900">{value}</span>
-      <span className="text-sm text-gray-500">{label}</span>
-    </Link>
+    <div className="dash-root">
+      {/* top header bar */}
+      <header className="dash-header">
+        <div>
+          <h1 className="dash-title">Development Hub</h1>
+          <p className="dash-subtitle">
+            {enabled.length} panel{enabled.length !== 1 ? "s" : ""} active
+          </p>
+        </div>
+        <div className="dash-header-actions">
+          {isEditMode && (
+            <button
+              className="btn-ghost"
+              onClick={handleResetGridLayouts}
+              title="Reset panel positions to defaults"
+            >
+              ↺ Reset
+            </button>
+          )}
+          <button className="btn-ghost" onClick={() => setShowSettings(true)}>
+            ⚙ Settings
+          </button>
+          <button
+            className={isEditMode ? "btn-edit-done" : "btn-edit-layout"}
+            onClick={() => setIsEditMode((v) => !v)}
+          >
+            {isEditMode ? "✓ Done" : "✎ Edit Layout"}
+          </button>
+        </div>
+      </header>
+
+      <div className="dash-page">
+        {/* edit mode: re-add hidden panels */}
+        {isEditMode && disabled.length > 0 && (
+          <div className="dash-hidden-panels">
+            <span className="dash-hidden-label">Hidden panels:</span>
+            {disabled.map((w) => (
+              <button
+                key={w.id}
+                className="btn-add-panel"
+                onClick={() => handleToggleWidget(w.id)}
+              >
+                {w.icon} + {w.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {isEditMode && (
+          <div className="dash-edit-hint">
+            <span>✋</span>
+            Drag panels by their header · resize from any edge · click ✕ to hide
+          </div>
+        )}
+
+        {enabled.length === 0 ? (
+          <div className="card dash-empty-card">
+            <p>No panels visible</p>
+            <p>
+              Open <strong>⚙ Settings</strong> or use{" "}
+              <strong>✎ Edit Layout</strong> to add panels.
+            </p>
+          </div>
+        ) : (
+          <div ref={containerRef}>
+            <Responsive
+              width={containerWidth}
+              layouts={filteredLayouts}
+              breakpoints={{ lg: 1200, md: 900, sm: 600, xs: 0 }}
+              cols={{ lg: 12, md: 10, sm: 6, xs: 4 }}
+              rowHeight={54}
+              dragConfig={
+                { enabled: isEditMode, handle: ".drag-handle" } as object
+              }
+              resizeConfig={
+                { enabled: isEditMode, handles: ["se", "s", "e"] } as object
+              }
+              onLayoutChange={handleLayoutChange}
+              margin={[16, 16]}
+              containerPadding={[0, 0]}
+            >
+              {enabled.map((w) => (
+                <div key={w.id} className="panel-wrapper">
+                  <Panel
+                    icon={w.icon}
+                    title={w.label}
+                    badge={widgetMap[w.id].badge}
+                    headerActions={widgetMap[w.id].headerActions}
+                    isEditMode={isEditMode}
+                    onClose={() => handleToggleWidget(w.id)}
+                  >
+                    {widgetMap[w.id].body}
+                  </Panel>
+                </div>
+              ))}
+            </Responsive>
+          </div>
+        )}
+
+        {showSettings && (
+          <DashboardSettingsModal onClose={() => setShowSettings(false)} />
+        )}
+      </div>
+    </div>
   );
 }
 
-export function DashboardPage() {
-  const { data: repos = [] } = useQuery({ queryKey: ['repositories'], queryFn: repositoriesApi.getAll });
-  const { data: prs = [] } = useQuery({ queryKey: ['pullrequests'], queryFn: pullRequestsApi.getOpen, staleTime: 60_000 });
-  const { data: executions = [] } = useQuery({ queryKey: ['executions'], queryFn: () => scriptsApi.getHistory(10), refetchInterval: 5000 });
+/* ─────────────────────────────────────────────────────────────── Panel ── */
 
-  const runningCount = executions.filter(e => e.status === 'Running').length;
-  const favoriteCount = repos.filter(r => r.isFavorite).length;
-
+function Panel({
+  icon,
+  title,
+  badge,
+  headerActions,
+  isEditMode,
+  onClose,
+  children,
+}: {
+  icon: string;
+  title: string;
+  badge?: number;
+  headerActions?: React.ReactNode;
+  isEditMode: boolean;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="p-6 flex flex-col gap-6">
-      <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <StatCard label="Repositories" value={repos.length} to="/repositories" />
-        <StatCard label="Favorites" value={favoriteCount} to="/repositories" />
-        <StatCard label="Open PRs" value={prs.length} to="/pull-requests" />
-        <StatCard label="Running Scripts" value={runningCount} to="/scripts" />
+    <div className={`panel${isEditMode ? " panel--editing" : ""}`}>
+      <div
+        className={`panel-header${isEditMode ? " drag-handle panel-header--draggable" : ""}`}
+      >
+        {isEditMode && <span className="panel-grip">⠿</span>}
+        <span className="panel-icon">{icon}</span>
+        <span className="panel-title">{title}</span>
+        {badge != null && <span className="panel-badge">{badge}</span>}
+        {headerActions && !isEditMode && (
+          <div
+            className="panel-header-actions"
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            {headerActions}
+          </div>
+        )}
+        {isEditMode && (
+          <button
+            className="panel-close-btn"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={onClose}
+          >
+            ✕
+          </button>
+        )}
       </div>
-
-      {repos.slice(0, 5).length > 0 && (
-        <section>
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Recent Repositories</h2>
-          <div className="bg-white border border-gray-200 rounded-lg divide-y divide-gray-100">
-            {repos.slice(0, 5).map(r => (
-              <div key={r.id} className="px-4 py-3 flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2">
-                  {r.isFavorite && <span className="text-yellow-400">★</span>}
-                  <span className="font-medium text-gray-800">{r.name}</span>
-                  {r.currentBranch && (
-                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded font-mono">{r.currentBranch}</span>
-                  )}
-                </div>
-                {r.lastOpenedAt && (
-                  <span className="text-xs text-gray-400">{new Date(r.lastOpenedAt).toLocaleDateString()}</span>
-                )}
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {executions.length > 0 && (
-        <section>
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Recent Script Runs</h2>
-          <div className="bg-white border border-gray-200 rounded-lg divide-y divide-gray-100">
-            {executions.slice(0, 5).map(e => (
-              <div key={e.id} className="px-4 py-3 flex items-center justify-between text-sm">
-                <span className="font-medium text-gray-800">{e.scriptName}</span>
-                <div className="flex items-center gap-3">
-                  <span className={`text-xs font-medium ${
-                    e.status === 'Success' ? 'text-green-600' :
-                    e.status === 'Running' ? 'text-blue-600' :
-                    e.status === 'Failed' ? 'text-red-500' : 'text-gray-400'
-                  }`}>{e.status}</span>
-                  <span className="text-xs text-gray-400">{new Date(e.startedAt).toLocaleTimeString()}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+      <div className="panel-body">{children}</div>
     </div>
   );
+}
+
+/* ───────────────────────────────────────────────── Repositories body ── */
+
+function RepositoriesBody({
+  repos,
+  onOpen,
+  onToggleFav,
+}: {
+  repos: Repository[];
+  onOpen: (
+    id: string,
+    openWith: "VsCode" | "VisualStudio" | "Explorer",
+  ) => void;
+  onToggleFav: (id: string) => void;
+}) {
+  if (repos.length === 0) return <Empty text="No repositories found" />;
+  return (
+    <div className="repo-grid">
+      {/* header */}
+      <div className="repo-grid-header repo-col-name">Repository</div>
+      <div className="repo-grid-header repo-col-branch">Branch</div>
+      <div className="repo-grid-header repo-col-icon" />
+      <div className="repo-grid-header repo-col-icon" />
+      <div className="repo-grid-header repo-col-icon" />
+      <div className="repo-grid-header repo-col-fav" />
+
+      {/* rows */}
+      {repos.map((r) => (
+        <Fragment key={r.id}>
+          {/* name */}
+          <div className="repo-cell repo-col-name">
+            <span className="item-name">{r.name}</span>
+          </div>
+
+          {/* branch + ahead/behind */}
+          <div className="repo-cell repo-col-branch">
+            {r.currentBranch && (
+              <div className="item-branch-row">
+                <span className="item-branch">{r.currentBranch}</span>
+                {(r.aheadBy ?? 0) > 0 && (
+                  <span className="item-ahead">↑{r.aheadBy}</span>
+                )}
+                {(r.behindBy ?? 0) > 0 && (
+                  <span className="item-behind">↓{r.behindBy}</span>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* VS Code */}
+          <div className="repo-cell repo-col-icon">
+            {r.entryPoints.some(
+              (ep) => ep.type === "CodeWorkspace" || ep.type === "Folder",
+            ) && (
+              <button
+                className="item-open-icon"
+                onClick={() => onOpen(r.id, "VsCode")}
+                title="In VS Code öffnen"
+              >
+                <img
+                  src={vscodeIconUrl}
+                  width="24"
+                  height="24"
+                  alt="VS Code"
+                  draggable={false}
+                />
+              </button>
+            )}
+          </div>
+
+          {/* Visual Studio */}
+          <div className="repo-cell repo-col-icon">
+            {r.entryPoints.some((ep) => ep.type === "Solution") && (
+              <button
+                className="item-open-icon"
+                onClick={() => onOpen(r.id, "VisualStudio")}
+                title="In Visual Studio öffnen"
+              >
+                <img
+                  src={visualStudioIconUrl}
+                  width="24"
+                  height="24"
+                  alt="Visual Studio"
+                  draggable={false}
+                />
+              </button>
+            )}
+          </div>
+
+          {/* Explorer */}
+          <div className="repo-cell repo-col-icon">
+            <button
+              className="item-open-icon"
+              onClick={() => onOpen(r.id, "Explorer")}
+              title="In Explorer öffnen"
+            >
+              <img
+                src={explorerIconUrl}
+                width="24"
+                height="24"
+                alt="Explorer"
+                draggable={false}
+              />
+            </button>
+          </div>
+
+          {/* Favourite */}
+          <div className="repo-cell repo-col-fav">
+            <button
+              className={`repo-fav-btn${r.isFavorite ? " repo-fav-btn--active" : ""}`}
+              onClick={() => onToggleFav(r.id)}
+              title={
+                r.isFavorite ? "Favorit entfernen" : "Als Favorit markieren"
+              }
+            >
+              ★
+            </button>
+          </div>
+        </Fragment>
+      ))}
+    </div>
+  );
+}
+
+/* ───────────────────────────────────────────────── Pull Requests body ── */
+
+const VOTE_CHIP: Record<number, { bg: string; fg: string; label: string }> = {
+  10: { bg: "#dcfce7", fg: "#15803d", label: "Approved" },
+  5: { bg: "#bbf7d0", fg: "#166534", label: "Approved+" },
+  0: { bg: "#f3f4f6", fg: "#6b7280", label: "No vote" },
+  [-5]: { bg: "#fef3c7", fg: "#d97706", label: "Waiting" },
+  [-10]: { bg: "#fee2e2", fg: "#dc2626", label: "Rejected" },
+};
+
+function PullRequestsBody({ prs }: { prs: PullRequest[] }) {
+  if (prs.length === 0) return <Empty text="No pull requests" />;
+  return (
+    <div>
+      {prs.map((pr) => {
+        const vote = VOTE_CHIP[pr.reviewerVote] ?? VOTE_CHIP[0];
+        return (
+          <div key={pr.prId} className="item-row">
+            <div className="item-main">
+              <div className="item-pr-top">
+                <Chip
+                  bg={pr.isDraft ? "#f3f4f6" : "#ede9fe"}
+                  fg={pr.isDraft ? "#6b7280" : "#7c3aed"}
+                >
+                  {pr.isDraft ? "DRAFT" : "OPEN"}
+                </Chip>
+                <span className="item-pr-title">{pr.title}</span>
+              </div>
+              <span className="item-meta">{pr.repositoryName}</span>
+            </div>
+            {pr.isReviewer && (
+              <Chip bg={vote.bg} fg={vote.fg}>
+                {vote.label}
+              </Chip>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────── shared ── */
+
+function Chip({
+  bg,
+  fg,
+  children,
+}: {
+  bg: string;
+  fg: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <span className="chip" style={{ background: bg, color: fg }}>
+      {children}
+    </span>
+  );
+}
+
+function Empty({ text }: { text: string }) {
+  return <p className="empty-msg">{text}</p>;
 }

@@ -39,5 +39,6 @@ public class OpenRepositoryRequest
 public enum OpenWith
 {
     VisualStudio,
-    VsCode
+    VsCode,
+    Explorer
 }

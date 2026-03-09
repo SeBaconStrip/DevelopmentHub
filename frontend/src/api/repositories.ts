@@ -10,6 +10,9 @@ async function handleResponse<T>(res: Response): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+export const fetchRepositories = (): Promise<Repository[]> =>
+  fetch(`${BASE}/repositories`).then(r => handleResponse(r));
+
 export const repositoriesApi = {
   getAll: (): Promise<Repository[]> =>
     fetch(`${BASE}/repositories`).then(r => handleResponse(r)),

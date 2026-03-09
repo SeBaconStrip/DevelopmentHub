@@ -6,6 +6,7 @@ public interface ILauncherService
 {
     Task<bool> OpenWithVisualStudioAsync(string solutionPath);
     Task<bool> OpenWithVsCodeAsync(string pathOrWorkspace);
+    Task<bool> OpenWithExplorerAsync(string folderPath);
 }
 
 public class LauncherService(ILogger<LauncherService> logger) : ILauncherService
@@ -22,6 +23,12 @@ public class LauncherService(ILogger<LauncherService> logger) : ILauncherService
         return LaunchAsync("code", [pathOrWorkspace]);
     }
 
+    public Task<bool> OpenWithExplorerAsync(string folderPath)
+    {
+        logger.LogInformation("Opening {Path} in Explorer", folderPath);
+        return LaunchAsync("explorer.exe", [folderPath]);
+    }
+
     private async Task<bool> LaunchAsync(string command, string[] args)
     {
         try
@@ -29,12 +36,10 @@ public class LauncherService(ILogger<LauncherService> logger) : ILauncherService
             var psi = new System.Diagnostics.ProcessStartInfo
             {
                 FileName = command,
-                UseShellExecute = false,
-                CreateNoWindow = true
+                UseShellExecute = true,
+                // Build a quoted argument string — ArgumentList is not supported with UseShellExecute = true
+                Arguments = string.Join(" ", args.Select(a => a.Contains(' ') ? $"\"{a}\"" : a))
             };
-
-            foreach (var arg in args)
-                psi.ArgumentList.Add(arg);
 
             using var process = new System.Diagnostics.Process { StartInfo = psi };
             process.Start();

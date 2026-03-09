@@ -1,8 +1,8 @@
 {
   "folders": [
     {
-      "path": "."
-    }
+      "path": ".",
+    },
   ],
   "settings": {
     "files.exclude": {
@@ -10,21 +10,24 @@
       "**/obj": true,
       "**/node_modules": true,
       "**/dist": true,
-      "**/.git": true
+      "**/.git": true,
     },
     "editor.formatOnSave": true,
     "editor.rulers": [120],
-    "dotnet.defaultSolution": "DevelopmentHub.sln"
+    "dotnet.defaultSolution": "DevelopmentHub.sln",
   },
   "tasks": {
     "version": "2.0.0",
     "tasks": [
       {
-        "label": "backend: run",
+        "label": "app: run",
         "type": "shell",
         "command": "dotnet run",
         "options": {
-          "cwd": "${workspaceFolder}/backend"
+          "cwd": "${workspaceFolder}/app",
+          "env": {
+            "ASPNETCORE_ENVIRONMENT": "Development",
+          },
         },
         "isBackground": true,
         "problemMatcher": {
@@ -34,27 +37,57 @@
             "line": 2,
             "column": 3,
             "severity": 4,
-            "message": 5
+            "message": 5,
           },
           "background": {
             "activeOnStart": true,
             "beginsPattern": "Building\\.\\.\\.",
-            "endsPattern": "Now listening on:"
-          }
+            "endsPattern": "Now listening on:",
+          },
         },
         "presentation": {
           "group": "devservers",
           "reveal": "always",
           "panel": "dedicated",
-          "label": "Backend (dotnet run)"
-        }
+          "label": "App (dotnet run)",
+        },
+      },
+      {
+        "label": "backend: run",
+        "type": "shell",
+        "command": "dotnet run",
+        "options": {
+          "cwd": "${workspaceFolder}/backend",
+        },
+        "isBackground": true,
+        "problemMatcher": {
+          "pattern": {
+            "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
+            "file": 1,
+            "line": 2,
+            "column": 3,
+            "severity": 4,
+            "message": 5,
+          },
+          "background": {
+            "activeOnStart": true,
+            "beginsPattern": "Building\\.\\.\\.",
+            "endsPattern": "Now listening on:",
+          },
+        },
+        "presentation": {
+          "group": "devservers",
+          "reveal": "always",
+          "panel": "dedicated",
+          "label": "Backend (dotnet run)",
+        },
       },
       {
         "label": "frontend: dev",
         "type": "shell",
         "command": "npm run dev",
         "options": {
-          "cwd": "${workspaceFolder}/frontend"
+          "cwd": "${workspaceFolder}/frontend",
         },
         "isBackground": true,
         "problemMatcher": {
@@ -62,100 +95,112 @@
             "regexp": "^$",
             "file": 1,
             "line": 2,
-            "message": 3
+            "message": 3,
           },
           "background": {
             "activeOnStart": true,
             "beginsPattern": "VITE",
-            "endsPattern": "Local:"
-          }
+            "endsPattern": "Local:",
+          },
         },
         "presentation": {
           "group": "devservers",
           "reveal": "always",
           "panel": "dedicated",
-          "label": "Frontend (vite dev)"
-        }
+          "label": "Frontend (vite dev)",
+        },
       },
       {
         "label": "dev: start all",
-        "dependsOn": ["backend: run", "frontend: dev"],
+        "dependsOn": ["app: run", "frontend: dev"],
         "dependsOrder": "parallel",
         "group": {
           "kind": "build",
-          "isDefault": true
+          "isDefault": true,
         },
         "problemMatcher": [],
         "presentation": {
-          "reveal": "silent"
-        }
+          "reveal": "silent",
+        },
       },
       {
         "label": "backend: build",
         "type": "shell",
         "command": "dotnet build",
         "options": {
-          "cwd": "${workspaceFolder}/backend"
+          "cwd": "${workspaceFolder}/backend",
         },
         "group": "build",
         "problemMatcher": "$msCompile",
         "presentation": {
           "reveal": "always",
-          "panel": "shared"
-        }
+          "panel": "shared",
+        },
       },
       {
         "label": "frontend: install",
         "type": "shell",
         "command": "npm install",
         "options": {
-          "cwd": "${workspaceFolder}/frontend"
+          "cwd": "${workspaceFolder}/frontend",
         },
         "problemMatcher": [],
         "presentation": {
           "reveal": "always",
-          "panel": "shared"
-        }
+          "panel": "shared",
+        },
       },
       {
         "label": "frontend: type-check",
         "type": "shell",
         "command": "npx tsc --noEmit",
         "options": {
-          "cwd": "${workspaceFolder}/frontend"
+          "cwd": "${workspaceFolder}/frontend",
         },
         "problemMatcher": "$tsc",
         "presentation": {
           "reveal": "always",
-          "panel": "shared"
-        }
+          "panel": "shared",
+        },
       },
       {
         "label": "frontend: build",
         "type": "shell",
         "command": "npm run build",
         "options": {
-          "cwd": "${workspaceFolder}/frontend"
+          "cwd": "${workspaceFolder}/frontend",
         },
         "group": "build",
         "problemMatcher": "$tsc",
         "presentation": {
           "reveal": "always",
-          "panel": "shared"
-        }
-      }
-    ]
+          "panel": "shared",
+        },
+      },
+    ],
   },
   "launch": {
     "version": "0.2.0",
     "configurations": [
       {
+        "name": "Debug App (Dev)",
+        "type": "coreclr",
+        "request": "launch",
+        "program": "${workspaceFolder}/app/bin/Debug/net9.0-windows/DevelopmentHub.App.exe",
+        "cwd": "${workspaceFolder}/app",
+        "env": {
+          "ASPNETCORE_ENVIRONMENT": "Development",
+        },
+        "stopAtEntry": false,
+        "console": "internalConsole",
+      },
+      {
         "name": "Attach to Backend",
         "type": "coreclr",
         "request": "attach",
-        "processId": "${command:pickProcess}"
-      }
-    ]
+        "processId": "${command:pickProcess}",
+      },
+    ],
   },
   "extensions": {
     "recommendations": [
@@ -163,7 +208,7 @@
       "ms-dotnettools.csharp",
       "dbaeumer.vscode-eslint",
       "esbenp.prettier-vscode",
-      "mongodb.mongodb-vscode"
-    ]
-  }
+      "mongodb.mongodb-vscode",
+    ],
+  },
 }

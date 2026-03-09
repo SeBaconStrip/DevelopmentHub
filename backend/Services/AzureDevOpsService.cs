@@ -1,7 +1,6 @@
 using DevelopmentHub.Api.Configuration;
 using DevelopmentHub.Api.Models.Dtos;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Options;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -16,11 +15,10 @@ public interface IAzureDevOpsService
 
 public class AzureDevOpsService(
     IHttpClientFactory httpClientFactory,
-    IOptions<AppSettings> settings,
+    IUserConfigService userConfigService,
     IMemoryCache cache,
     ILogger<AzureDevOpsService> logger) : IAzureDevOpsService
 {
-    private readonly AppSettings _settings = settings.Value;
     private const string CacheKey = "azdo_pullrequests";
     private static readonly TimeSpan CacheDuration = TimeSpan.FromSeconds(60);
 
@@ -29,7 +27,8 @@ public class AzureDevOpsService(
         if (cache.TryGetValue<List<PullRequestDto>>(CacheKey, out var cached) && cached is not null)
             return cached;
 
-        var cfg = _settings.AzureDevOps;
+        var userConfig = await userConfigService.GetAsync();
+        var cfg = userConfig.AzureDevOps;
 
         if (string.IsNullOrWhiteSpace(cfg.Organization) ||
             string.IsNullOrWhiteSpace(cfg.Project) ||
@@ -39,14 +38,13 @@ public class AzureDevOpsService(
             return [];
         }
 
-        var userId = await ResolveUserIdAsync(cfg);
+        var client = CreateAuthorizedClient(cfg.Pat);
+        var userId = await ResolveUserIdAsync(cfg, client);
         if (userId is null)
         {
             logger.LogWarning("Could not resolve Azure DevOps user ID for {Email}", cfg.UserEmail);
             return [];
         }
-
-        var client = httpClientFactory.CreateClient("AzureDevOps");
 
         var myPrs = await FetchPullRequestsAsync(client, cfg, $"searchCriteria.status=active&searchCriteria.creatorId={userId}");
         var reviewerPrs = await FetchPullRequestsAsync(client, cfg, $"searchCriteria.status=active&searchCriteria.reviewerId={userId}");
@@ -78,13 +76,23 @@ public class AzureDevOpsService(
         return result;
     }
 
-    private async Task<string?> ResolveUserIdAsync(AzureDevOpsSettings cfg)
+    private HttpClient CreateAuthorizedClient(string pat)
+    {
+        var client = httpClientFactory.CreateClient("AzureDevOps");
+        if (!string.IsNullOrWhiteSpace(pat))
+        {
+            var encoded = Convert.ToBase64String(Encoding.ASCII.GetBytes($":{pat}"));
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", encoded);
+        }
+        return client;
+    }
+
+    private async Task<string?> ResolveUserIdAsync(AzureDevOpsSettings cfg, HttpClient client)
     {
         if (string.IsNullOrWhiteSpace(cfg.UserEmail)) return null;
 
         try
         {
-            var client = httpClientFactory.CreateClient("AzureDevOps");
             var url = $"https://vssps.dev.azure.com/{cfg.Organization}/_apis/identities?searchFilter=MailAddress&filterValue={Uri.EscapeDataString(cfg.UserEmail)}&api-version=7.1";
             var response = await client.GetStringAsync(url);
             var json = JsonNode.Parse(response);

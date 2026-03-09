@@ -7,6 +7,9 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/main/Dotnet.gitignore
 
+# VS Code browser debug profile
+.vscode/edge-debug-profile/
+
 # Build results
 [Dd]ebug/
 [Dd]ebugPublic/
@@ -55,7 +58,15 @@ nunit-*.xml
 
 # DevelopmentHub — local secrets and generated files
 backend/appsettings.local.json
-backend/data/
+backend/data/*.db
+backend/data/*.sqlite
 frontend/node_modules/
 frontend/dist/
 frontend/.vite/
+
+
+.vs/*
+
+
+publish/
+installer/output/
