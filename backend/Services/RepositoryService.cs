@@ -11,6 +11,7 @@ public interface IRepositoryService
     Task<RepositoryDto?> ToggleFavoriteAsync(string id);
     Task<RepositoryDto?> OpenAsync(string id, OpenRepositoryRequest request);
     Task<(bool Success, string Output)> SyncAsync(string id, CancellationToken cancellationToken);
+    Task<int> RemoveOrphanedAsync(string[] activeRoots);
 }
 
 public class RepositoryService(
@@ -167,6 +168,21 @@ public class RepositoryService(
         }
 
         return (success, output);
+    }
+
+    public Task<int> RemoveOrphanedAsync(string[] activeRoots)
+    {
+        var all = db.Repositories.FindAll().ToList();
+        var orphans = all
+            .Where(r => !IsUnderKnownRoot(r.Path, activeRoots))
+            .Select(r => r.Id)
+            .ToList();
+
+        var removed = orphans.Sum(id => db.Repositories.Delete(id) ? 1 : 0);
+        if (removed > 0)
+            logger.LogInformation("Removed {Count} orphaned repository record(s) after root path change.", removed);
+
+        return Task.FromResult(removed);
     }
 
     private static bool IsUnderKnownRoot(string path, string[] roots)

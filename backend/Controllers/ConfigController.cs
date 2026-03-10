@@ -10,6 +10,7 @@ namespace DevelopmentHub.Api.Controllers;
 [Route("api/config")]
 public class ConfigController(
     IUserConfigService userConfigService,
+    IRepositoryService repositoryService,
     ILogger<ConfigController> logger) : ControllerBase
 {
     [HttpGet]
@@ -55,6 +56,7 @@ public class ConfigController(
             current.HotkeyBinding = dto.HotkeyBinding;
 
             await userConfigService.SaveAsync(current);
+            await repositoryService.RemoveOrphanedAsync(current.RepositoryRoots);
 
             if (!string.IsNullOrWhiteSpace(dto.HotkeyBinding))
                 HotkeyChangedNotifier.Notify(dto.HotkeyBinding);
