@@ -1,7 +1,6 @@
 using DevelopmentHub.Api.Data;
 using DevelopmentHub.Api.Models;
 using DevelopmentHub.Api.Models.Dtos;
-using MongoDB.Driver;
 
 namespace DevelopmentHub.Api.Services;
 
@@ -22,15 +21,17 @@ public class RepositoryService(
     ILogger<RepositoryService> logger) : IRepositoryService
 {
 
-    public async Task<List<RepositoryDto>> GetAllAsync()
+    public Task<List<RepositoryDto>> GetAllAsync()
     {
-        var entities = await db.Repositories.Find(_ => true).ToListAsync();
+        var entities = db.Repositories.FindAll().ToList();
 
-        return entities
+        var result = entities
             .Select(MapToDto)
             .OrderByDescending(r => r.IsFavorite)
             .ThenByDescending(r => r.UsageScore)
             .ToList();
+
+        return Task.FromResult(result);
     }
 
     public async Task<List<RepositoryDto>> ScanAsync(CancellationToken cancellationToken = default)
@@ -57,25 +58,23 @@ public class RepositoryService(
             found.AheadBy = ahead;
             found.BehindBy = behind;
 
-            var filter = Builders<RepositoryDao>.Filter.Eq(r => r.Path, found.Path);
-            var existing = await db.Repositories.Find(filter).FirstOrDefaultAsync();
+            var existing = db.Repositories.FindOne(r => r.Path == found.Path);
 
             if (existing is null)
             {
                 found.CreatedAt = now;
                 found.LastSeenAt = now;
-                await db.Repositories.InsertOneAsync(found);
+                db.Repositories.Insert(found);
             }
             else
             {
-                var update = Builders<RepositoryDao>.Update
-                    .Set(r => r.Name, found.Name)
-                    .Set(r => r.CurrentBranch, found.CurrentBranch)
-                    .Set(r => r.AheadBy, found.AheadBy)
-                    .Set(r => r.BehindBy, found.BehindBy)
-                    .Set(r => r.EntryPoints, found.EntryPoints)
-                    .Set(r => r.LastSeenAt, now);
-                await db.Repositories.UpdateOneAsync(filter, update);
+                existing.Name = found.Name;
+                existing.CurrentBranch = found.CurrentBranch;
+                existing.AheadBy = found.AheadBy;
+                existing.BehindBy = found.BehindBy;
+                existing.EntryPoints = found.EntryPoints;
+                existing.LastSeenAt = now;
+                db.Repositories.Update(existing);
             }
         }
 
@@ -83,22 +82,19 @@ public class RepositoryService(
         return await GetAllAsync();
     }
 
-    public async Task<RepositoryDto?> ToggleFavoriteAsync(string id)
+    public Task<RepositoryDto?> ToggleFavoriteAsync(string id)
     {
-        var filter = Builders<RepositoryDao>.Filter.Eq(r => r.Id, id);
-        var entity = await db.Repositories.Find(filter).FirstOrDefaultAsync();
-        if (entity is null) return null;
+        var entity = db.Repositories.FindOne(r => r.Id == id);
+        if (entity is null) return Task.FromResult<RepositoryDto?>(null);
 
-        var update = Builders<RepositoryDao>.Update.Set(r => r.IsFavorite, !entity.IsFavorite);
-        await db.Repositories.UpdateOneAsync(filter, update);
         entity.IsFavorite = !entity.IsFavorite;
-        return MapToDto(entity);
+        db.Repositories.Update(entity);
+        return Task.FromResult<RepositoryDto?>(MapToDto(entity));
     }
 
     public async Task<RepositoryDto?> OpenAsync(string id, OpenRepositoryRequest request)
     {
-        var filter = Builders<RepositoryDao>.Filter.Eq(r => r.Id, id);
-        var entity = await db.Repositories.Find(filter).FirstOrDefaultAsync();
+        var entity = db.Repositories.FindOne(r => r.Id == id);
         if (entity is null) return null;
 
         var cfg = await userConfigService.GetAsync();
@@ -130,12 +126,9 @@ public class RepositoryService(
         if (launched)
         {
             var now = DateTime.UtcNow;
-            var update = Builders<RepositoryDao>.Update
-                .Inc(r => r.OpenCount, 1)
-                .Set(r => r.LastOpenedAt, now);
-            await db.Repositories.UpdateOneAsync(filter, update);
             entity.OpenCount++;
             entity.LastOpenedAt = now;
+            db.Repositories.Update(entity);
         }
 
         return MapToDto(entity);
@@ -143,8 +136,7 @@ public class RepositoryService(
 
     public async Task<(bool Success, string Output)> SyncAsync(string id, CancellationToken cancellationToken)
     {
-        var filter = Builders<RepositoryDao>.Filter.Eq(r => r.Id, id);
-        var entity = await db.Repositories.Find(filter).FirstOrDefaultAsync();
+        var entity = db.Repositories.FindOne(r => r.Id == id);
         if (entity is null) return (false, "Repository not found.");
 
         var cfg = await userConfigService.GetAsync();
@@ -156,12 +148,11 @@ public class RepositoryService(
         if (success)
         {
             var (branch, ahead, behind) = await gitService.GetBranchStatusAsync(entity.Path);
-            var update = Builders<RepositoryDao>.Update
-                .Set(r => r.LastSyncedAt, DateTime.UtcNow)
-                .Set(r => r.CurrentBranch, branch)
-                .Set(r => r.AheadBy, ahead)
-                .Set(r => r.BehindBy, behind);
-            await db.Repositories.UpdateOneAsync(filter, update);
+            entity.LastSyncedAt = DateTime.UtcNow;
+            entity.CurrentBranch = branch;
+            entity.AheadBy = ahead;
+            entity.BehindBy = behind;
+            db.Repositories.Update(entity);
         }
 
         return (success, output);

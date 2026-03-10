@@ -3,7 +3,6 @@ using DevelopmentHub.Api.Configuration;
 using DevelopmentHub.Api.Data;
 using DevelopmentHub.Api.Hubs;
 using DevelopmentHub.Api.Services;
-using MongoDB.Driver;
 using Serilog;
 using Serilog.Events;
 
@@ -50,16 +49,13 @@ public static class BackendHost
             builder.WebHost.UseWebRoot(wwwroot);
 
         // ── Database ──────────────────────────────────────────────────────────
-        builder.Services.AddSingleton<IMongoClient>(_ =>
-            new MongoClient(appSettings.MongoConnectionString));
+        var liteDbPath = string.IsNullOrWhiteSpace(appSettings.LiteDbPath)
+            ? Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "DevelopmentHub", "developmenthub.db")
+            : appSettings.LiteDbPath;
 
-        builder.Services.AddSingleton<DashboardDatabase>(sp =>
-        {
-            var client = sp.GetRequiredService<IMongoClient>();
-            var database = new DashboardDatabase(client, appSettings.MongoDatabaseName);
-            database.EnsureIndexesAsync().GetAwaiter().GetResult();
-            return database;
-        });
+        builder.Services.AddSingleton(new DashboardDatabase(liteDbPath));
 
         // ── HttpClient for Azure DevOps ───────────────────────────────────────
         builder.Services.AddHttpClient("AzureDevOps", client =>

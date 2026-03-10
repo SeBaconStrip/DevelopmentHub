@@ -59,62 +59,13 @@ public class ConfigController(
             if (!string.IsNullOrWhiteSpace(dto.HotkeyBinding))
                 HotkeyChangedNotifier.Notify(dto.HotkeyBinding);
 
-            logger.LogInformation("Configuration saved to MongoDB.");
+            logger.LogInformation("Configuration saved to LiteDB.");
             return Ok(new { message = "Configuration saved." });
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to save configuration");
             return StatusCode(500, new { error = "Failed to save configuration." });
-        }
-    }
-
-    [HttpGet("dashboard")]
-    public async Task<ActionResult<DashboardConfigDto>> GetDashboard()
-    {
-        var cfg = await userConfigService.GetAsync();
-        return Ok(new DashboardConfigDto
-        {
-            Widgets = cfg.DashboardWidgets
-                .Select(w => new DashboardWidgetDto { Id = w.Id, Enabled = w.Enabled })
-                .ToList(),
-            GridLayouts = cfg.GridLayouts.ToDictionary(
-                kvp => kvp.Key,
-                kvp => kvp.Value.Select(item => new LayoutItemDto
-                {
-                    I = item.I, X = item.X, Y = item.Y,
-                    W = item.W, H = item.H, MinW = item.MinW, MinH = item.MinH
-                }).ToList())
-        });
-    }
-
-    [HttpPut("dashboard")]
-    public async Task<IActionResult> UpdateDashboard([FromBody] DashboardConfigDto dto)
-    {
-        try
-        {
-            var current = await userConfigService.GetAsync();
-
-            current.DashboardWidgets = dto.Widgets
-                .Select(w => new DashboardWidgetConfig { Id = w.Id, Enabled = w.Enabled })
-                .ToList();
-            current.GridLayouts = dto.GridLayouts.ToDictionary(
-                kvp => kvp.Key,
-                kvp => kvp.Value.Select(item => new LayoutItemConfig
-                {
-                    I = item.I, X = item.X, Y = item.Y,
-                    W = item.W, H = item.H, MinW = item.MinW, MinH = item.MinH
-                }).ToList());
-
-            await userConfigService.SaveAsync(current);
-
-            logger.LogInformation("Dashboard configuration saved to MongoDB.");
-            return Ok(new { message = "Dashboard configuration saved." });
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to save dashboard configuration");
-            return StatusCode(500, new { error = "Failed to save dashboard configuration." });
         }
     }
 }

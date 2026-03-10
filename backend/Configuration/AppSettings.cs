@@ -2,12 +2,15 @@ namespace DevelopmentHub.Api.Configuration;
 
 /// <summary>
 /// Infrastructure-only settings read from appsettings.json on startup.
-/// User-configurable settings (repositories, Azure DevOps) are stored in MongoDB — see <see cref="DevelopmentHub.Api.Models.UserConfigDao"/>.
+/// User-configurable settings (repositories, Azure DevOps) are stored in LiteDB — see <see cref="DevelopmentHub.Api.Models.UserConfigDao"/>.
 /// </summary>
 public class AppSettings
 {
-    public string MongoConnectionString { get; set; } = "mongodb://localhost:27017";
-    public string MongoDatabaseName { get; set; } = "developmenthub";
+    /// <summary>
+    /// Path to the LiteDB database file.
+    /// Defaults to %LOCALAPPDATA%\DevelopmentHub\developmenthub.db when empty.
+    /// </summary>
+    public string LiteDbPath { get; set; } = string.Empty;
 }
 
 public class AzureDevOpsSettings

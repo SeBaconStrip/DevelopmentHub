@@ -1,34 +1,29 @@
 using DevelopmentHub.Api.Models;
-using MongoDB.Driver;
+using LiteDB;
 
 namespace DevelopmentHub.Api.Data;
 
 /// <summary>
-/// Singleton wrapper around the MongoDB database.
+/// Singleton wrapper around the LiteDB embedded database.
 /// Exposes typed collections and ensures indexes are created on startup.
 /// </summary>
-public class DashboardDatabase
+public sealed class DashboardDatabase : IDisposable
 {
-    public IMongoCollection<RepositoryDao> Repositories { get; }
-    public IMongoCollection<UserConfigDao> AppConfig { get; }
+    private readonly LiteDatabase _db;
 
-    public DashboardDatabase(IMongoClient client, string databaseName)
-    {
-        var database = client.GetDatabase(databaseName);
-        Repositories = database.GetCollection<RepositoryDao>("repositories");
-        AppConfig = database.GetCollection<UserConfigDao>("app_config");
-    }
+    public ILiteCollection<RepositoryDao> Repositories { get; }
+    public ILiteCollection<UserConfigDao> AppConfig { get; }
 
-    /// <summary>
-    /// Creates indexes idempotently. Safe to call every startup — MongoDB skips
-    /// index creation if an identical index already exists.
-    /// </summary>
-    public async Task EnsureIndexesAsync()
+    public DashboardDatabase(string databasePath)
     {
+        Directory.CreateDirectory(Path.GetDirectoryName(databasePath)!);
+        _db = new LiteDatabase(databasePath);
+        Repositories = _db.GetCollection<RepositoryDao>("repositories");
+        AppConfig = _db.GetCollection<UserConfigDao>("app_config");
+
         // Unique index on Path — prevents duplicate repository documents
-        var pathIndex = new CreateIndexModel<RepositoryDao>(
-            Builders<RepositoryDao>.IndexKeys.Ascending(r => r.Path),
-            new CreateIndexOptions { Unique = true });
-        await Repositories.Indexes.CreateOneAsync(pathIndex);
+        Repositories.EnsureIndex(r => r.Path, unique: true);
     }
+
+    public void Dispose() => _db.Dispose();
 }

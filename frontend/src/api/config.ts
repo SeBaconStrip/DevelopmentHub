@@ -1,4 +1,4 @@
-import type { AppConfig, DashboardConfig } from '../types';
+import type { AppConfig } from '../types';
 
 async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
@@ -23,16 +23,4 @@ export const configApi = {
     fetch('/api/folder-picker')
       .then(r => handleResponse<{ cancelled: boolean; path: string | null }>(r))
       .then(res => res.cancelled ? null : res.path),
-};
-
-export const dashboardConfigApi = {
-  get: (): Promise<DashboardConfig> =>
-    fetch('/api/config/dashboard').then(r => handleResponse(r)),
-
-  save: (config: DashboardConfig): Promise<{ message: string }> =>
-    fetch('/api/config/dashboard', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(config),
-    }).then(r => handleResponse(r)),
 };

@@ -1,4 +1,4 @@
-﻿import { useState, useRef, useEffect, Fragment } from "react";
+﻿import { useState, Fragment } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Responsive, useContainerWidth } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
@@ -10,7 +10,6 @@ import vscodeIconUrl from "../../assets/icons/vscode.svg";
 import visualStudioIconUrl from "../../assets/icons/visualstudio.svg";
 import explorerIconUrl from "../../assets/icons/windows-explorer.svg";
 import { fetchPullRequests } from "../../api/pullRequests";
-import { dashboardConfigApi } from "../../api/config";
 import {
   useUiStore,
   type BreakpointLayouts,
@@ -31,51 +30,7 @@ export default function DashboardPage() {
     gridLayouts,
     setGridLayouts,
     resetGridLayouts,
-    hydrate,
   } = useUiStore();
-
-  // Load dashboard config from backend and hydrate the store
-  const { data: dashboardConfig } = useQuery({
-    queryKey: ["dashboardConfig"],
-    queryFn: dashboardConfigApi.get,
-    staleTime: Infinity,
-  });
-  useEffect(() => {
-    if (dashboardConfig) {
-      hydrate(
-        dashboardConfig.widgets,
-        dashboardConfig.gridLayouts as BreakpointLayouts,
-      );
-    }
-  }, [dashboardConfig, hydrate]);
-
-  // Save dashboard config to backend (debounced for layout changes)
-  const saveMutation = useMutation({ mutationFn: dashboardConfigApi.save });
-  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isMounted = useRef(true);
-
-  useEffect(() => {
-    isMounted.current = true;
-    return () => {
-      isMounted.current = false;
-      if (saveTimer.current) {
-        clearTimeout(saveTimer.current);
-        saveTimer.current = null;
-      }
-    };
-  }, []);
-
-  function scheduleSave(delay = 1500) {
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => {
-      if (!isMounted.current) return;
-      const { dashboardWidgets: w, gridLayouts: g } = useUiStore.getState();
-      saveMutation.mutate({
-        widgets: w.map(({ id, enabled }) => ({ id, enabled })),
-        gridLayouts: g,
-      });
-    }, delay);
-  }
 
   const { data: repos = [], refetch: refetchRepos } = useQuery<Repository[]>({
     queryKey: ["repositories"],
@@ -148,17 +103,14 @@ export default function DashboardPage() {
 
   function handleLayoutChange(_: unknown, layouts: unknown) {
     setGridLayouts(layouts as BreakpointLayouts);
-    scheduleSave();
   }
 
   function handleToggleWidget(id: WidgetId) {
     toggleWidget(id);
-    scheduleSave(0);
   }
 
   function handleResetGridLayouts() {
     resetGridLayouts();
-    scheduleSave(0);
   }
 
   return (
