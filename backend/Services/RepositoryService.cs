@@ -44,20 +44,25 @@ public class RepositoryService(
             cfg.RepoScanDepth,
             cfg.EntryPointScanDepth);
 
-        // Fetch from remote so AheadBy/BehindBy reflects the current remote state
-        foreach (var repo in discovered)
-            await gitService.FetchAsync(repo.Path, cancellationToken);
+        // Fetch all repos in parallel so we don't pay N × network-RTT
+        await Task.WhenAll(discovered.Select(r => gitService.FetchAsync(r.Path, cancellationToken)));
+
+        // Re-read branch status in parallel now that remote tracking refs are up to date
+        var statusTasks = discovered.Select(r => gitService.GetBranchStatusAsync(r.Path)).ToList();
+        var statuses = await Task.WhenAll(statusTasks);
+
+        for (var i = 0; i < discovered.Count; i++)
+        {
+            var (branch, ahead, behind) = statuses[i];
+            discovered[i].CurrentBranch = branch ?? discovered[i].CurrentBranch;
+            discovered[i].AheadBy = ahead;
+            discovered[i].BehindBy = behind;
+        }
 
         var now = DateTime.UtcNow;
 
         foreach (var found in discovered)
         {
-            // Re-read branch status now that fetch has updated remote tracking refs
-            var (branch, ahead, behind) = await gitService.GetBranchStatusAsync(found.Path);
-            found.CurrentBranch = branch ?? found.CurrentBranch;
-            found.AheadBy = ahead;
-            found.BehindBy = behind;
-
             var existing = db.Repositories.FindOne(r => r.Path == found.Path);
 
             if (existing is null)

@@ -2,6 +2,7 @@
 
 ## 0.3 - 2026-03-10
 
+- Fixed Repo refresh button
 - Changed from MongoDB to LiteDB, moved uiConfig to Browser cache
 
 ## 0.2 – 2026-03-09
