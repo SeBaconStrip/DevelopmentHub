@@ -57,6 +57,8 @@ export interface LayoutItem {
   minW?: number;
   minH?: number;
 }
+
+export interface AppConfig {
   repositoryRoots: string[];
   azureDevOps: AzureDevOpsConfig;
   scanIntervalMinutes: number;

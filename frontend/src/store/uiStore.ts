@@ -39,6 +39,15 @@ const THEME_IDS: ThemeId[] = ['violet', 'dark', 'ocean', 'orange', 'nature'];
 const LAYOUTS_KEY = 'dh-layouts';
 const WIDGETS_KEY = 'dh-widgets';
 
+let _layoutsPersistTimer: ReturnType<typeof setTimeout> | null = null;
+function persistLayoutsDebounced(layouts: BreakpointLayouts) {
+  if (_layoutsPersistTimer !== null) clearTimeout(_layoutsPersistTimer);
+  _layoutsPersistTimer = setTimeout(() => {
+    localStorage.setItem(LAYOUTS_KEY, JSON.stringify(layouts));
+    _layoutsPersistTimer = null;
+  }, 500);
+}
+
 function loadTheme(): ThemeId {
   const stored = localStorage.getItem('dh-theme');
   return THEME_IDS.includes(stored as ThemeId) ? (stored as ThemeId) : 'violet';
@@ -92,10 +101,14 @@ export const useUiStore = create<UiStore>()((set) => ({
     }),
   gridLayouts: loadLayouts(),
   setGridLayouts: (layouts) => {
-    localStorage.setItem(LAYOUTS_KEY, JSON.stringify(layouts));
     set({ gridLayouts: layouts });
+    persistLayoutsDebounced(layouts);
   },
   resetGridLayouts: () => {
+    if (_layoutsPersistTimer !== null) {
+      clearTimeout(_layoutsPersistTimer);
+      _layoutsPersistTimer = null;
+    }
     localStorage.setItem(LAYOUTS_KEY, JSON.stringify(DEFAULT_LAYOUTS));
     set({ gridLayouts: DEFAULT_LAYOUTS });
   },

@@ -16,7 +16,9 @@ public sealed class DashboardDatabase : IDisposable
 
     public DashboardDatabase(string databasePath)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(databasePath)!);
+        var dir = Path.GetDirectoryName(databasePath);
+        if (!string.IsNullOrEmpty(dir))
+            Directory.CreateDirectory(dir);
         _db = new LiteDatabase(databasePath);
         Repositories = _db.GetCollection<RepositoryDao>("repositories");
         AppConfig = _db.GetCollection<UserConfigDao>("app_config");
