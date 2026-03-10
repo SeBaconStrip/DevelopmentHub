@@ -31,9 +31,52 @@ export interface DashboardWidget {
 }
 
 const defaultWidgets: DashboardWidget[] = [
-  { id: 'repositories', label: 'Repositories',     icon: '📁', enabled: true },
-  { id: 'pullRequests', label: 'Pull Requests',     icon: '🔀', enabled: true },
+  { id: 'repositories', label: 'Repositories',     icon: '\uD83D\uDCC1', enabled: true },
+  { id: 'pullRequests', label: 'Pull Requests',     icon: '\uD83D\uDD00', enabled: true },
 ];
+
+const THEME_IDS: ThemeId[] = ['violet', 'dark', 'ocean', 'orange', 'nature'];
+const LAYOUTS_KEY = 'dh-layouts';
+const WIDGETS_KEY = 'dh-widgets';
+
+let _layoutsPersistTimer: ReturnType<typeof setTimeout> | null = null;
+function persistLayoutsDebounced(layouts: BreakpointLayouts) {
+  if (_layoutsPersistTimer !== null) clearTimeout(_layoutsPersistTimer);
+  _layoutsPersistTimer = setTimeout(() => {
+    localStorage.setItem(LAYOUTS_KEY, JSON.stringify(layouts));
+    _layoutsPersistTimer = null;
+  }, 500);
+}
+
+function loadTheme(): ThemeId {
+  const stored = localStorage.getItem('dh-theme');
+  return THEME_IDS.includes(stored as ThemeId) ? (stored as ThemeId) : 'violet';
+}
+
+function loadLayouts(): BreakpointLayouts {
+  try {
+    const stored = localStorage.getItem(LAYOUTS_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored) as BreakpointLayouts;
+      if (Object.keys(parsed).length > 0) return parsed;
+    }
+  } catch { /* fall through to default */ }
+  return DEFAULT_LAYOUTS;
+}
+
+function loadWidgets(): DashboardWidget[] {
+  try {
+    const stored = localStorage.getItem(WIDGETS_KEY);
+    if (stored) {
+      const enabled = JSON.parse(stored) as Record<string, boolean>;
+      return defaultWidgets.map((w) => ({
+        ...w,
+        enabled: w.id in enabled ? enabled[w.id] : w.enabled,
+      }));
+    }
+  } catch { /* fall through to default */ }
+  return defaultWidgets;
+}
 
 interface UiStore {
   dashboardWidgets: DashboardWidget[];
@@ -41,37 +84,34 @@ interface UiStore {
   gridLayouts: BreakpointLayouts;
   setGridLayouts: (layouts: BreakpointLayouts) => void;
   resetGridLayouts: () => void;
-  hydrate: (widgets: { id: string; enabled: boolean }[], layouts: BreakpointLayouts) => void;
   theme: ThemeId;
   setTheme: (theme: ThemeId) => void;
 }
 
-const THEME_IDS: ThemeId[] = ['violet', 'dark', 'ocean', 'orange', 'nature'];
-
-function loadTheme(): ThemeId {
-  const stored = localStorage.getItem('dh-theme');
-  return THEME_IDS.includes(stored as ThemeId) ? (stored as ThemeId) : 'violet';
-}
-
 export const useUiStore = create<UiStore>()((set) => ({
-  dashboardWidgets: defaultWidgets,
+  dashboardWidgets: loadWidgets(),
   toggleWidget: (id) =>
-    set((state) => ({
-      dashboardWidgets: state.dashboardWidgets.map((w) =>
+    set((state) => {
+      const updated = state.dashboardWidgets.map((w) =>
         w.id === id ? { ...w, enabled: !w.enabled } : w
-      ),
-    })),
-  gridLayouts: DEFAULT_LAYOUTS,
-  setGridLayouts: (layouts) => set({ gridLayouts: layouts }),
-  resetGridLayouts: () => set({ gridLayouts: DEFAULT_LAYOUTS }),
-  hydrate: (serverWidgets, layouts) =>
-    set((state) => ({
-      dashboardWidgets: state.dashboardWidgets.map((w) => {
-        const match = serverWidgets.find((sw) => sw.id === w.id);
-        return match !== undefined ? { ...w, enabled: match.enabled } : w;
-      }),
-      gridLayouts: Object.keys(layouts).length > 0 ? layouts : DEFAULT_LAYOUTS,
-    })),
+      );
+      const enabledMap = Object.fromEntries(updated.map((w) => [w.id, w.enabled]));
+      localStorage.setItem(WIDGETS_KEY, JSON.stringify(enabledMap));
+      return { dashboardWidgets: updated };
+    }),
+  gridLayouts: loadLayouts(),
+  setGridLayouts: (layouts) => {
+    set({ gridLayouts: layouts });
+    persistLayoutsDebounced(layouts);
+  },
+  resetGridLayouts: () => {
+    if (_layoutsPersistTimer !== null) {
+      clearTimeout(_layoutsPersistTimer);
+      _layoutsPersistTimer = null;
+    }
+    localStorage.setItem(LAYOUTS_KEY, JSON.stringify(DEFAULT_LAYOUTS));
+    set({ gridLayouts: DEFAULT_LAYOUTS });
+  },
   theme: loadTheme(),
   setTheme: (theme) => {
     localStorage.setItem('dh-theme', theme);

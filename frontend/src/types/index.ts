@@ -48,15 +48,6 @@ export interface AzureDevOpsConfig {
   pat: string;
 }
 
-export interface AppConfig {
-  repositoryRoots: string[];
-  azureDevOps: AzureDevOpsConfig;
-  scanIntervalMinutes: number;
-  repoScanDepth: number;
-  entryPointScanDepth: number;
-  hotkeyBinding: string;
-}
-
 export interface LayoutItem {
   i: string;
   x: number;
@@ -67,7 +58,12 @@ export interface LayoutItem {
   minH?: number;
 }
 
-export interface DashboardConfig {
-  widgets: { id: string; enabled: boolean }[];
-  gridLayouts: Record<string, LayoutItem[]>;
+export interface AppConfig {
+  repositoryRoots: string[];
+  azureDevOps: AzureDevOpsConfig;
+  scanIntervalMinutes: number;
+  repoScanDepth: number;
+  entryPointScanDepth: number;
+  hotkeyBinding: string;
 }
+

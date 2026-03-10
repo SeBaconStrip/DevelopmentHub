@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3 - 2026-03-10
+
+- Changed from MongoDB to LiteDB, moved uiConfig to Browser cache
+
 ## 0.2 – 2026-03-09
 
 - Added theming support with five built-in themes (Violet, Dark, Ocean, Orange, Nature)
