@@ -1,5 +1,5 @@
 ﻿import { useState, Fragment } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Responsive, useContainerWidth } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
@@ -32,9 +32,16 @@ export default function DashboardPage() {
     resetGridLayouts,
   } = useUiStore();
 
+  const queryClient = useQueryClient();
+
   const { data: repos = [], refetch: refetchRepos } = useQuery<Repository[]>({
     queryKey: ["repositories"],
     queryFn: fetchRepositories,
+  });
+
+  const scanRepos = useMutation({
+    mutationFn: repositoriesApi.scan,
+    onSuccess: (data) => queryClient.setQueryData(["repositories"], data),
   });
 
   const openRepo = useMutation({
@@ -75,8 +82,9 @@ export default function DashboardPage() {
       headerActions: (
         <button
           className="panel-action-btn"
-          onClick={() => refetchRepos()}
-          title="Repositories aktualisieren"
+          onClick={() => scanRepos.mutate()}
+          disabled={scanRepos.isPending}
+          title="Repositories neu scannen"
         >
           ↻
         </button>

@@ -11,6 +11,7 @@ public interface IRepositoryService
     Task<RepositoryDto?> ToggleFavoriteAsync(string id);
     Task<RepositoryDto?> OpenAsync(string id, OpenRepositoryRequest request);
     Task<(bool Success, string Output)> SyncAsync(string id, CancellationToken cancellationToken);
+    Task<int> RemoveOrphanedAsync(string[] activeRoots);
 }
 
 public class RepositoryService(
@@ -44,9 +45,20 @@ public class RepositoryService(
             cfg.RepoScanDepth,
             cfg.EntryPointScanDepth);
 
-        // Fetch from remote so AheadBy/BehindBy reflects the current remote state
-        foreach (var repo in discovered)
-            await gitService.FetchAsync(repo.Path, cancellationToken);
+        // Fetch all repos in parallel so we don't pay N × network-RTT
+        await Task.WhenAll(discovered.Select(r => gitService.FetchAsync(r.Path, cancellationToken)));
+
+        // Re-read branch status in parallel now that remote tracking refs are up to date
+        var statusTasks = discovered.Select(r => gitService.GetBranchStatusAsync(r.Path)).ToList();
+        var statuses = await Task.WhenAll(statusTasks);
+
+        for (var i = 0; i < discovered.Count; i++)
+        {
+            var (branch, ahead, behind) = statuses[i];
+            discovered[i].CurrentBranch = branch ?? discovered[i].CurrentBranch;
+            discovered[i].AheadBy = ahead;
+            discovered[i].BehindBy = behind;
+        }
 
         var now = DateTime.UtcNow;
 
@@ -156,6 +168,21 @@ public class RepositoryService(
         }
 
         return (success, output);
+    }
+
+    public Task<int> RemoveOrphanedAsync(string[] activeRoots)
+    {
+        var all = db.Repositories.FindAll().ToList();
+        var orphans = all
+            .Where(r => !IsUnderKnownRoot(r.Path, activeRoots))
+            .Select(r => r.Id)
+            .ToList();
+
+        var removed = orphans.Sum(id => db.Repositories.Delete(id) ? 1 : 0);
+        if (removed > 0)
+            logger.LogInformation("Removed {Count} orphaned repository record(s) after root path change.", removed);
+
+        return Task.FromResult(removed);
     }
 
     private static bool IsUnderKnownRoot(string path, string[] roots)
