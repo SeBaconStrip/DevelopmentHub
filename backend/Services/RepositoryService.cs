@@ -63,6 +63,12 @@ public class RepositoryService(
 
         foreach (var found in discovered)
         {
+            // Re-read branch status now that fetch has updated remote tracking refs
+            var (branch, ahead, behind) = await gitService.GetBranchStatusAsync(found.Path);
+            found.CurrentBranch = branch ?? found.CurrentBranch;
+            found.AheadBy = ahead;
+            found.BehindBy = behind;
+
             var existing = db.Repositories.FindOne(r => r.Path == found.Path);
 
             if (existing is null)
