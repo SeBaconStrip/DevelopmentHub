@@ -65,5 +65,6 @@ export interface AppConfig {
   repoScanDepth: number;
   entryPointScanDepth: number;
   hotkeyBinding: string;
+  prRefreshIntervalSeconds: number;
 }
 

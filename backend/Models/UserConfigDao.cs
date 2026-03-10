@@ -17,4 +17,5 @@ public class UserConfigDao
     public int EntryPointScanDepth { get; set; } = 2;
 
     public string HotkeyBinding { get; set; } = "Ctrl+Shift+D";
+    public int PrRefreshIntervalSeconds { get; set; } = 120;
 }

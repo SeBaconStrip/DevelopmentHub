@@ -14,16 +14,13 @@ public class RepositoryScannerService(
         // Initial scan on startup
         await RunScanAsync(stoppingToken);
 
-        var cfg = await userConfigService.GetAsync();
-        var interval = TimeSpan.FromMinutes(cfg.ScanIntervalMinutes > 0 ? cfg.ScanIntervalMinutes : 30);
-
-        using var timer = new PeriodicTimer(interval);
-
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                await timer.WaitForNextTickAsync(stoppingToken);
+                var cfg = await userConfigService.GetAsync();
+                var interval = TimeSpan.FromMinutes(cfg.ScanIntervalMinutes > 0 ? cfg.ScanIntervalMinutes : 30);
+                await Task.Delay(interval, stoppingToken);
                 await RunScanAsync(stoppingToken);
             }
             catch (OperationCanceledException)

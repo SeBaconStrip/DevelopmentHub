@@ -91,6 +91,19 @@ public class RepositoryService(
         }
 
         logger.LogInformation("Scan complete. Found {Count} repositories.", discovered.Count);
+
+        // Remove any records that are under a known root but no longer exist on disk
+        var discoveredPaths = discovered.Select(d => d.Path).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var stale = db.Repositories
+            .FindAll()
+            .Where(r => IsUnderKnownRoot(r.Path, cfg.RepositoryRoots) && !discoveredPaths.Contains(r.Path))
+            .ToList();
+        foreach (var s in stale)
+        {
+            db.Repositories.Delete(s.Id);
+            logger.LogInformation("Removed stale repository record: {Path}", s.Path);
+        }
+
         return await GetAllAsync();
     }
 

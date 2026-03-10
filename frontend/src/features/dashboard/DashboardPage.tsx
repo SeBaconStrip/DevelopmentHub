@@ -6,6 +6,7 @@ import "react-resizable/css/styles.css";
 import "./DashboardPage.css";
 
 import { fetchRepositories, repositoriesApi } from "../../api/repositories";
+import { configApi } from "../../api/config";
 import vscodeIconUrl from "../../assets/icons/vscode.svg";
 import visualStudioIconUrl from "../../assets/icons/visualstudio.svg";
 import explorerIconUrl from "../../assets/icons/windows-explorer.svg";
@@ -34,6 +35,11 @@ export default function DashboardPage() {
 
   const queryClient = useQueryClient();
 
+  const { data: config } = useQuery({
+    queryKey: ["config"],
+    queryFn: configApi.get,
+  });
+
   const { data: repos = [], refetch: refetchRepos } = useQuery<Repository[]>({
     queryKey: ["repositories"],
     queryFn: fetchRepositories,
@@ -61,7 +67,7 @@ export default function DashboardPage() {
   const { data: prs = [] } = useQuery<PullRequest[]>({
     queryKey: ["pullrequests"],
     queryFn: fetchPullRequests,
-    refetchInterval: 120_000,
+    refetchInterval: (config?.prRefreshIntervalSeconds ?? 120) * 1000,
   });
 
   type WidgetConfig = {

@@ -30,7 +30,8 @@ public class ConfigController(
             ScanIntervalMinutes = cfg.ScanIntervalMinutes,
             RepoScanDepth = cfg.RepoScanDepth,
             EntryPointScanDepth = cfg.EntryPointScanDepth,
-            HotkeyBinding = cfg.HotkeyBinding
+            HotkeyBinding = cfg.HotkeyBinding,
+            PrRefreshIntervalSeconds = cfg.PrRefreshIntervalSeconds
         });
     }
 
@@ -45,6 +46,7 @@ public class ConfigController(
             current.ScanIntervalMinutes = dto.ScanIntervalMinutes;
             current.RepoScanDepth = dto.RepoScanDepth;
             current.EntryPointScanDepth = dto.EntryPointScanDepth;
+            current.PrRefreshIntervalSeconds = dto.PrRefreshIntervalSeconds;
             current.AzureDevOps = new AzureDevOpsSettings
             {
                 Organization = dto.AzureDevOps.Organization ?? current.AzureDevOps.Organization,
