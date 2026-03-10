@@ -1,11 +1,12 @@
 ﻿import { useState, useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   useUiStore,
   type DashboardWidget,
   type ThemeId,
 } from "../store/uiStore";
 import { configApi } from "../api/config";
+import { repositoriesApi } from "../api/repositories";
 import type { AppConfig } from "../types";
 import "./DashboardSettingsModal.css";
 
@@ -117,11 +118,19 @@ function WidgetRow({ widget, onToggle }: RowProps) {
 
 function SettingsTab({ onClose }: { onClose: () => void }) {
   const { theme, setTheme } = useUiStore();
+  const queryClient = useQueryClient();
   const { data, isLoading } = useQuery({
     queryKey: ["config"],
     queryFn: configApi.get,
   });
-  const save = useMutation({ mutationFn: configApi.save });
+  const scan = useMutation({
+    mutationFn: repositoriesApi.scan,
+    onSuccess: (data) => queryClient.setQueryData(["repositories"], data),
+  });
+  const save = useMutation({
+    mutationFn: configApi.save,
+    onSuccess: () => scan.mutate(),
+  });
   const [form, setForm] = useState<AppConfig | null>(null);
   const [isCapturingHotkey, setIsCapturingHotkey] = useState(false);
 
@@ -334,12 +343,24 @@ function SettingsTab({ onClose }: { onClose: () => void }) {
         <button
           className="btn-primary"
           onClick={() => save.mutate(form)}
-          disabled={save.isPending}
+          disabled={save.isPending || scan.isPending}
         >
-          {save.isPending ? "Saving…" : "💾 Save Configuration"}
+          {save.isPending
+            ? "Saving…"
+            : scan.isPending
+              ? "Scanning…"
+              : "💾 Save Configuration"}
         </button>
-        {save.isSuccess && <span className="settings-save-ok">✓ Saved</span>}
-        {save.isError && <span className="settings-save-err">✗ Failed</span>}
+        {scan.isSuccess && (
+          <span className="settings-save-ok">✓ Saved &amp; scanned</span>
+        )}
+        {save.isSuccess &&
+          !scan.isPending &&
+          !scan.isSuccess &&
+          !scan.isError && <span className="settings-save-ok">✓ Saved</span>}
+        {(save.isError || scan.isError) && (
+          <span className="settings-save-err">✗ Failed</span>
+        )}
         <button className="btn-close" onClick={onClose}>
           Close
         </button>

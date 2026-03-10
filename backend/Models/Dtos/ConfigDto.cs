@@ -12,9 +12,9 @@ public class ConfigDto
 
 public class AzureDevOpsConfigDto
 {
-    public string Organization { get; set; } = string.Empty;
-    public string Project { get; set; } = string.Empty;
-    public string UserEmail { get; set; } = string.Empty;
+    public string? Organization { get; set; }
+    public string? Project { get; set; }
+    public string? UserEmail { get; set; }
     /// <summary>PAT is write-only from the UI. Returned as empty string on GET.</summary>
-    public string Pat { get; set; } = string.Empty;
+    public string? Pat { get; set; }
 }
