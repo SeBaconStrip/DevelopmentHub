@@ -101,6 +101,17 @@ public partial class MainWindow : Window
         WebView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = _isDev;
         WebView.CoreWebView2.Settings.AreDevToolsEnabled = _isDev;
 
+        // Open all external links (e.g. PR URLs) in the default system browser
+        WebView.CoreWebView2.NewWindowRequested += (_, e) =>
+        {
+            e.Handled = true;
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(e.Uri)
+            {
+                UseShellExecute = true
+            });
+        };
+
+
         if (!_isDev)
         {
             // Show a loading page while Kestrel is starting up

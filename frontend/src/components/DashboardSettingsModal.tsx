@@ -420,7 +420,9 @@ function PullRequestsPage({ form, setField, setAzDO }: PullRequestsPageProps) {
             onChange={(e) => setAzDO("pat", e.target.value)}
             placeholder="Leave blank to keep existing"
           />
-          <span className="settings-field-hint">Required scope: vso.code</span>
+          <span className="settings-field-hint">
+            Required scopes: Code (Read) · Profile (Read)
+          </span>
         </Field>
       </Section>
     </>

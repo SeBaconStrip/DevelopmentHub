@@ -39,39 +39,7 @@ public class AzureDevOpsService(
         }
 
         var client = CreateAuthorizedClient(cfg.Pat);
-        var userId = await ResolveUserIdAsync(cfg, client);
-        if (userId is null)
-        {
-            logger.LogWarning("Could not resolve Azure DevOps user ID for {Email}", cfg.UserEmail);
-            return [];
-        }
-
-        var myPrs = await FetchPullRequestsAsync(client, cfg, $"searchCriteria.status=active&searchCriteria.creatorId={userId}");
-        var reviewerPrs = await FetchPullRequestsAsync(client, cfg, $"searchCriteria.status=active&searchCriteria.reviewerId={userId}");
-
-        // Merge and deduplicate
-        var all = new Dictionary<int, PullRequestDto>();
-
-        foreach (var pr in myPrs)
-        {
-            pr.CreatedByMe = true;
-            all[pr.PrId] = pr;
-        }
-
-        foreach (var pr in reviewerPrs)
-        {
-            if (all.TryGetValue(pr.PrId, out var existing))
-            {
-                existing.IsReviewer = true;
-            }
-            else
-            {
-                pr.IsReviewer = true;
-                all[pr.PrId] = pr;
-            }
-        }
-
-        var result = all.Values.OrderByDescending(p => p.CreatedAt).ToList();
+        var result = await FetchPullRequestsAsync(client, cfg);
         cache.Set(CacheKey, result, cacheDuration);
         return result;
     }
@@ -87,40 +55,22 @@ public class AzureDevOpsService(
         return client;
     }
 
-    private async Task<string?> ResolveUserIdAsync(AzureDevOpsSettings cfg, HttpClient client)
-    {
-        if (string.IsNullOrWhiteSpace(cfg.UserEmail)) return null;
-
-        try
-        {
-            var url = $"https://vssps.dev.azure.com/{cfg.Organization}/_apis/identities?searchFilter=MailAddress&filterValue={Uri.EscapeDataString(cfg.UserEmail)}&api-version=7.1";
-            var response = await client.GetStringAsync(url);
-            var json = JsonNode.Parse(response);
-            var id = json?["value"]?[0]?["id"]?.GetValue<string>();
-            return id;
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to resolve user ID from Azure DevOps");
-            return null;
-        }
-    }
-
-    private async Task<List<PullRequestDto>> FetchPullRequestsAsync(
-        HttpClient client, AzureDevOpsSettings cfg, string query)
+    private async Task<List<PullRequestDto>> FetchPullRequestsAsync(HttpClient client, AzureDevOpsSettings cfg)
     {
         try
         {
-            var url = $"https://dev.azure.com/{cfg.Organization}/{cfg.Project}/_apis/git/pullrequests?{query}&api-version=7.1";
+            var url = $"https://dev.azure.com/{cfg.Organization}/{cfg.Project}/_apis/git/pullrequests?searchCriteria.status=active&api-version=7.1";
             var response = await client.GetStringAsync(url);
             var json = JsonNode.Parse(response);
             var values = json?["value"]?.AsArray();
 
             if (values is null) return [];
 
+            var userEmail = cfg.UserEmail;
             return values
                 .Where(v => v is not null)
-                .Select(v => MapPullRequest(v!, cfg))
+                .Select(v => MapPullRequest(v!, cfg, userEmail))
+                .OrderByDescending(p => p.CreatedAt)
                 .ToList();
         }
         catch (Exception ex)
@@ -130,9 +80,21 @@ public class AzureDevOpsService(
         }
     }
 
-    private PullRequestDto MapPullRequest(JsonNode pr, AzureDevOpsSettings cfg)
+    private PullRequestDto MapPullRequest(JsonNode pr, AzureDevOpsSettings cfg, string userEmail)
     {
         var prId = pr["pullRequestId"]?.GetValue<int>() ?? 0;
+        var authorUniqueName = pr["createdBy"]?["uniqueName"]?.GetValue<string>() ?? string.Empty;
+        var authorMailAddress = pr["createdBy"]?["mailAddress"]?.GetValue<string>() ?? string.Empty;
+
+        var isAuthor = !string.IsNullOrWhiteSpace(userEmail) &&
+            (string.Equals(authorUniqueName, userEmail, StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(authorMailAddress, userEmail, StringComparison.OrdinalIgnoreCase));
+
+        var isReviewer = !string.IsNullOrWhiteSpace(userEmail) &&
+            (pr["reviewers"]?.AsArray().Any(r =>
+                string.Equals(r?["uniqueName"]?.GetValue<string>(), userEmail, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(r?["mailAddress"]?.GetValue<string>(), userEmail, StringComparison.OrdinalIgnoreCase)) ?? false);
+
         return new PullRequestDto
         {
             PrId = prId,
@@ -144,6 +106,8 @@ public class AzureDevOpsService(
             CreatedAt = pr["creationDate"]?.GetValue<DateTime>() ?? DateTime.UtcNow,
             IsDraft = pr["isDraft"]?.GetValue<bool>() ?? false,
             AuthorDisplayName = pr["createdBy"]?["displayName"]?.GetValue<string>() ?? string.Empty,
+            CreatedByMe = isAuthor,
+            IsReviewer = isReviewer,
             Url = $"https://dev.azure.com/{cfg.Organization}/{cfg.Project}/_git/{pr["repository"]?["name"]?.GetValue<string>()}/pullrequest/{prId}"
         };
     }

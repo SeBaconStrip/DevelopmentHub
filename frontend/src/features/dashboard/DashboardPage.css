@@ -522,3 +522,81 @@
   padding: 24px 16px;
   margin: 0;
 }
+
+/* ── pull requests data grid ── */
+.pr-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1.5fr 0.8fr 180px;
+  align-items: center;
+  border: 1px solid var(--border-accent);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* header cells — styled identically to .repo-grid-header */
+.pr-grid-head {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 10px 10px;
+  border-bottom: 2px solid var(--border-accent);
+  height: 50px;
+  display: flex;
+  align-items: center;
+}
+
+/* each <a> row is invisible to the grid — its cells slot into the parent tracks */
+.pr-grid-row {
+  display: contents;
+  text-decoration: none;
+  color: inherit;
+}
+
+.pr-grid-row:hover > .pr-cell {
+  background: rgba(99, 102, 241, 0.06);
+  cursor: pointer;
+}
+
+.pr-cell {
+  display: flex;
+  align-items: center;
+  padding: 7px 10px;
+  border-bottom: 2px solid var(--border-accent);
+  height: 50px;
+  min-width: 0;
+}
+
+.pr-col-title,
+.pr-col-repo,
+.pr-col-author,
+.pr-col-branch {
+  min-width: 0;
+}
+
+.pr-col-badges {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 10px 7px 4px;
+  white-space: nowrap;
+}
+
+.pr-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.pr-chip--draft     { background: #f3f4f6; color: #6b7280; }
+.pr-chip--mine      { background: #ede9fe; color: #7c3aed; }
+.pr-chip--reviewer  { background: #f0f9ff; color: #0369a1; }
+.pr-chip--vote-pos  { background: #dcfce7; color: #15803d; }
+.pr-chip--vote-wait { background: #fef3c7; color: #d97706; }
+.pr-chip--vote-neg  { background: #fee2e2; color: #dc2626; }
+
