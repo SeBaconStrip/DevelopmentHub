@@ -1,11 +1,13 @@
-﻿import { useState, Fragment } from "react";
+﻿import { useState, Fragment, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Responsive, useContainerWidth } from "react-grid-layout";
+import * as signalR from "@microsoft/signalr";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import "./DashboardPage.css";
 
 import { fetchRepositories, repositoriesApi } from "../../api/repositories";
+import { configApi } from "../../api/config";
 import vscodeIconUrl from "../../assets/icons/vscode.svg";
 import visualStudioIconUrl from "../../assets/icons/visualstudio.svg";
 import explorerIconUrl from "../../assets/icons/windows-explorer.svg";
@@ -34,15 +36,44 @@ export default function DashboardPage() {
 
   const queryClient = useQueryClient();
 
+  const { data: config } = useQuery({
+    queryKey: ["config"],
+    queryFn: configApi.get,
+  });
+
   const { data: repos = [], refetch: refetchRepos } = useQuery<Repository[]>({
     queryKey: ["repositories"],
     queryFn: fetchRepositories,
+    refetchInterval: (config?.scanIntervalMinutes ?? 30) * 60 * 1000,
   });
+
+  // Invalidate immediately when the backend signals a scan has finished
+  const repoHubRef = useRef<signalR.HubConnection | null>(null);
+  useEffect(() => {
+    const connection = new signalR.HubConnectionBuilder()
+      .withUrl("/hubs/log")
+      .withAutomaticReconnect()
+      .build();
+    repoHubRef.current = connection;
+    connection.on("RepositoriesUpdated", () => {
+      queryClient.invalidateQueries({ queryKey: ["repositories"] });
+    });
+    connection
+      .start()
+      .catch((err) =>
+        console.warn("SignalR (repo updates) connection failed:", err),
+      );
+    return () => {
+      connection.stop();
+    };
+  }, [queryClient]);
 
   const scanRepos = useMutation({
     mutationFn: repositoriesApi.scan,
     onSuccess: (data) => queryClient.setQueryData(["repositories"], data),
   });
+
+  const [openError, setOpenError] = useState<string | null>(null);
 
   const openRepo = useMutation({
     mutationFn: ({
@@ -52,6 +83,7 @@ export default function DashboardPage() {
       id: string;
       openWith: "VsCode" | "VisualStudio" | "Explorer";
     }) => repositoriesApi.open(id, { openWith }),
+    onError: (err) => setOpenError(err.message),
   });
 
   const toggleFav = useMutation({
@@ -61,7 +93,7 @@ export default function DashboardPage() {
   const { data: prs = [] } = useQuery<PullRequest[]>({
     queryKey: ["pullrequests"],
     queryFn: fetchPullRequests,
-    refetchInterval: 120_000,
+    refetchInterval: (config?.prRefreshIntervalSeconds ?? 120) * 1000,
   });
 
   type WidgetConfig = {
@@ -72,11 +104,22 @@ export default function DashboardPage() {
   const widgetMap: Record<WidgetId, WidgetConfig> = {
     repositories: {
       body: (
-        <RepositoriesBody
-          repos={repos}
-          onOpen={(id, openWith) => openRepo.mutate({ id, openWith })}
-          onToggleFav={(id) => toggleFav.mutate(id)}
-        />
+        <>
+          {openError && (
+            <div className="panel-error-bar">
+              <span>⚠ {openError}</span>
+              <button onClick={() => setOpenError(null)}>✕</button>
+            </div>
+          )}
+          <RepositoriesBody
+            repos={repos}
+            onOpen={(id, openWith) => {
+              setOpenError(null);
+              openRepo.mutate({ id, openWith });
+            }}
+            onToggleFav={(id) => toggleFav.mutate(id)}
+          />
+        </>
       ),
       badge: repos.length,
       headerActions: (

@@ -21,6 +21,7 @@ public static class BackendHost
             .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
             .MinimumLevel.Override("Microsoft.Hosting", LogEventLevel.Warning)
             .Enrich.FromLogContext()
+            .WriteTo.Console(outputTemplate: "{Timestamp:HH:mm:ss} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
             .WriteTo.File(
                 Path.Combine(logDir, "app-.log"),
                 rollingInterval: RollingInterval.Day,

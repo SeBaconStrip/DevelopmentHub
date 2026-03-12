@@ -14,7 +14,9 @@ public class LauncherService(ILogger<LauncherService> logger) : ILauncherService
     public Task<bool> OpenWithVisualStudioAsync(string solutionPath)
     {
         logger.LogInformation("Opening {Path} in Visual Studio", solutionPath);
-        return LaunchAsync("devenv.exe", [solutionPath]);
+        // Shell-execute the .sln directly so Windows uses the registered VS association
+        // — devenv.exe is not on PATH in typical installs
+        return LaunchAsync(solutionPath, []);
     }
 
     public Task<bool> OpenWithVsCodeAsync(string pathOrWorkspace)

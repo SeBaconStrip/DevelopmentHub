@@ -1,10 +1,13 @@
+using DevelopmentHub.Api.Hubs;
 using DevelopmentHub.Api.Services;
+using Microsoft.AspNetCore.SignalR;
 
 namespace DevelopmentHub.Api.BackgroundServices;
 
 public class RepositoryScannerService(
     IServiceScopeFactory scopeFactory,
     IUserConfigService userConfigService,
+    IHubContext<LogHub> hubContext,
     ILogger<RepositoryScannerService> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -14,16 +17,13 @@ public class RepositoryScannerService(
         // Initial scan on startup
         await RunScanAsync(stoppingToken);
 
-        var cfg = await userConfigService.GetAsync();
-        var interval = TimeSpan.FromMinutes(cfg.ScanIntervalMinutes > 0 ? cfg.ScanIntervalMinutes : 30);
-
-        using var timer = new PeriodicTimer(interval);
-
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                await timer.WaitForNextTickAsync(stoppingToken);
+                var cfg = await userConfigService.GetAsync();
+                var interval = TimeSpan.FromMinutes(cfg.ScanIntervalMinutes > 0 ? cfg.ScanIntervalMinutes : 30);
+                await Task.Delay(interval, stoppingToken);
                 await RunScanAsync(stoppingToken);
             }
             catch (OperationCanceledException)
@@ -41,6 +41,7 @@ public class RepositoryScannerService(
             var service = scope.ServiceProvider.GetRequiredService<IRepositoryService>();
             var repos = await service.ScanAsync(cancellationToken);
             logger.LogInformation("Background scan complete: {Count} repositories found.", repos.Count);
+            await hubContext.Clients.All.SendAsync("RepositoriesUpdated", cancellationToken);
         }
         catch (Exception ex)
         {

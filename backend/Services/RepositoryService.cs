@@ -91,6 +91,19 @@ public class RepositoryService(
         }
 
         logger.LogInformation("Scan complete. Found {Count} repositories.", discovered.Count);
+
+        // Remove any records that are under a known root but no longer exist on disk
+        var discoveredPaths = discovered.Select(d => d.Path).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var stale = db.Repositories
+            .FindAll()
+            .Where(r => IsUnderKnownRoot(r.Path, cfg.RepositoryRoots) && !discoveredPaths.Contains(r.Path))
+            .ToList();
+        foreach (var s in stale)
+        {
+            db.Repositories.Delete(s.Id);
+            logger.LogInformation("Removed stale repository record: {Path}", s.Path);
+        }
+
         return await GetAllAsync();
     }
 
@@ -122,17 +135,21 @@ public class RepositoryService(
         {
             launched = await launcher.OpenWithExplorerAsync(entity.Path);
         }
-        else if (request.OpenWith == OpenWith.VisualStudio && request.EntryPointPath is not null)
+        else if (request.OpenWith == OpenWith.VisualStudio)
         {
-            launched = await launcher.OpenWithVisualStudioAsync(request.EntryPointPath);
+            var target = request.EntryPointPath
+                ?? entity.EntryPoints.FirstOrDefault(p => p.EndsWith(".sln", StringComparison.OrdinalIgnoreCase));
+            if (target is null)
+                throw new InvalidOperationException($"No .sln file found for repository '{entity.Name}'.");
+            launched = await launcher.OpenWithVisualStudioAsync(target);
         }
-        else if (request.EntryPointPath is not null)
+        else // VsCode
         {
-            launched = await launcher.OpenWithVsCodeAsync(request.EntryPointPath);
-        }
-        else
-        {
-            launched = await launcher.OpenWithVsCodeAsync(entity.Path);
+            var target = request.EntryPointPath
+                ?? entity.EntryPoints.FirstOrDefault(p => p.EndsWith(".code-workspace", StringComparison.OrdinalIgnoreCase));
+            if (target is null)
+                throw new InvalidOperationException($"No .code-workspace file found for repository '{entity.Name}'.");
+            launched = await launcher.OpenWithVsCodeAsync(target);
         }
 
         if (launched)

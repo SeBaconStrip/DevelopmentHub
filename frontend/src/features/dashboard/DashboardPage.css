@@ -386,6 +386,31 @@
   background: var(--color-primary-hover);
 }
 
+/* ── error bar inside panel body ── */
+.panel-error-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 12px;
+  margin-bottom: 8px;
+  background: var(--color-error-bg, #fee2e2);
+  color: var(--color-error, #dc2626);
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.panel-error-bar button {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 2px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
 /* ── open-with buttons in repo rows ── */
 .item-open-btns {
   display: flex;

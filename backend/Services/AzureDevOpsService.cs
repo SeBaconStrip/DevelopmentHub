@@ -20,7 +20,6 @@ public class AzureDevOpsService(
     ILogger<AzureDevOpsService> logger) : IAzureDevOpsService
 {
     private const string CacheKey = "azdo_pullrequests";
-    private static readonly TimeSpan CacheDuration = TimeSpan.FromSeconds(60);
 
     public async Task<List<PullRequestDto>> GetOpenPullRequestsAsync()
     {
@@ -29,6 +28,7 @@ public class AzureDevOpsService(
 
         var userConfig = await userConfigService.GetAsync();
         var cfg = userConfig.AzureDevOps;
+        var cacheDuration = TimeSpan.FromSeconds(Math.Max(30, userConfig.PrRefreshIntervalSeconds / 2));
 
         if (string.IsNullOrWhiteSpace(cfg.Organization) ||
             string.IsNullOrWhiteSpace(cfg.Project) ||
@@ -72,7 +72,7 @@ public class AzureDevOpsService(
         }
 
         var result = all.Values.OrderByDescending(p => p.CreatedAt).ToList();
-        cache.Set(CacheKey, result, CacheDuration);
+        cache.Set(CacheKey, result, cacheDuration);
         return result;
     }
 
