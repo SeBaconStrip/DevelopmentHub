@@ -132,7 +132,9 @@ public class GitService(ILogger<GitService> logger) : IGitService
 
     public async Task FetchAsync(string repoPath, CancellationToken cancellationToken)
     {
-        var (success, output) = await RunGitCommandAsync(repoPath, ["fetch", "--prune"], cancellationToken);
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
+        var (success, output) = await RunGitCommandAsync(repoPath, ["fetch", "--prune"], linked.Token);
         if (!success)
             logger.LogWarning("git fetch --prune failed for {Path}: {Output}", repoPath, output);
     }

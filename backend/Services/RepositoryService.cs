@@ -135,17 +135,21 @@ public class RepositoryService(
         {
             launched = await launcher.OpenWithExplorerAsync(entity.Path);
         }
-        else if (request.OpenWith == OpenWith.VisualStudio && request.EntryPointPath is not null)
+        else if (request.OpenWith == OpenWith.VisualStudio)
         {
-            launched = await launcher.OpenWithVisualStudioAsync(request.EntryPointPath);
+            var target = request.EntryPointPath
+                ?? entity.EntryPoints.FirstOrDefault(p => p.EndsWith(".sln", StringComparison.OrdinalIgnoreCase));
+            if (target is null)
+                throw new InvalidOperationException($"No .sln file found for repository '{entity.Name}'.");
+            launched = await launcher.OpenWithVisualStudioAsync(target);
         }
-        else if (request.EntryPointPath is not null)
+        else // VsCode
         {
-            launched = await launcher.OpenWithVsCodeAsync(request.EntryPointPath);
-        }
-        else
-        {
-            launched = await launcher.OpenWithVsCodeAsync(entity.Path);
+            var target = request.EntryPointPath
+                ?? entity.EntryPoints.FirstOrDefault(p => p.EndsWith(".code-workspace", StringComparison.OrdinalIgnoreCase));
+            if (target is null)
+                throw new InvalidOperationException($"No .code-workspace file found for repository '{entity.Name}'.");
+            launched = await launcher.OpenWithVsCodeAsync(target);
         }
 
         if (launched)

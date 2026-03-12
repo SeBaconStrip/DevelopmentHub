@@ -31,8 +31,15 @@ public class RepositoriesController(IRepositoryService repositoryService) : Cont
     [HttpPost("{id}/open")]
     public async Task<ActionResult<RepositoryDto>> Open(string id, [FromBody] OpenRepositoryRequest request)
     {
-        var result = await repositoryService.OpenAsync(id, request);
-        return result is null ? NotFound() : Ok(result);
+        try
+        {
+            var result = await repositoryService.OpenAsync(id, request);
+            return result is null ? NotFound() : Ok(result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
     }
 
     [HttpPost("{id}/sync")]
