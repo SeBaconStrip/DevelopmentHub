@@ -26,6 +26,7 @@ export interface OpenRepositoryRequest {
 
 
 export interface PullRequest {
+  providerId: PullRequestProvider;
   prId: number;
   title: string;
   repositoryName: string;
@@ -41,12 +42,9 @@ export interface PullRequest {
   authorDisplayName: string;
 }
 
-export interface AzureDevOpsConfig {
-  organization: string;
-  project: string;
-  userEmail: string;
-  pat: string;
-}
+export type PullRequestProvider = 'azureDevOps' | 'github';
+export type PullRequestProviderConfig = Record<string, string>;
+export type PullRequestProvidersConfig = Record<string, PullRequestProviderConfig>;
 
 export interface LayoutItem {
   i: string;
@@ -60,7 +58,7 @@ export interface LayoutItem {
 
 export interface AppConfig {
   repositoryRoots: string[];
-  azureDevOps: AzureDevOpsConfig;
+  pullRequestProviders: PullRequestProvidersConfig;
   scanIntervalMinutes: number;
   repoScanDepth: number;
   entryPointScanDepth: number;

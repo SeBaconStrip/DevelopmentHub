@@ -20,13 +20,7 @@ public class ConfigController(
         return Ok(new ConfigDto
         {
             RepositoryRoots = cfg.RepositoryRoots,
-            AzureDevOps = new AzureDevOpsConfigDto
-            {
-                Organization = cfg.AzureDevOps.Organization,
-                Project = cfg.AzureDevOps.Project,
-                UserEmail = cfg.AzureDevOps.UserEmail,
-                Pat = string.IsNullOrEmpty(cfg.AzureDevOps.Pat) ? "" : "***" // redacted
-            },
+            PullRequestProviders = RedactProviderSecrets(cfg.PullRequestProviders),
             ScanIntervalMinutes = cfg.ScanIntervalMinutes,
             RepoScanDepth = cfg.RepoScanDepth,
             EntryPointScanDepth = cfg.EntryPointScanDepth,
@@ -43,18 +37,11 @@ public class ConfigController(
             var current = await userConfigService.GetAsync();
 
             current.RepositoryRoots = dto.RepositoryRoots;
+            current.PullRequestProviders = MergeProviderSettings(current.PullRequestProviders, dto.PullRequestProviders);
             current.ScanIntervalMinutes = dto.ScanIntervalMinutes;
             current.RepoScanDepth = dto.RepoScanDepth;
             current.EntryPointScanDepth = dto.EntryPointScanDepth;
             current.PrRefreshIntervalSeconds = dto.PrRefreshIntervalSeconds;
-            current.AzureDevOps = new AzureDevOpsSettings
-            {
-                Organization = dto.AzureDevOps.Organization ?? current.AzureDevOps.Organization,
-                Project = dto.AzureDevOps.Project ?? current.AzureDevOps.Project,
-                UserEmail = dto.AzureDevOps.UserEmail ?? current.AzureDevOps.UserEmail,
-                // Only update PAT if a real value was sent (not the redacted placeholder)
-                Pat = dto.AzureDevOps.Pat is "***" or "" or null ? current.AzureDevOps.Pat : dto.AzureDevOps.Pat
-            };
             current.HotkeyBinding = dto.HotkeyBinding;
 
             await userConfigService.SaveAsync(current);
@@ -72,4 +59,59 @@ public class ConfigController(
             return StatusCode(500, new { error = "Failed to save configuration." });
         }
     }
+
+    private static Dictionary<string, Dictionary<string, string>> RedactProviderSecrets(
+        Dictionary<string, Dictionary<string, string>> providers)
+    {
+        var result = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var (providerId, settings) in providers)
+        {
+            var redacted = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var (key, value) in settings)
+            {
+                redacted[key] = IsSecretKey(key) && !string.IsNullOrEmpty(value) ? "***" : value;
+            }
+
+            result[providerId] = redacted;
+        }
+
+        return result;
+    }
+
+    private static Dictionary<string, Dictionary<string, string>> MergeProviderSettings(
+        Dictionary<string, Dictionary<string, string>> current,
+        Dictionary<string, Dictionary<string, string>> incoming)
+    {
+        var result = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var (providerId, settings) in current ?? new(StringComparer.OrdinalIgnoreCase))
+        {
+            result[providerId] = new Dictionary<string, string>(settings, StringComparer.OrdinalIgnoreCase);
+        }
+
+        foreach (var (providerId, settings) in incoming ?? new(StringComparer.OrdinalIgnoreCase))
+        {
+            if (!result.TryGetValue(providerId, out var merged))
+            {
+                merged = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                result[providerId] = merged;
+            }
+
+            foreach (var (key, value) in settings)
+            {
+                if (IsSecretKey(key) && (value is "***" or "" || value is null))
+                    continue;
+
+                merged[key] = value ?? string.Empty;
+            }
+        }
+
+        return result;
+    }
+
+    private static bool IsSecretKey(string key) =>
+        key.EndsWith("pat", StringComparison.OrdinalIgnoreCase) ||
+        key.EndsWith("token", StringComparison.OrdinalIgnoreCase) ||
+        key.Contains("secret", StringComparison.OrdinalIgnoreCase);
 }

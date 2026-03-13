@@ -70,3 +70,4 @@ frontend/.vite/
 
 publish/
 installer/output/
+.dotnet/

@@ -15,14 +15,36 @@ public class UserConfigService(DashboardDatabase db) : IUserConfigService
 
     public Task<UserConfigDao> GetAsync()
     {
-        var config = db.AppConfig.FindById(ConfigId);
-        return Task.FromResult(config ?? new UserConfigDao());
+        var config = db.AppConfig.FindById(ConfigId) ?? new UserConfigDao();
+        Normalize(config);
+        return Task.FromResult(config);
     }
 
     public Task SaveAsync(UserConfigDao config)
     {
+        Normalize(config);
         config.Id = ConfigId;
         db.AppConfig.Upsert(config);
         return Task.CompletedTask;
+    }
+
+    private static void Normalize(UserConfigDao config)
+    {
+        config.RepositoryRoots ??= [];
+        config.PullRequestProviders ??= new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
+        config.HotkeyBinding ??= "Ctrl+Shift+D";
+        EnsureProvider(config, "azureDevOps");
+        EnsureProvider(config, "github");
+    }
+
+    private static Dictionary<string, string> EnsureProvider(UserConfigDao config, string providerId)
+    {
+        if (!config.PullRequestProviders.TryGetValue(providerId, out var provider) || provider is null)
+        {
+            provider = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            config.PullRequestProviders[providerId] = provider;
+        }
+
+        return provider;
     }
 }

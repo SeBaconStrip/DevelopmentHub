@@ -6,12 +6,12 @@ namespace DevelopmentHub.Api.Controllers;
 
 [ApiController]
 [Route("api/pullrequests")]
-public class PullRequestsController(IAzureDevOpsService azureDevOpsService) : ControllerBase
+public class PullRequestsController(IPullRequestService pullRequestService) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<List<PullRequestDto>>> GetOpen()
     {
-        var prs = await azureDevOpsService.GetOpenPullRequestsAsync();
+        var prs = await pullRequestService.GetOpenPullRequestsAsync(HttpContext.RequestAborted);
         return Ok(prs);
     }
 }

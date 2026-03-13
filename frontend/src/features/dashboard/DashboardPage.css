@@ -526,7 +526,7 @@
 /* ── pull requests data grid ── */
 .pr-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr 1.5fr 0.8fr 180px;
+  grid-template-columns: 42px 2fr 1fr 1.5fr 0.8fr 180px;
   align-items: center;
   border: 1px solid var(--border-accent);
   border-radius: 12px;
@@ -573,6 +573,18 @@
 .pr-col-author,
 .pr-col-branch {
   min-width: 0;
+}
+
+.pr-col-provider {
+  justify-content: center;
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
+.pr-provider-icon {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
 }
 
 .pr-col-badges {

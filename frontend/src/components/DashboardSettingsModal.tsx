@@ -7,7 +7,9 @@ import {
 } from "../store/uiStore";
 import { configApi } from "../api/config";
 import { repositoriesApi } from "../api/repositories";
-import type { AppConfig } from "../types";
+import type { AppConfig, PullRequestProvider } from "../types";
+import githubIcon from "../assets/icons/github.svg";
+import azureDevOpsIcon from "../assets/icons/azure-devops.svg";
 import "./DashboardSettingsModal.css";
 
 type NavPage = "general" | "repositories" | "pullRequests" | "appearance";
@@ -21,6 +23,47 @@ const NAV_ITEMS: { id: NavPage; icon: string; label: string }[] = [
 
 interface Props {
   onClose: () => void;
+}
+
+type ProviderField = {
+  key: string;
+  label: string;
+  placeholder: string;
+  type?: "text" | "password";
+  hint?: string;
+};
+
+type ProviderOption = {
+  id: PullRequestProvider;
+  label: string;
+  description: string;
+  icon: string;
+  sectionTitle: string;
+  sectionHint?: string;
+  fields: ProviderField[];
+};
+
+function normalizeConfig(config: AppConfig): AppConfig {
+  return {
+    ...config,
+    repositoryRoots: config.repositoryRoots ?? [],
+    pullRequestProviders: {
+      azureDevOps: {
+        organization:
+          config.pullRequestProviders?.azureDevOps?.organization ?? "",
+        project: config.pullRequestProviders?.azureDevOps?.project ?? "",
+        userEmail: config.pullRequestProviders?.azureDevOps?.userEmail ?? "",
+        pat: config.pullRequestProviders?.azureDevOps?.pat ?? "",
+      },
+      github: {
+        userLogin: config.pullRequestProviders?.github?.userLogin ?? "",
+        searchQuery: config.pullRequestProviders?.github?.searchQuery ?? "",
+        pat: config.pullRequestProviders?.github?.pat ?? "",
+      },
+      ...(config.pullRequestProviders ?? {}),
+    },
+    hotkeyBinding: config.hotkeyBinding ?? "Ctrl+Shift+D",
+  };
 }
 
 export function DashboardSettingsModal({ onClose }: Props) {
@@ -49,19 +92,29 @@ export function DashboardSettingsModal({ onClose }: Props) {
   const [isCapturingHotkey, setIsCapturingHotkey] = useState(false);
 
   useEffect(() => {
-    if (data) setForm(JSON.parse(JSON.stringify(data)));
+    if (data) setForm(normalizeConfig(JSON.parse(JSON.stringify(data))));
   }, [data]);
 
   const setField = <K extends keyof AppConfig>(key: K, value: AppConfig[K]) =>
     setForm((prev) => (prev ? { ...prev, [key]: value } : prev));
 
-  const setAzDO = <K extends keyof AppConfig["azureDevOps"]>(
-    key: K,
+  const setProviderField = (
+    providerId: PullRequestProvider,
+    key: string,
     value: string,
   ) =>
     setForm((prev) =>
       prev
-        ? { ...prev, azureDevOps: { ...prev.azureDevOps, [key]: value } }
+        ? {
+            ...prev,
+            pullRequestProviders: {
+              ...prev.pullRequestProviders,
+              [providerId]: {
+                ...(prev.pullRequestProviders[providerId] ?? {}),
+                [key]: value,
+              },
+            },
+          }
         : prev,
     );
 
@@ -136,7 +189,11 @@ export function DashboardSettingsModal({ onClose }: Props) {
         );
       case "pullRequests":
         return (
-          <PullRequestsPage form={form} setField={setField} setAzDO={setAzDO} />
+          <PullRequestsPage
+            form={form}
+            setField={setField}
+            setProviderField={setProviderField}
+          />
         );
       case "appearance":
         return <AppearancePage />;
@@ -357,13 +414,93 @@ function RepositoriesPage({
 interface PullRequestsPageProps {
   form: AppConfig;
   setField: <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => void;
-  setAzDO: <K extends keyof AppConfig["azureDevOps"]>(
-    key: K,
+  setProviderField: (
+    providerId: PullRequestProvider,
+    key: string,
     value: string,
   ) => void;
 }
 
-function PullRequestsPage({ form, setField, setAzDO }: PullRequestsPageProps) {
+const PULL_REQUEST_PROVIDER_OPTIONS: {
+  [K in PullRequestProvider]: ProviderOption;
+} = {
+  azureDevOps: {
+    id: "azureDevOps",
+    label: "Azure DevOps",
+    description: "Use Azure DevOps repositories and pull requests.",
+    icon: azureDevOpsIcon,
+    sectionTitle: "Azure DevOps",
+    fields: [
+      {
+        key: "organization",
+        label: "Organization",
+        placeholder: "myorg",
+      },
+      {
+        key: "project",
+        label: "Project",
+        placeholder: "MyProject",
+      },
+      {
+        key: "userEmail",
+        label: "User Email",
+        placeholder: "you@example.com",
+      },
+      {
+        key: "pat",
+        label: "Personal Access Token",
+        placeholder: "Leave blank to keep existing",
+        type: "password",
+        hint: "Required scopes: Code (Read) · Profile (Read)",
+      },
+    ],
+  },
+  github: {
+    id: "github",
+    label: "GitHub",
+    description: "Use GitHub pull requests and repositories.",
+    icon: githubIcon,
+    sectionTitle: "GitHub",
+    sectionHint:
+      "GitHub pull requests are loaded via search for open pull requests that involve the configured user. You can optionally add extra search qualifiers to narrow the result set.",
+    fields: [
+      {
+        key: "userLogin",
+        label: "User Login",
+        placeholder: "your-login",
+        hint: "Your GitHub username. The search uses this to find open pull requests that involve you.",
+      },
+      {
+        key: "searchQuery",
+        label: "Extra Search Query",
+        placeholder: "org:my-org -label:wip",
+        hint: "Optional GitHub search qualifiers appended to the base query. Example: org:my-org, repo:owner/name, team-review-requested:my-org/team-slug.",
+      },
+      {
+        key: "pat",
+        label: "Personal Access Token",
+        placeholder: "Leave blank to keep existing",
+        type: "password",
+        hint: "Use a token that can read pull requests and repository metadata for the repositories returned by your search.",
+      },
+    ],
+  },
+};
+
+const PULL_REQUEST_PROVIDER_LIST = [
+  {
+    ...PULL_REQUEST_PROVIDER_OPTIONS.azureDevOps,
+  },
+  {
+    ...PULL_REQUEST_PROVIDER_OPTIONS.github,
+  },
+] satisfies ProviderOption[];
+
+function PullRequestsPage({
+  form,
+  setField,
+  setProviderField,
+}: PullRequestsPageProps) {
   const { dashboardWidgets, toggleWidget } = useUiStore();
   const widget = dashboardWidgets.find((w) => w.id === "pullRequests");
 
@@ -390,41 +527,43 @@ function PullRequestsPage({ form, setField, setAzDO }: PullRequestsPageProps) {
             }
           />
           <span className="settings-field-hint">
-            How often to poll Azure DevOps for open pull requests.
+            How often to poll all configured pull request providers for open
+            pull requests.
           </span>
         </Field>
       </Section>
 
-      <Section title="Azure DevOps">
-        {(
-          [
-            ["Organization", "organization", "myorg"],
-            ["Project", "project", "MyProject"],
-            ["User Email", "userEmail", "you@example.com"],
-          ] as const
-        ).map(([label, key, placeholder]) => (
-          <Field key={key} label={label}>
-            <input
-              className="settings-input"
-              value={form.azureDevOps[key]}
-              onChange={(e) => setAzDO(key, e.target.value)}
-              placeholder={placeholder}
-            />
-          </Field>
-        ))}
-        <Field label="Personal Access Token">
-          <input
-            type="password"
-            className="settings-input"
-            value={form.azureDevOps.pat}
-            onChange={(e) => setAzDO("pat", e.target.value)}
-            placeholder="Leave blank to keep existing"
-          />
-          <span className="settings-field-hint">
-            Required scopes: Code (Read) · Profile (Read)
-          </span>
-        </Field>
-      </Section>
+      {PULL_REQUEST_PROVIDER_LIST.map((provider) => {
+        const providerConfig = form.pullRequestProviders[provider.id] ?? {};
+
+        return (
+          <Section key={provider.id} title={provider.sectionTitle}>
+            <div className="provider-section-heading">
+              <img src={provider.icon} alt="" className="provider-radio-icon" />
+              <span className="settings-page-hint">{provider.description}</span>
+            </div>
+            {provider.fields.map((field) => (
+              <Field key={field.key} label={field.label}>
+                <input
+                  type={field.type ?? "text"}
+                  className="settings-input"
+                  value={providerConfig[field.key] ?? ""}
+                  onChange={(e) =>
+                    setProviderField(provider.id, field.key, e.target.value)
+                  }
+                  placeholder={field.placeholder}
+                />
+                {field.hint && (
+                  <span className="settings-field-hint">{field.hint}</span>
+                )}
+              </Field>
+            ))}
+            {provider.sectionHint && (
+              <p className="settings-page-hint">{provider.sectionHint}</p>
+            )}
+          </Section>
+        );
+      })}
     </>
   );
 }

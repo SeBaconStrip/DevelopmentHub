@@ -270,6 +270,67 @@
   margin-bottom: 8px;
 }
 
+.provider-section-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.provider-radio-group {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.provider-radio {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 180px;
+  padding: 10px 14px;
+  border: 1px solid var(--input-border);
+  border-radius: 12px;
+  background: var(--input-bg);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+}
+
+.provider-radio:hover {
+  border-color: var(--color-accent);
+  background: var(--surface-muted);
+}
+
+.provider-radio--active {
+  border-color: var(--color-accent);
+  background: var(--widget-enabled-bg);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-accent) 20%, transparent);
+}
+
+.provider-radio-input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.provider-radio-icon {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  filter: none;
+}
+
+[data-theme="dark"] .provider-radio-icon {
+  filter: brightness(0) invert(1);
+}
+
+.provider-radio-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
 /* ── action buttons ── */
 .btn-remove {
   background: none;

@@ -1,86 +1,91 @@
-using DevelopmentHub.Api.Configuration;
+using DevelopmentHub.Api.Models;
 using DevelopmentHub.Api.Models.Dtos;
 using Microsoft.Extensions.Caching.Memory;
 using System.Net.Http.Headers;
 using System.Text;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 
 namespace DevelopmentHub.Api.Services;
 
-public interface IAzureDevOpsService
-{
-    Task<List<PullRequestDto>> GetOpenPullRequestsAsync();
-}
-
-public class AzureDevOpsService(
+public class AzureDevOpsPullRequestProvider(
     IHttpClientFactory httpClientFactory,
-    IUserConfigService userConfigService,
     IMemoryCache cache,
-    ILogger<AzureDevOpsService> logger) : IAzureDevOpsService
+    ILogger<AzureDevOpsPullRequestProvider> logger) : IPullRequestProvider
 {
-    private const string CacheKey = "azdo_pullrequests";
+    private const string CacheKey = "pullrequests.azuredevops";
 
-    public async Task<List<PullRequestDto>> GetOpenPullRequestsAsync()
+    public string ProviderId => "azureDevOps";
+
+    public async Task<List<PullRequestDto>> GetOpenPullRequestsAsync(UserConfigDao userConfig, CancellationToken cancellationToken = default)
     {
         if (cache.TryGetValue<List<PullRequestDto>>(CacheKey, out var cached) && cached is not null)
             return cached;
 
-        var userConfig = await userConfigService.GetAsync();
-        var cfg = userConfig.AzureDevOps;
+        var cfg = GetSettings(userConfig);
         var cacheDuration = TimeSpan.FromSeconds(Math.Max(30, userConfig.PrRefreshIntervalSeconds / 2));
 
-        if (string.IsNullOrWhiteSpace(cfg.Organization) ||
-            string.IsNullOrWhiteSpace(cfg.Project) ||
-            string.IsNullOrWhiteSpace(cfg.Pat))
+        if (!IsConfigured(cfg))
         {
             logger.LogWarning("Azure DevOps is not fully configured. Skipping PR fetch.");
             return [];
         }
 
         var client = CreateAuthorizedClient(cfg.Pat);
-        var result = await FetchPullRequestsAsync(client, cfg);
+        var result = await FetchPullRequestsAsync(client, cfg, cancellationToken);
         cache.Set(CacheKey, result, cacheDuration);
         return result;
     }
 
+    private static bool IsConfigured(AzureDevOpsProviderSettings cfg) =>
+        !string.IsNullOrWhiteSpace(cfg.Organization) &&
+        !string.IsNullOrWhiteSpace(cfg.Project) &&
+        !string.IsNullOrWhiteSpace(cfg.Pat);
+
+    private static AzureDevOpsProviderSettings GetSettings(UserConfigDao userConfig) =>
+        new()
+        {
+            Organization = userConfig.GetProviderSetting("azureDevOps", "organization"),
+            Project = userConfig.GetProviderSetting("azureDevOps", "project"),
+            UserEmail = userConfig.GetProviderSetting("azureDevOps", "userEmail"),
+            Pat = userConfig.GetProviderSetting("azureDevOps", "pat"),
+        };
+
     private HttpClient CreateAuthorizedClient(string pat)
     {
         var client = httpClientFactory.CreateClient("AzureDevOps");
-        if (!string.IsNullOrWhiteSpace(pat))
-        {
-            var encoded = Convert.ToBase64String(Encoding.ASCII.GetBytes($":{pat}"));
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", encoded);
-        }
+        var encoded = Convert.ToBase64String(Encoding.ASCII.GetBytes($":{pat}"));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", encoded);
         return client;
     }
 
-    private async Task<List<PullRequestDto>> FetchPullRequestsAsync(HttpClient client, AzureDevOpsSettings cfg)
+    private async Task<List<PullRequestDto>> FetchPullRequestsAsync(
+        HttpClient client,
+        AzureDevOpsProviderSettings cfg,
+        CancellationToken cancellationToken)
     {
         try
         {
             var url = $"https://dev.azure.com/{cfg.Organization}/{cfg.Project}/_apis/git/pullrequests?searchCriteria.status=active&api-version=7.1";
-            var response = await client.GetStringAsync(url);
+            var response = await client.GetStringAsync(url, cancellationToken);
             var json = JsonNode.Parse(response);
             var values = json?["value"]?.AsArray();
 
             if (values is null) return [];
 
-            var userEmail = cfg.UserEmail;
             return values
                 .Where(v => v is not null)
-                .Select(v => MapPullRequest(v!, cfg, userEmail))
+                .Select(v => MapPullRequest(v!, cfg, cfg.UserEmail))
                 .OrderByDescending(p => p.CreatedAt)
                 .ToList();
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to fetch pull requests");
+            logger.LogError(ex, "Failed to fetch Azure DevOps pull requests");
             return [];
         }
     }
 
-    private PullRequestDto MapPullRequest(JsonNode pr, AzureDevOpsSettings cfg, string userEmail)
+    private static PullRequestDto MapPullRequest(JsonNode pr, AzureDevOpsProviderSettings cfg, string userEmail)
     {
         var prId = pr["pullRequestId"]?.GetValue<int>() ?? 0;
         var authorUniqueName = pr["createdBy"]?["uniqueName"]?.GetValue<string>() ?? string.Empty;
@@ -90,13 +95,15 @@ public class AzureDevOpsService(
             (string.Equals(authorUniqueName, userEmail, StringComparison.OrdinalIgnoreCase) ||
              string.Equals(authorMailAddress, userEmail, StringComparison.OrdinalIgnoreCase));
 
-        var isReviewer = !string.IsNullOrWhiteSpace(userEmail) &&
-            (pr["reviewers"]?.AsArray().Any(r =>
+        var matchedReviewer = !string.IsNullOrWhiteSpace(userEmail)
+            ? pr["reviewers"]?.AsArray().FirstOrDefault(r =>
                 string.Equals(r?["uniqueName"]?.GetValue<string>(), userEmail, StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(r?["mailAddress"]?.GetValue<string>(), userEmail, StringComparison.OrdinalIgnoreCase)) ?? false);
+                string.Equals(r?["mailAddress"]?.GetValue<string>(), userEmail, StringComparison.OrdinalIgnoreCase))
+            : null;
 
         return new PullRequestDto
         {
+            ProviderId = "azureDevOps",
             PrId = prId,
             Title = pr["title"]?.GetValue<string>() ?? string.Empty,
             RepositoryName = pr["repository"]?["name"]?.GetValue<string>() ?? string.Empty,
@@ -107,8 +114,17 @@ public class AzureDevOpsService(
             IsDraft = pr["isDraft"]?.GetValue<bool>() ?? false,
             AuthorDisplayName = pr["createdBy"]?["displayName"]?.GetValue<string>() ?? string.Empty,
             CreatedByMe = isAuthor,
-            IsReviewer = isReviewer,
+            IsReviewer = matchedReviewer is not null,
+            ReviewerVote = matchedReviewer?["vote"]?.GetValue<int>() ?? 0,
             Url = $"https://dev.azure.com/{cfg.Organization}/{cfg.Project}/_git/{pr["repository"]?["name"]?.GetValue<string>()}/pullrequest/{prId}"
         };
     }
+}
+
+internal sealed class AzureDevOpsProviderSettings
+{
+    public string Organization { get; init; } = string.Empty;
+    public string Project { get; init; } = string.Empty;
+    public string UserEmail { get; init; } = string.Empty;
+    public string Pat { get; init; } = string.Empty;
 }

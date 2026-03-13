@@ -11,6 +11,8 @@ import { configApi } from "../../api/config";
 import vscodeIconUrl from "../../assets/icons/vscode.svg";
 import visualStudioIconUrl from "../../assets/icons/visualstudio.svg";
 import explorerIconUrl from "../../assets/icons/windows-explorer.svg";
+import githubIconUrl from "../../assets/icons/github.svg";
+import azureDevOpsIconUrl from "../../assets/icons/azure-devops.svg";
 import { fetchPullRequests } from "../../api/pullRequests";
 import { launcherApi } from "../../api/launcher";
 import {
@@ -456,11 +458,17 @@ const VOTE_LABEL: Record<number, string> = {
   [-10]: "Rejected",
 };
 
+const PROVIDER_ICONS: Record<PullRequest["providerId"], string> = {
+  azureDevOps: azureDevOpsIconUrl,
+  github: githubIconUrl,
+};
+
 function PullRequestsBody({ prs }: { prs: PullRequest[] }) {
   if (prs.length === 0) return <Empty text="No pull requests" />;
   return (
     <div className="pr-grid">
       {/* header cells — direct grid children, same as repo-grid pattern */}
+      <div className="pr-grid-head pr-col-provider" />
       <div className="pr-grid-head pr-col-title">Title</div>
       <div className="pr-grid-head pr-col-repo">Repository</div>
       <div className="pr-grid-head pr-col-branch">Branch</div>
@@ -470,7 +478,7 @@ function PullRequestsBody({ prs }: { prs: PullRequest[] }) {
       {/* rows — display:contents so cells share the parent grid tracks */}
       {prs.map((pr) => (
         <div
-          key={pr.prId}
+          key={`${pr.providerId}-${pr.prId}`}
           className="pr-grid-row"
           role="button"
           tabIndex={0}
@@ -478,6 +486,14 @@ function PullRequestsBody({ prs }: { prs: PullRequest[] }) {
           onClick={() => launcherApi.openUrl(pr.url)}
           onKeyDown={(e) => e.key === "Enter" && launcherApi.openUrl(pr.url)}
         >
+          <div className="pr-cell pr-col-provider">
+            <img
+              src={PROVIDER_ICONS[pr.providerId]}
+              alt={pr.providerId}
+              className="pr-provider-icon"
+              draggable={false}
+            />
+          </div>
           <div className="pr-cell pr-col-title">
             <span className="item-name">{pr.title}</span>
           </div>
