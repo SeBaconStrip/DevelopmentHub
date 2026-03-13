@@ -74,6 +74,7 @@ public static class BackendHost
 
         // ── Services ──────────────────────────────────────────────────────────
         builder.Services.AddMemoryCache();
+        builder.Services.AddSingleton<IBrowserTabCommandBridge, BrowserTabCommandBridge>();
         builder.Services.AddScoped<IGitService, GitService>();
         builder.Services.AddScoped<ILauncherService, LauncherService>();
         builder.Services.AddScoped<IPullRequestService, PullRequestService>();
@@ -108,6 +109,13 @@ public static class BackendHost
                       .AllowAnyMethod()
                       .AllowCredentials();
             });
+
+            options.AddPolicy("BrowserExtension", policy =>
+            {
+                policy.AllowAnyOrigin()
+                      .AllowAnyHeader()
+                      .AllowAnyMethod();
+            });
         });
 
         var app = builder.Build();
@@ -117,10 +125,10 @@ public static class BackendHost
         app.UseSwaggerUI();
 
         app.UseRouting();
+        app.UseCors("BrowserExtension");
 
         if (app.Environment.IsDevelopment())
         {
-            app.UseCors("LocalDev");
         }
         else if (Directory.Exists(wwwroot))
         {

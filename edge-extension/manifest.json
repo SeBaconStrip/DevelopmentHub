@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "DevelopmentHub Tab Reuser",
+  "version": "0.1.0",
+  "description": "Focus an existing Edge tab for a URL or open a new one.",
+  "permissions": ["tabs"],
+  "host_permissions": [
+    "<all_urls>",
+    "http://localhost:5131/*",
+    "http://localhost:6131/*"
+  ],
+  "background": {
+    "service_worker": "service-worker.js"
+  },
+  "action": {
+    "default_title": "DevelopmentHub Tab Reuser",
+    "default_popup": "popup.html"
+  }
+}

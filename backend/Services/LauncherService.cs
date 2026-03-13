@@ -10,7 +10,9 @@ public interface ILauncherService
     Task<bool> OpenUrlAsync(string url);
 }
 
-public class LauncherService(ILogger<LauncherService> logger) : ILauncherService
+public class LauncherService(
+    ILogger<LauncherService> logger,
+    IBrowserTabCommandBridge browserTabCommandBridge) : ILauncherService
 {
     public Task<bool> OpenWithVisualStudioAsync(string solutionPath)
     {
@@ -32,10 +34,18 @@ public class LauncherService(ILogger<LauncherService> logger) : ILauncherService
         return LaunchAsync("explorer.exe", [folderPath]);
     }
 
-    public Task<bool> OpenUrlAsync(string url)
+    public async Task<bool> OpenUrlAsync(string url)
     {
         logger.LogInformation("Opening URL in default browser: {Url}", url);
-        return LaunchAsync(url, []);
+
+        var handledByExtension = await browserTabCommandBridge.RequestOpenUrlAsync(url);
+        if (handledByExtension)
+        {
+            logger.LogInformation("URL handled by browser extension: {Url}", url);
+            return true;
+        }
+
+        return await LaunchAsync(url, []);
     }
 
     private async Task<bool> LaunchAsync(string command, string[] args)
