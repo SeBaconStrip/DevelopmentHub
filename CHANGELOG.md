@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.5 - 2026-03-15
+
+- Refactored pull request integrations to use adapter-based providers instead of Azure DevOps-only logic
+- Pull requests can now be loaded from Azure DevOps and GitHub at the same time and appear in one merged list
+- Added provider icons to the pull request list so GitHub and Azure DevOps entries are visually distinguishable
+- Reworked pull request settings to a provider-based configuration model and removed the old single-provider selection flow
+- Changed GitHub pull request loading from single-repository polling to user-based search with optional extra search qualifiers
+- Added a simple Microsoft Edge extension prototype that reuses existing tabs for matching URLs instead of always opening a new tab
+- Added a lightweight backend-to-extension bridge so DevelopmentHub can hand PR URLs to the Edge extension locally
+- Extended GitHub Actions build/release workflow to package the Edge extension as a versioned ZIP artifact and attach it to releases
+
 ## 0.4 - 2026-03-12
 
 - Refactored settings modal to sidebar-style navigation with per-panel config pages
