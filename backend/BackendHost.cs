@@ -112,7 +112,17 @@ public static class BackendHost
 
             options.AddPolicy("BrowserExtension", policy =>
             {
-                policy.AllowAnyOrigin()
+                policy.SetIsOriginAllowed(origin =>
+                      {
+                          if (Uri.TryCreate(origin, UriKind.Absolute, out var uri))
+                          {
+                              return uri.Scheme is "chrome-extension"
+                                  or "ms-browser-extension"
+                                  or "moz-extension"
+                                  or "safari-extension";
+                          }
+                          return false;
+                      })
                       .AllowAnyHeader()
                       .AllowAnyMethod();
             });
@@ -125,7 +135,7 @@ public static class BackendHost
         app.UseSwaggerUI();
 
         app.UseRouting();
-        app.UseCors("BrowserExtension");
+        app.UseCors("LocalDev");
 
         if (app.Environment.IsDevelopment())
         {

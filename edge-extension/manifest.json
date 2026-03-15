@@ -5,7 +5,6 @@
   "description": "Focus an existing Edge tab for a URL or open a new one.",
   "permissions": ["tabs"],
   "host_permissions": [
-    "<all_urls>",
     "http://localhost:5131/*",
     "http://localhost:6131/*"
   ],

@@ -30,7 +30,7 @@ public sealed class BrowserTabCommandBridge : IBrowserTabCommandBridge
 
         try
         {
-            await using var _ = timeoutCts.Token.Register(() => tcs.TrySetResult(false));
+            using var _ = timeoutCts.Token.Register(() => tcs.TrySetResult(false));
             return await tcs.Task;
         }
         finally
