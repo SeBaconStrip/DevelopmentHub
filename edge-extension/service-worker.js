@@ -18,6 +18,21 @@ const API_BASES = [
 ];
 
 let pollTimer = null;
+let consecutiveFailures = 0;
+const BASE_POLL_INTERVAL_MS = 3000;
+const ACTIVE_POLL_INTERVAL_MS = 500;
+const MAX_BACKOFF_MS = 30000;
+
+function getPollInterval(hasFailures) {
+  if (hasFailures) {
+    const backoff = Math.min(
+      BASE_POLL_INTERVAL_MS * Math.pow(2, consecutiveFailures - 1),
+      MAX_BACKOFF_MS,
+    );
+    return backoff;
+  }
+  return BASE_POLL_INTERVAL_MS;
+}
 
 async function findMatchingTab(targetUrl) {
   const normalizedTarget = normalizeUrl(targetUrl);
@@ -61,10 +76,13 @@ async function focusOrOpenUrl(rawUrl) {
 }
 
 async function fetchNextCommand() {
+  let anyReachable = false;
   for (const baseUrl of API_BASES) {
     try {
       const response = await fetch(`${baseUrl}/next`, { method: "GET" });
+      anyReachable = true;
       if (response.status === 204) {
+        consecutiveFailures = 0;
         return null;
       }
 
@@ -72,6 +90,7 @@ async function fetchNextCommand() {
         continue;
       }
 
+      consecutiveFailures = 0;
       const command = await response.json();
       return { baseUrl, command };
     } catch {
@@ -79,6 +98,9 @@ async function fetchNextCommand() {
     }
   }
 
+  if (!anyReachable) {
+    consecutiveFailures++;
+  }
   return null;
 }
 
@@ -97,6 +119,7 @@ async function completeCommand(baseUrl, commandId, handled) {
 async function pollBackend() {
   const next = await fetchNextCommand();
   if (!next?.command) {
+    schedulePoll(getPollInterval(consecutiveFailures > 0));
     return;
   }
 
@@ -105,6 +128,7 @@ async function pollBackend() {
     if (command.type === "focus-or-open-url") {
       await focusOrOpenUrl(command.url);
       await completeCommand(baseUrl, command.commandId, true);
+      schedulePoll(ACTIVE_POLL_INTERVAL_MS);
       return;
     }
   } catch {
@@ -112,6 +136,19 @@ async function pollBackend() {
   }
 
   await completeCommand(baseUrl, command.commandId, false);
+  schedulePoll(BASE_POLL_INTERVAL_MS);
+}
+
+function schedulePoll(delayMs) {
+  if (pollTimer !== null) {
+    clearTimeout(pollTimer);
+  }
+  pollTimer = setTimeout(() => {
+    pollTimer = null;
+    pollBackend().catch(() => {
+      schedulePoll(getPollInterval(consecutiveFailures > 0));
+    });
+  }, delayMs);
 }
 
 function startPolling() {
@@ -119,9 +156,7 @@ function startPolling() {
     return;
   }
 
-  pollTimer = setInterval(() => {
-    pollBackend().catch(() => {});
-  }, 1000);
+  schedulePoll(BASE_POLL_INTERVAL_MS);
 }
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {

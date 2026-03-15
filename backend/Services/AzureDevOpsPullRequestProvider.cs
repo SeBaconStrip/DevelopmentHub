@@ -65,7 +65,7 @@ public class AzureDevOpsPullRequestProvider(
     {
         try
         {
-            var url = $"https://dev.azure.com/{cfg.Organization}/{cfg.Project}/_apis/git/pullrequests?searchCriteria.status=active&api-version=7.1";
+            var url = $"https://dev.azure.com/{cfg.Organization}/{cfg.Project}/_apis/git/pullrequests?searchCriteria.status=active&$top=200&api-version=7.1";
             var response = await client.GetStringAsync(url, cancellationToken);
             var json = JsonNode.Parse(response);
             var values = json?["value"]?.AsArray();

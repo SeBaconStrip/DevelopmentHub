@@ -17,8 +17,8 @@ public class LauncherController(ILauncherService launcher) : ControllerBase
             return BadRequest(new { error = "Invalid URL." });
         }
 
-        await launcher.OpenUrlAsync(request.Url);
-        return Ok();
+        var success = await launcher.OpenUrlAsync(request.Url);
+        return success ? Ok(new { ok = true }) : StatusCode(StatusCodes.Status502BadGateway, new { ok = false, error = "Failed to open URL." });
     }
 }
 

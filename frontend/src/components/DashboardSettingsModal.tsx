@@ -44,23 +44,23 @@ type ProviderOption = {
 };
 
 function normalizeConfig(config: AppConfig): AppConfig {
+  const existingProviders = config.pullRequestProviders ?? {};
   return {
     ...config,
     repositoryRoots: config.repositoryRoots ?? [],
     pullRequestProviders: {
+      ...existingProviders,
       azureDevOps: {
-        organization:
-          config.pullRequestProviders?.azureDevOps?.organization ?? "",
-        project: config.pullRequestProviders?.azureDevOps?.project ?? "",
-        userEmail: config.pullRequestProviders?.azureDevOps?.userEmail ?? "",
-        pat: config.pullRequestProviders?.azureDevOps?.pat ?? "",
+        organization: existingProviders.azureDevOps?.organization ?? "",
+        project: existingProviders.azureDevOps?.project ?? "",
+        userEmail: existingProviders.azureDevOps?.userEmail ?? "",
+        pat: existingProviders.azureDevOps?.pat ?? "",
       },
       github: {
-        userLogin: config.pullRequestProviders?.github?.userLogin ?? "",
-        searchQuery: config.pullRequestProviders?.github?.searchQuery ?? "",
-        pat: config.pullRequestProviders?.github?.pat ?? "",
+        userLogin: existingProviders.github?.userLogin ?? "",
+        searchQuery: existingProviders.github?.searchQuery ?? "",
+        pat: existingProviders.github?.pat ?? "",
       },
-      ...(config.pullRequestProviders ?? {}),
     },
     hotkeyBinding: config.hotkeyBinding ?? "Ctrl+Shift+D",
   };
