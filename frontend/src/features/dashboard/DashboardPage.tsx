@@ -484,7 +484,12 @@ function PullRequestsBody({ prs }: { prs: PullRequest[] }) {
           tabIndex={0}
           title={pr.title}
           onClick={() => launcherApi.openUrl(pr.url)}
-          onKeyDown={(e) => e.key === "Enter" && launcherApi.openUrl(pr.url)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              launcherApi.openUrl(pr.url);
+            }
+          }}
         >
           <div className="pr-cell pr-col-provider">
             <img
