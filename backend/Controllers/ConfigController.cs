@@ -20,6 +20,12 @@ public class ConfigController(
         return Ok(new ConfigDto
         {
             RepositoryRoots = cfg.RepositoryRoots,
+            CustomLinks = cfg.CustomLinks.Select(link => new CustomLinkDto
+            {
+                Name = link.Name,
+                Target = link.Target,
+                Type = link.Type
+            }).ToList(),
             PullRequestProviders = RedactProviderSecrets(cfg.PullRequestProviders),
             ScanIntervalMinutes = cfg.ScanIntervalMinutes,
             RepoScanDepth = cfg.RepoScanDepth,
@@ -37,6 +43,15 @@ public class ConfigController(
             var current = await userConfigService.GetAsync();
 
             current.RepositoryRoots = dto.RepositoryRoots;
+            current.CustomLinks = (dto.CustomLinks ?? [])
+                .Where(link => !string.IsNullOrWhiteSpace(link?.Name) && !string.IsNullOrWhiteSpace(link.Target))
+                .Select(link => new CustomLinkDao
+                {
+                    Name = link.Name.Trim(),
+                    Target = link.Target.Trim(),
+                    Type = string.Equals(link.Type, "explorer", StringComparison.OrdinalIgnoreCase) ? "explorer" : "web"
+                })
+                .ToList();
             current.PullRequestProviders = MergeProviderSettings(current.PullRequestProviders, dto.PullRequestProviders);
             current.ScanIntervalMinutes = dto.ScanIntervalMinutes;
             current.RepoScanDepth = dto.RepoScanDepth;

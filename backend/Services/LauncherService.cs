@@ -6,7 +6,7 @@ public interface ILauncherService
 {
     Task<bool> OpenWithVisualStudioAsync(string solutionPath);
     Task<bool> OpenWithVsCodeAsync(string pathOrWorkspace);
-    Task<bool> OpenWithExplorerAsync(string folderPath);
+    Task<bool> OpenWithExplorerAsync(string targetPath);
     Task<bool> OpenUrlAsync(string url);
 }
 
@@ -28,10 +28,10 @@ public class LauncherService(
         return LaunchAsync("code", [pathOrWorkspace]);
     }
 
-    public Task<bool> OpenWithExplorerAsync(string folderPath)
+    public Task<bool> OpenWithExplorerAsync(string targetPath)
     {
-        logger.LogInformation("Opening {Path} in Explorer", folderPath);
-        return LaunchAsync("explorer.exe", [folderPath]);
+        logger.LogInformation("Opening {Path} in Explorer", targetPath);
+        return LaunchAsync("explorer.exe", [targetPath]);
     }
 
     public async Task<bool> OpenUrlAsync(string url)

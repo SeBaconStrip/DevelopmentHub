@@ -31,8 +31,18 @@ public class UserConfigService(DashboardDatabase db) : IUserConfigService
     private static void Normalize(UserConfigDao config)
     {
         config.RepositoryRoots ??= [];
+        config.CustomLinks ??= [];
         config.PullRequestProviders ??= new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
         config.HotkeyBinding ??= "Ctrl+Shift+D";
+        config.CustomLinks = config.CustomLinks
+            .Where(link => !string.IsNullOrWhiteSpace(link?.Name) && !string.IsNullOrWhiteSpace(link.Target))
+            .Select(link => new CustomLinkDao
+            {
+                Name = link.Name.Trim(),
+                Target = link.Target.Trim(),
+                Type = string.Equals(link.Type, "explorer", StringComparison.OrdinalIgnoreCase) ? "explorer" : "web"
+            })
+            .ToList();
         EnsureProvider(config, "azureDevOps");
         EnsureProvider(config, "github");
     }

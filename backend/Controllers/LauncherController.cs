@@ -20,6 +20,22 @@ public class LauncherController(ILauncherService launcher) : ControllerBase
         var success = await launcher.OpenUrlAsync(request.Url);
         return success ? Ok(new { ok = true }) : StatusCode(StatusCodes.Status502BadGateway, new { ok = false, error = "Failed to open URL." });
     }
+
+    [HttpPost("open-explorer")]
+    public async Task<IActionResult> OpenExplorer([FromBody] OpenExplorerRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Target))
+            return BadRequest(new { error = "Invalid Explorer target." });
+
+        var target = request.Target.Trim();
+        var exists = Directory.Exists(target) || System.IO.File.Exists(target);
+        if (!exists)
+            return BadRequest(new { error = "Explorer target does not exist." });
+
+        var success = await launcher.OpenWithExplorerAsync(target);
+        return success ? Ok(new { ok = true }) : StatusCode(StatusCodes.Status502BadGateway, new { ok = false, error = "Failed to open Explorer target." });
+    }
 }
 
 public record OpenUrlRequest(string Url);
+public record OpenExplorerRequest(string Target);

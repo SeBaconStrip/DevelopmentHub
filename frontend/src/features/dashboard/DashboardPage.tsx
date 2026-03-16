@@ -21,7 +21,7 @@ import {
   type WidgetId,
 } from "../../store/uiStore";
 import { DashboardSettingsModal } from "../../components/DashboardSettingsModal";
-import type { Repository, PullRequest } from "../../types";
+import type { CustomLink, Repository, PullRequest } from "../../types";
 
 /* ─────────────────────────────────────────────────────────────── layout ── */
 
@@ -43,6 +43,7 @@ export default function DashboardPage() {
     queryKey: ["config"],
     queryFn: configApi.get,
   });
+  const customLinks = config?.customLinks ?? [];
 
   const { data: repos = [], refetch: refetchRepos } = useQuery<Repository[]>({
     queryKey: ["repositories"],
@@ -137,6 +138,10 @@ export default function DashboardPage() {
       ),
     },
     pullRequests: { body: <PullRequestsBody prs={prs} />, badge: prs.length },
+    quickLinks: {
+      body: <QuickLinksBody links={customLinks} />,
+      badge: customLinks.length,
+    },
   };
 
   const enabled = dashboardWidgets.filter(
@@ -536,6 +541,55 @@ function PullRequestsBody({ prs }: { prs: PullRequest[] }) {
             )}
           </div>
         </div>
+      ))}
+    </div>
+  );
+}
+
+function QuickLinksBody({ links }: { links: CustomLink[] }) {
+  const [error, setError] = useState<string | null>(null);
+
+  if (links.length === 0) {
+    return <Empty text="No quick links yet. Add some in Settings > Quick Links." />;
+  }
+
+  async function handleOpen(link: CustomLink) {
+    try {
+      setError(null);
+      if (link.type === "explorer") {
+        await launcherApi.openExplorer(link.target);
+        return;
+      }
+
+      await launcherApi.openUrl(link.target);
+    } catch {
+      setError(`Could not open "${link.name}".`);
+    }
+  }
+
+  return (
+    <div className="quick-links-list">
+      {error && (
+        <div className="panel-error-bar">
+          <span>⚠ {error}</span>
+          <button onClick={() => setError(null)}>✕</button>
+        </div>
+      )}
+      {links.map((link, index) => (
+        <button
+          key={`${link.type}-${link.target}-${index}`}
+          className="quick-link-item"
+          onClick={() => handleOpen(link)}
+          title={link.target}
+        >
+          <span className="quick-link-icon">
+            {link.type === "explorer" ? "📁" : "🌐"}
+          </span>
+          <span className="quick-link-copy">
+            <span className="item-name">{link.name}</span>
+            <span className="item-meta">{link.target}</span>
+          </span>
+        </button>
       ))}
     </div>
   );

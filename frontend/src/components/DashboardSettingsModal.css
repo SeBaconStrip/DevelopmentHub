@@ -284,6 +284,20 @@
   filter: none;
 }
 
+.custom-link-card {
+  padding: 14px;
+  margin-bottom: 12px;
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  background: var(--surface-muted);
+}
+
+.custom-link-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(160px, 0.8fr);
+  gap: 12px;
+}
+
 [data-theme="dark"] .provider-radio-icon {
   filter: brightness(0) invert(1);
 }
