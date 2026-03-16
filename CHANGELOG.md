@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6 - 2026-03-16
+
+- Added a Microsoft Edge tab-reuse extension prototype and a WebSocket bridge so PR links can reuse existing browser tabs
+- Improved extension resilience with reconnect handling, heartbeats, wake-up alarms, and stale-client filtering on the backend
+- Updated the pull request and repository widgets so their data grids share the same surface styling as quick links
+- Restored dark theme provider icon contrast in the pull request widget
+- Packaged the Edge extension in CI and synchronized its manifest version with the application release version
+- Simplified VS Code workspace tasks and aligned `run all` with the desktop app-based development flow
+
 ## 0.5 - 2026-03-15
 
 - Refactored pull request integrations to use adapter-based providers instead of Azure DevOps-only logic
