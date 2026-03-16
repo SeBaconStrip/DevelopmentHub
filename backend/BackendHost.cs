@@ -5,6 +5,7 @@ using DevelopmentHub.Api.Hubs;
 using DevelopmentHub.Api.Services;
 using Serilog;
 using Serilog.Events;
+using System.Net.WebSockets;
 
 namespace DevelopmentHub.Api;
 
@@ -135,6 +136,7 @@ public static class BackendHost
         app.UseSwaggerUI();
 
         app.UseRouting();
+        app.UseWebSockets();
         app.UseCors("LocalDev");
 
         if (app.Environment.IsDevelopment())
@@ -148,6 +150,19 @@ public static class BackendHost
 
         app.MapControllers();
         app.MapHub<LogHub>("/hubs/log");
+        app.Map("/ws/browser-tab-bridge", async context =>
+        {
+            if (!context.WebSockets.IsWebSocketRequest)
+            {
+                context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                await context.Response.WriteAsync("WebSocket connection expected.");
+                return;
+            }
+
+            var bridge = context.RequestServices.GetRequiredService<IBrowserTabCommandBridge>();
+            using var webSocket = await context.WebSockets.AcceptWebSocketAsync();
+            await bridge.HandleConnectionAsync(webSocket, context.RequestAborted);
+        });
 
         if (!app.Environment.IsDevelopment() && Directory.Exists(wwwroot))
         {

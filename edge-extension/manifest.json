@@ -6,7 +6,9 @@
   "permissions": ["tabs"],
   "host_permissions": [
     "http://localhost:5131/*",
-    "http://localhost:6131/*"
+    "http://localhost:6131/*",
+    "ws://localhost:5131/*",
+    "ws://localhost:6131/*"
   ],
   "background": {
     "service_worker": "service-worker.js"

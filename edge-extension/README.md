@@ -23,14 +23,16 @@ Simple proof of concept for Microsoft Edge:
 
 ## Local bridge
 
-The background service worker also polls these backend endpoints:
+The background service worker keeps a WebSocket connection to one of these
+backend endpoints:
 
-- `http://localhost:6131/api/browser-tab-bridge/next`
-- `http://localhost:5131/api/browser-tab-bridge/next`
+- `ws://localhost:6131/ws/browser-tab-bridge`
+- `ws://localhost:5131/ws/browser-tab-bridge`
 
-If DevelopmentHub enqueues a URL, the extension tries to focus an existing tab
-with the same normalized URL or opens a new one, then posts the result back to
-`/complete`.
+If DevelopmentHub sends a URL, the extension tries to focus an existing tab
+with the same normalized URL or opens a new one, then acknowledges the command
+over the same socket. If no extension is connected, DevelopmentHub falls back
+to opening the URL normally in the system browser.
 
 ## Not implemented yet
 
