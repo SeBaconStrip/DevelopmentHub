@@ -2,6 +2,29 @@ function normalizeUrl(rawUrl) {
   try {
     const url = new URL(rawUrl);
     url.hash = "";
+    url.protocol = url.protocol.toLowerCase();
+    url.hostname = url.hostname.toLowerCase();
+
+    const params = [...url.searchParams.entries()]
+      .sort(([leftKey, leftValue], [rightKey, rightValue]) => {
+        if (leftKey === rightKey) {
+          return leftValue.localeCompare(rightValue);
+        }
+        return leftKey.localeCompare(rightKey);
+      });
+
+    url.search = "";
+    for (const [key, value] of params) {
+      url.searchParams.append(key, value);
+    }
+
+    if (
+      (url.protocol === "https:" && url.port === "443") ||
+      (url.protocol === "http:" && url.port === "80")
+    ) {
+      url.port = "";
+    }
+
     let normalized = url.toString();
     if (normalized.endsWith("/")) {
       normalized = normalized.slice(0, -1);
@@ -12,43 +35,87 @@ function normalizeUrl(rawUrl) {
   }
 }
 
-const API_BASES = [
-  "http://localhost:6131/api/browser-tab-bridge",
-  "http://localhost:5131/api/browser-tab-bridge",
+function normalizeUrlWithoutSearch(rawUrl) {
+  try {
+    const url = new URL(rawUrl);
+    url.hash = "";
+    url.search = "";
+    url.protocol = url.protocol.toLowerCase();
+    url.hostname = url.hostname.toLowerCase();
+
+    if (
+      (url.protocol === "https:" && url.port === "443") ||
+      (url.protocol === "http:" && url.port === "80")
+    ) {
+      url.port = "";
+    }
+
+    let normalized = url.toString();
+    if (normalized.endsWith("/")) {
+      normalized = normalized.slice(0, -1);
+    }
+    return normalized;
+  } catch {
+    return rawUrl.trim();
+  }
+}
+
+const WS_BASES = [
+  "ws://localhost:6131/ws/browser-tab-bridge",
+  "ws://localhost:5131/ws/browser-tab-bridge",
 ];
 
-let pollTimer = null;
+let bridgeSocket = null;
+let reconnectTimer = null;
 let consecutiveFailures = 0;
-const BASE_POLL_INTERVAL_MS = 3000;
-const ACTIVE_POLL_INTERVAL_MS = 500;
+let bridgeState = "disconnected";
+let activeSocketUrl = null;
+let lastSocketUrl = null;
+let heartbeatTimer = null;
+let lastHeartbeatAt = null;
+let lastDisconnectAt = null;
+const BASE_RECONNECT_INTERVAL_MS = 1500;
+const HEARTBEAT_INTERVAL_MS = 15000;
 const MAX_BACKOFF_MS = 30000;
+const BRIDGE_MAINTENANCE_ALARM = "bridge-maintenance";
+const BRIDGE_MAINTENANCE_PERIOD_MINUTES = 0.5;
 
-function getPollInterval(hasFailures) {
-  if (hasFailures) {
-    const backoff = Math.min(
-      BASE_POLL_INTERVAL_MS * Math.pow(2, consecutiveFailures - 1),
+function getReconnectInterval() {
+  if (consecutiveFailures > 0) {
+    return Math.min(
+      BASE_RECONNECT_INTERVAL_MS * Math.pow(2, consecutiveFailures - 1),
       MAX_BACKOFF_MS,
     );
-    return backoff;
   }
-  return BASE_POLL_INTERVAL_MS;
+
+  return BASE_RECONNECT_INTERVAL_MS;
 }
 
 async function findMatchingTab(targetUrl) {
   const normalizedTarget = normalizeUrl(targetUrl);
+  const normalizedTargetWithoutSearch = normalizeUrlWithoutSearch(targetUrl);
   const tabs = await chrome.tabs.query({});
+  let fallbackMatch = null;
 
   for (const tab of tabs) {
     if (!tab.id || !tab.url) {
       continue;
     }
 
-    if (normalizeUrl(tab.url) === normalizedTarget) {
+    const normalizedTabUrl = normalizeUrl(tab.url);
+    if (normalizedTabUrl === normalizedTarget) {
       return tab;
+    }
+
+    if (
+      fallbackMatch === null &&
+      normalizeUrlWithoutSearch(tab.url) === normalizedTargetWithoutSearch
+    ) {
+      fallbackMatch = tab;
     }
   }
 
-  return null;
+  return fallbackMatch;
 }
 
 async function focusOrOpenUrl(rawUrl) {
@@ -75,91 +142,206 @@ async function focusOrOpenUrl(rawUrl) {
   return { reused: false, tabId: createdTab.id ?? null };
 }
 
-async function fetchNextCommand() {
-  let anyReachable = false;
-  for (const baseUrl of API_BASES) {
-    try {
-      const response = await fetch(`${baseUrl}/next`, { method: "GET" });
-      anyReachable = true;
-      if (response.status === 204) {
-        consecutiveFailures = 0;
-        return null;
-      }
-
-      if (!response.ok) {
-        continue;
-      }
-
-      consecutiveFailures = 0;
-      const command = await response.json();
-      return { baseUrl, command };
-    } catch {
-      // try next backend URL
-    }
+function sendBridgeMessage(message) {
+  if (bridgeSocket?.readyState !== WebSocket.OPEN) {
+    return false;
   }
 
-  if (!anyReachable) {
-    consecutiveFailures++;
-  }
-  return null;
+  bridgeSocket.send(JSON.stringify(message));
+  return true;
 }
 
-async function completeCommand(baseUrl, commandId, handled) {
-  try {
-    await fetch(`${baseUrl}/complete`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ commandId, handled }),
-    });
-  } catch {
-    // best effort
+function stopHeartbeat() {
+  if (heartbeatTimer !== null) {
+    clearInterval(heartbeatTimer);
+    heartbeatTimer = null;
   }
 }
 
-async function pollBackend() {
-  const next = await fetchNextCommand();
-  if (!next?.command) {
-    schedulePoll(getPollInterval(consecutiveFailures > 0));
+function sendHeartbeat() {
+  const sentAt = new Date().toISOString();
+  const sent = sendBridgeMessage({
+    type: "heartbeat",
+    sentAt,
+  });
+
+  if (sent) {
+    lastHeartbeatAt = sentAt;
+    return true;
+  }
+
+  stopHeartbeat();
+  return false;
+}
+
+function startHeartbeat() {
+  stopHeartbeat();
+  sendHeartbeat();
+  heartbeatTimer = setInterval(() => {
+    sendHeartbeat();
+  }, HEARTBEAT_INTERVAL_MS);
+}
+
+function setBridgeState(state, socketUrl = null) {
+  bridgeState = state;
+  if (socketUrl) {
+    lastSocketUrl = socketUrl;
+  }
+
+  if (state === "connected") {
+    activeSocketUrl = socketUrl;
+    lastDisconnectAt = null;
     return;
   }
 
-  const { baseUrl, command } = next;
+  activeSocketUrl = null;
+  if (state === "disconnected") {
+    lastDisconnectAt = new Date().toISOString();
+  }
+}
+
+async function handleBridgeCommand(command) {
   try {
-    if (command.type === "focus-or-open-url") {
+    if (command?.type === "focus-or-open-url") {
       await focusOrOpenUrl(command.url);
-      await completeCommand(baseUrl, command.commandId, true);
-      schedulePoll(ACTIVE_POLL_INTERVAL_MS);
+      sendBridgeMessage({
+        type: "complete-command",
+        commandId: command.commandId,
+        handled: true,
+      });
       return;
     }
   } catch {
     // fall through to handled=false
   }
 
-  await completeCommand(baseUrl, command.commandId, false);
-  schedulePoll(BASE_POLL_INTERVAL_MS);
-}
-
-function schedulePoll(delayMs) {
-  if (pollTimer !== null) {
-    clearTimeout(pollTimer);
-  }
-  pollTimer = setTimeout(() => {
-    pollTimer = null;
-    pollBackend().catch(() => {
-      schedulePoll(getPollInterval(consecutiveFailures > 0));
+  if (command?.commandId) {
+    sendBridgeMessage({
+      type: "complete-command",
+      commandId: command.commandId,
+      handled: false,
     });
-  }, delayMs);
+  }
 }
 
-function startPolling() {
-  if (pollTimer !== null) {
+function scheduleReconnect() {
+  if (reconnectTimer !== null) {
     return;
   }
 
-  schedulePoll(BASE_POLL_INTERVAL_MS);
+  setBridgeState("connecting", lastSocketUrl);
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    connectBridge().catch(() => {
+      scheduleReconnect();
+    });
+  }, getReconnectInterval());
+}
+
+function ensureMaintenanceAlarm() {
+  chrome.alarms.create(BRIDGE_MAINTENANCE_ALARM, {
+    periodInMinutes: BRIDGE_MAINTENANCE_PERIOD_MINUTES,
+  });
+}
+
+function openBridgeSocket(socketUrl) {
+  return new Promise((resolve, reject) => {
+    const socket = new WebSocket(socketUrl);
+    let settled = false;
+    setBridgeState("connecting", socketUrl);
+
+    socket.addEventListener("open", () => {
+      bridgeSocket = socket;
+      consecutiveFailures = 0;
+      setBridgeState("connected", socketUrl);
+      startHeartbeat();
+      settled = true;
+      resolve();
+    });
+
+    socket.addEventListener("message", (event) => {
+      try {
+        const command = JSON.parse(event.data);
+        handleBridgeCommand(command);
+      } catch {
+        // ignore malformed payloads
+      }
+    });
+
+    socket.addEventListener("close", () => {
+      if (bridgeSocket === socket) {
+        bridgeSocket = null;
+      }
+      stopHeartbeat();
+      setBridgeState("disconnected", socketUrl);
+
+      if (!settled) {
+        settled = true;
+        reject(new Error("Bridge connection closed before opening."));
+        return;
+      }
+
+      consecutiveFailures++;
+      scheduleReconnect();
+    });
+
+    socket.addEventListener("error", () => {
+      stopHeartbeat();
+      setBridgeState("disconnected", socketUrl);
+
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+      try {
+        socket.close();
+      } catch {
+        // ignore
+      }
+      reject(new Error(`Failed to connect to ${socketUrl}`));
+    });
+  });
+}
+
+async function connectBridge() {
+  if (
+    bridgeSocket &&
+    (bridgeSocket.readyState === WebSocket.OPEN ||
+      bridgeSocket.readyState === WebSocket.CONNECTING)
+  ) {
+    return;
+  }
+
+  setBridgeState("connecting", lastSocketUrl);
+
+  for (const socketUrl of WS_BASES) {
+    try {
+      await openBridgeSocket(socketUrl);
+      return;
+    } catch {
+      // try next websocket URL
+    }
+  }
+
+  consecutiveFailures++;
+  setBridgeState("disconnected", lastSocketUrl);
+  scheduleReconnect();
 }
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message?.type === "get-bridge-status") {
+    sendResponse({
+      state: bridgeState,
+      activeUrl: activeSocketUrl,
+      lastUrl: lastSocketUrl,
+      lastHeartbeatAt,
+      lastDisconnectAt,
+      heartbeatIntervalMs: HEARTBEAT_INTERVAL_MS,
+    });
+    return false;
+  }
+
   if (message?.type !== "focus-or-open-url") {
     return false;
   }
@@ -177,11 +359,53 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 });
 
 chrome.runtime.onStartup?.addListener(() => {
-  startPolling();
+  ensureMaintenanceAlarm();
+  connectBridge().catch(() => {
+    scheduleReconnect();
+  });
 });
 
 chrome.runtime.onInstalled.addListener(() => {
-  startPolling();
+  ensureMaintenanceAlarm();
+  connectBridge().catch(() => {
+    scheduleReconnect();
+  });
 });
 
-startPolling();
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name !== BRIDGE_MAINTENANCE_ALARM) {
+    return;
+  }
+
+  if (bridgeSocket?.readyState === WebSocket.OPEN) {
+    sendHeartbeat();
+    return;
+  }
+
+  connectBridge().catch(() => {
+    scheduleReconnect();
+  });
+});
+
+chrome.runtime.onSuspend?.addListener(() => {
+  stopHeartbeat();
+
+  if (reconnectTimer !== null) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+
+  try {
+    bridgeSocket?.close();
+  } catch {
+    // ignore
+  }
+
+  bridgeSocket = null;
+  setBridgeState("disconnected", lastSocketUrl);
+});
+
+ensureMaintenanceAlarm();
+connectBridge().catch(() => {
+  scheduleReconnect();
+});

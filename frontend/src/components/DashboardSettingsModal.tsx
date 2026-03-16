@@ -7,17 +7,18 @@ import {
 } from "../store/uiStore";
 import { configApi } from "../api/config";
 import { repositoriesApi } from "../api/repositories";
-import type { AppConfig, PullRequestProvider } from "../types";
+import type { AppConfig, CustomLink, PullRequestProvider } from "../types";
 import githubIcon from "../assets/icons/github.svg";
 import azureDevOpsIcon from "../assets/icons/azure-devops.svg";
 import "./DashboardSettingsModal.css";
 
-type NavPage = "general" | "repositories" | "pullRequests" | "appearance";
+type NavPage = "general" | "repositories" | "pullRequests" | "quickLinks" | "appearance";
 
 const NAV_ITEMS: { id: NavPage; icon: string; label: string }[] = [
   { id: "general", icon: "⚙", label: "General" },
   { id: "repositories", icon: "📁", label: "Repositories" },
   { id: "pullRequests", icon: "⎇", label: "Pull Requests" },
+  { id: "quickLinks", icon: "🔗", label: "Quick Links" },
   { id: "appearance", icon: "🎨", label: "Appearance" },
 ];
 
@@ -48,6 +49,11 @@ function normalizeConfig(config: AppConfig): AppConfig {
   return {
     ...config,
     repositoryRoots: config.repositoryRoots ?? [],
+    customLinks: (config.customLinks ?? []).map((link) => ({
+      name: link.name ?? "",
+      target: link.target ?? "",
+      type: link.type === "explorer" ? "explorer" : "web",
+    })),
     pullRequestProviders: {
       ...existingProviders,
       azureDevOps: {
@@ -195,6 +201,8 @@ export function DashboardSettingsModal({ onClose }: Props) {
             setProviderField={setProviderField}
           />
         );
+      case "quickLinks":
+        return <QuickLinksPage form={form} setField={setField} />;
       case "appearance":
         return <AppearancePage />;
     }
@@ -564,6 +572,127 @@ function PullRequestsPage({
           </Section>
         );
       })}
+    </>
+  );
+}
+
+/* ───────────────────────────────────────────────────── Quick links page ── */
+
+interface QuickLinksPageProps {
+  form: AppConfig;
+  setField: <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => void;
+}
+
+function QuickLinksPage({ form, setField }: QuickLinksPageProps) {
+  const { dashboardWidgets, toggleWidget } = useUiStore();
+  const widget = dashboardWidgets.find((w) => w.id === "quickLinks");
+
+  const updateLink = (index: number, next: CustomLink) =>
+    setField(
+      "customLinks",
+      form.customLinks.map((link, currentIndex) =>
+        currentIndex === index ? next : link,
+      ),
+    );
+
+  const addLink = () =>
+    setField("customLinks", [
+      ...form.customLinks,
+      { name: "", target: "", type: "web" },
+    ]);
+
+  const removeLink = (index: number) =>
+    setField(
+      "customLinks",
+      form.customLinks.filter((_, currentIndex) => currentIndex !== index),
+    );
+
+  const browseExplorerTarget = async (index: number) => {
+    const path = await configApi.pickFolder();
+    if (!path) return;
+
+    updateLink(index, { ...form.customLinks[index], target: path, type: "explorer" });
+  };
+
+  return (
+    <>
+      <Section title="Panel">
+        {widget && (
+          <WidgetRow widget={widget} onToggle={() => toggleWidget("quickLinks")} />
+        )}
+      </Section>
+
+      <Section title="Saved Links">
+        {form.customLinks.length === 0 && (
+          <p className="settings-page-hint">
+            Add named shortcuts to websites or Explorer folders.
+          </p>
+        )}
+
+        {form.customLinks.map((link, index) => (
+          <div key={index} className="custom-link-card">
+            <div className="custom-link-row">
+              <Field label="Name">
+                <input
+                  className="settings-input"
+                  value={link.name}
+                  onChange={(e) =>
+                    updateLink(index, { ...link, name: e.target.value })
+                  }
+                  placeholder="Docs, Sprint Board, Downloads..."
+                />
+              </Field>
+              <Field label="Type">
+                <select
+                  className="settings-input"
+                  value={link.type}
+                  onChange={(e) =>
+                    updateLink(index, {
+                      ...link,
+                      type: e.target.value as CustomLink["type"],
+                    })
+                  }
+                >
+                  <option value="web">Web Link</option>
+                  <option value="explorer">Explorer Link</option>
+                </select>
+              </Field>
+            </div>
+
+            <Field label={link.type === "web" ? "URL" : "Folder Path"}>
+              <div className="settings-root-row">
+                <input
+                  className="settings-input"
+                  value={link.target}
+                  onChange={(e) =>
+                    updateLink(index, { ...link, target: e.target.value })
+                  }
+                  placeholder={
+                    link.type === "web"
+                      ? "https://example.com"
+                      : "C:\\Projects\\SomeFolder"
+                  }
+                />
+                {link.type === "explorer" && (
+                  <button
+                    type="button"
+                    className="btn-ghost"
+                    title="Browse…"
+                    onClick={() => browseExplorerTarget(index)}
+                  >
+                    📁
+                  </button>
+                )}
+                <button className="btn-remove" onClick={() => removeLink(index)}>
+                  ✕
+                </button>
+              </div>
+            </Field>
+          </div>
+        ))}
+
+        <AddLink onClick={addLink}>+ Add link</AddLink>
+      </Section>
     </>
   );
 }

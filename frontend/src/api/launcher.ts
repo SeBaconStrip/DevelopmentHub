@@ -7,4 +7,11 @@ export const launcherApi = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url }),
     }).then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); }),
+
+  openExplorer: (target: string): Promise<void> =>
+    fetch(`${BASE}/open-explorer`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ target }),
+    }).then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); }),
 };

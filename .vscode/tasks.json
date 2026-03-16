@@ -30,8 +30,25 @@
       "problemMatcher": "$msCompile"
     },
     {
+      "label": "run app",
+      "type": "shell",
+      "command": "dotnet build; dotnet run",
+      "options": {
+        "cwd": "${workspaceFolder}/app",
+        "env": {
+          "ASPNETCORE_ENVIRONMENT": "Development"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "app"
+      },
+      "problemMatcher": "$msCompile"
+    },
+    {
       "label": "run all",
-      "dependsOn": ["run frontend", "run backend"],
+      "dependsOn": ["run frontend", "run app"],
       "dependsOrder": "parallel",
       "problemMatcher": []
     },

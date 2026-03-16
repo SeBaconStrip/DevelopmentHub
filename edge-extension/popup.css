@@ -25,6 +25,43 @@ body {
   color: #cbd5e1;
 }
 
+.hub-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 9px 11px;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  background: #0f172a;
+  font-size: 12px;
+  color: #dbeafe;
+}
+
+.hub-status-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: #94a3b8;
+  flex-shrink: 0;
+}
+
+.hub-status--connected .hub-status-dot {
+  background: #22c55e;
+}
+
+.hub-status--connecting .hub-status-dot {
+  background: #f59e0b;
+}
+
+.hub-status--disconnected .hub-status-dot {
+  background: #ef4444;
+}
+
+.hub-status--unknown .hub-status-dot {
+  background: #94a3b8;
+}
+
 .label {
   display: block;
   margin-bottom: 6px;

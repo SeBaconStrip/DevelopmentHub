@@ -58,11 +58,18 @@ export interface LayoutItem {
 
 export interface AppConfig {
   repositoryRoots: string[];
+  customLinks: CustomLink[];
   pullRequestProviders: PullRequestProvidersConfig;
   scanIntervalMinutes: number;
   repoScanDepth: number;
   entryPointScanDepth: number;
   hotkeyBinding: string;
   prRefreshIntervalSeconds: number;
+}
+
+export interface CustomLink {
+  name: string;
+  target: string;
+  type: 'web' | 'explorer';
 }
 

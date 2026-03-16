@@ -17,9 +17,20 @@ public class ConfigController(
     public async Task<ActionResult<ConfigDto>> Get()
     {
         var cfg = await userConfigService.GetAsync();
+        logger.LogDebug(
+            "Returning configuration. RepositoryRoots={RepositoryRoots} CustomLinks={CustomLinks} PullRequestProviders={PullRequestProviders}",
+            cfg.RepositoryRoots.Length,
+            cfg.CustomLinks.Count,
+            cfg.PullRequestProviders.Count);
         return Ok(new ConfigDto
         {
             RepositoryRoots = cfg.RepositoryRoots,
+            CustomLinks = cfg.CustomLinks.Select(link => new CustomLinkDto
+            {
+                Name = link.Name,
+                Target = link.Target,
+                Type = link.Type
+            }).ToList(),
             PullRequestProviders = RedactProviderSecrets(cfg.PullRequestProviders),
             ScanIntervalMinutes = cfg.ScanIntervalMinutes,
             RepoScanDepth = cfg.RepoScanDepth,
@@ -34,9 +45,25 @@ public class ConfigController(
     {
         try
         {
+            logger.LogInformation(
+                "Updating configuration. RepositoryRoots={RepositoryRoots} CustomLinks={CustomLinks} PullRequestProviders={PullRequestProviders} ScanIntervalMinutes={ScanIntervalMinutes} PrRefreshIntervalSeconds={PrRefreshIntervalSeconds}",
+                dto.RepositoryRoots?.Length ?? 0,
+                dto.CustomLinks?.Count ?? 0,
+                dto.PullRequestProviders?.Count ?? 0,
+                dto.ScanIntervalMinutes,
+                dto.PrRefreshIntervalSeconds);
             var current = await userConfigService.GetAsync();
 
             current.RepositoryRoots = dto.RepositoryRoots;
+            current.CustomLinks = (dto.CustomLinks ?? [])
+                .Where(link => !string.IsNullOrWhiteSpace(link?.Name) && !string.IsNullOrWhiteSpace(link.Target))
+                .Select(link => new CustomLinkDao
+                {
+                    Name = link.Name.Trim(),
+                    Target = link.Target.Trim(),
+                    Type = string.Equals(link.Type, "explorer", StringComparison.OrdinalIgnoreCase) ? "explorer" : "web"
+                })
+                .ToList();
             current.PullRequestProviders = MergeProviderSettings(current.PullRequestProviders, dto.PullRequestProviders);
             current.ScanIntervalMinutes = dto.ScanIntervalMinutes;
             current.RepoScanDepth = dto.RepoScanDepth;
