@@ -71,8 +71,14 @@ let consecutiveFailures = 0;
 let bridgeState = "disconnected";
 let activeSocketUrl = null;
 let lastSocketUrl = null;
+let heartbeatTimer = null;
+let lastHeartbeatAt = null;
+let lastDisconnectAt = null;
 const BASE_RECONNECT_INTERVAL_MS = 1500;
+const HEARTBEAT_INTERVAL_MS = 15000;
 const MAX_BACKOFF_MS = 30000;
+const BRIDGE_MAINTENANCE_ALARM = "bridge-maintenance";
+const BRIDGE_MAINTENANCE_PERIOD_MINUTES = 0.5;
 
 function getReconnectInterval() {
   if (consecutiveFailures > 0) {
@@ -145,6 +151,37 @@ function sendBridgeMessage(message) {
   return true;
 }
 
+function stopHeartbeat() {
+  if (heartbeatTimer !== null) {
+    clearInterval(heartbeatTimer);
+    heartbeatTimer = null;
+  }
+}
+
+function sendHeartbeat() {
+  const sentAt = new Date().toISOString();
+  const sent = sendBridgeMessage({
+    type: "heartbeat",
+    sentAt,
+  });
+
+  if (sent) {
+    lastHeartbeatAt = sentAt;
+    return true;
+  }
+
+  stopHeartbeat();
+  return false;
+}
+
+function startHeartbeat() {
+  stopHeartbeat();
+  sendHeartbeat();
+  heartbeatTimer = setInterval(() => {
+    sendHeartbeat();
+  }, HEARTBEAT_INTERVAL_MS);
+}
+
 function setBridgeState(state, socketUrl = null) {
   bridgeState = state;
   if (socketUrl) {
@@ -153,10 +190,14 @@ function setBridgeState(state, socketUrl = null) {
 
   if (state === "connected") {
     activeSocketUrl = socketUrl;
+    lastDisconnectAt = null;
     return;
   }
 
   activeSocketUrl = null;
+  if (state === "disconnected") {
+    lastDisconnectAt = new Date().toISOString();
+  }
 }
 
 async function handleBridgeCommand(command) {
@@ -197,6 +238,12 @@ function scheduleReconnect() {
   }, getReconnectInterval());
 }
 
+function ensureMaintenanceAlarm() {
+  chrome.alarms.create(BRIDGE_MAINTENANCE_ALARM, {
+    periodInMinutes: BRIDGE_MAINTENANCE_PERIOD_MINUTES,
+  });
+}
+
 function openBridgeSocket(socketUrl) {
   return new Promise((resolve, reject) => {
     const socket = new WebSocket(socketUrl);
@@ -207,6 +254,7 @@ function openBridgeSocket(socketUrl) {
       bridgeSocket = socket;
       consecutiveFailures = 0;
       setBridgeState("connected", socketUrl);
+      startHeartbeat();
       settled = true;
       resolve();
     });
@@ -224,6 +272,7 @@ function openBridgeSocket(socketUrl) {
       if (bridgeSocket === socket) {
         bridgeSocket = null;
       }
+      stopHeartbeat();
       setBridgeState("disconnected", socketUrl);
 
       if (!settled) {
@@ -237,6 +286,7 @@ function openBridgeSocket(socketUrl) {
     });
 
     socket.addEventListener("error", () => {
+      stopHeartbeat();
       setBridgeState("disconnected", socketUrl);
 
       if (settled) {
@@ -285,6 +335,9 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       state: bridgeState,
       activeUrl: activeSocketUrl,
       lastUrl: lastSocketUrl,
+      lastHeartbeatAt,
+      lastDisconnectAt,
+      heartbeatIntervalMs: HEARTBEAT_INTERVAL_MS,
     });
     return false;
   }
@@ -306,17 +359,53 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 });
 
 chrome.runtime.onStartup?.addListener(() => {
+  ensureMaintenanceAlarm();
   connectBridge().catch(() => {
     scheduleReconnect();
   });
 });
 
 chrome.runtime.onInstalled.addListener(() => {
+  ensureMaintenanceAlarm();
   connectBridge().catch(() => {
     scheduleReconnect();
   });
 });
 
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name !== BRIDGE_MAINTENANCE_ALARM) {
+    return;
+  }
+
+  if (bridgeSocket?.readyState === WebSocket.OPEN) {
+    sendHeartbeat();
+    return;
+  }
+
+  connectBridge().catch(() => {
+    scheduleReconnect();
+  });
+});
+
+chrome.runtime.onSuspend?.addListener(() => {
+  stopHeartbeat();
+
+  if (reconnectTimer !== null) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+
+  try {
+    bridgeSocket?.close();
+  } catch {
+    // ignore
+  }
+
+  bridgeSocket = null;
+  setBridgeState("disconnected", lastSocketUrl);
+});
+
+ensureMaintenanceAlarm();
 connectBridge().catch(() => {
   scheduleReconnect();
 });

@@ -3,7 +3,7 @@
   "name": "DevelopmentHub Tab Reuser",
   "version": "0.1.0",
   "description": "Focus an existing Edge tab for a URL or open a new one.",
-  "permissions": ["tabs"],
+  "permissions": ["tabs", "alarms"],
   "host_permissions": [
     "http://localhost:5131/*",
     "http://localhost:6131/*",

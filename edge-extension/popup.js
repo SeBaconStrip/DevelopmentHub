@@ -10,7 +10,28 @@ function setStatus(message, type = "") {
   status.className = `status${type ? ` status--${type}` : ""}`;
 }
 
-function setHubStatus(state, details = "") {
+function formatRelativeAge(isoTimestamp) {
+  if (!isoTimestamp) {
+    return "";
+  }
+
+  const then = new Date(isoTimestamp).getTime();
+  if (Number.isNaN(then)) {
+    return "";
+  }
+
+  const seconds = Math.max(0, Math.round((Date.now() - then) / 1000));
+  if (seconds < 60) {
+    return `${seconds}s ago`;
+  }
+
+  const minutes = Math.round(seconds / 60);
+  return `${minutes}m ago`;
+}
+
+function setHubStatus(statusInfo = {}) {
+  const { state, activeUrl, lastUrl, lastHeartbeatAt, lastDisconnectAt } = statusInfo;
+  const details = activeUrl || lastUrl || "";
   const normalizedState = ["connected", "connecting", "disconnected"].includes(state)
     ? state
     : "unknown";
@@ -18,9 +39,10 @@ function setHubStatus(state, details = "") {
   hubStatus.className = `hub-status hub-status--${normalizedState}`;
 
   if (normalizedState === "connected") {
+    const heartbeatAge = formatRelativeAge(lastHeartbeatAt);
     hubStatusText.textContent = details
-      ? `Connected to Development Hub at ${details}`
-      : "Connected to Development Hub";
+      ? `Connected to Development Hub at ${details}${heartbeatAge ? ` | heartbeat ${heartbeatAge}` : ""}`
+      : `Connected to Development Hub${heartbeatAge ? ` | heartbeat ${heartbeatAge}` : ""}`;
     return;
   }
 
@@ -32,9 +54,10 @@ function setHubStatus(state, details = "") {
   }
 
   if (normalizedState === "disconnected") {
+    const disconnectAge = formatRelativeAge(lastDisconnectAt);
     hubStatusText.textContent = details
-      ? `Development Hub unavailable. Last tried ${details}`
-      : "Development Hub unavailable";
+      ? `Development Hub unavailable. Last tried ${details}${disconnectAge ? ` | likely sleeping/disconnected ${disconnectAge}` : ""}`
+      : `Development Hub unavailable${disconnectAge ? ` | likely sleeping/disconnected ${disconnectAge}` : ""}`;
     return;
   }
 
@@ -47,9 +70,9 @@ async function refreshHubStatus() {
       type: "get-bridge-status",
     });
 
-    setHubStatus(response?.state, response?.activeUrl || response?.lastUrl || "");
+    setHubStatus(response ?? {});
   } catch {
-    setHubStatus("unknown");
+    setHubStatus();
   }
 }
 

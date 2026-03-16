@@ -14,6 +14,7 @@ public interface IBrowserTabCommandBridge
 public sealed class BrowserTabCommandBridge : IBrowserTabCommandBridge
 {
     private static readonly TimeSpan ExtensionResponseTimeout = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan ClientFreshnessThreshold = TimeSpan.FromSeconds(45);
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     private readonly ILogger<BrowserTabCommandBridge> _logger;
@@ -27,14 +28,18 @@ public sealed class BrowserTabCommandBridge : IBrowserTabCommandBridge
 
     public async Task<bool> RequestOpenUrlAsync(string url, CancellationToken cancellationToken = default)
     {
+        var nowUtc = DateTime.UtcNow;
         var clients = _clients.Values
-            .Where(client => client.IsOpen)
+            .Where(client => client.IsHealthy(nowUtc, ClientFreshnessThreshold))
             .OrderByDescending(client => client.ConnectedAtUtc)
             .ToArray();
 
         if (clients.Length == 0)
         {
-            _logger.LogDebug("No browser extension clients connected. Url={Url}", url);
+            _logger.LogDebug(
+                "No healthy browser extension clients connected. Url={Url} FreshnessThresholdSeconds={FreshnessThresholdSeconds}",
+                url,
+                ClientFreshnessThreshold.TotalSeconds);
             return false;
         }
 
@@ -139,6 +144,14 @@ public sealed class BrowserTabCommandBridge : IBrowserTabCommandBridge
                         message.Handled);
                     Complete(message.CommandId, message.Handled);
                 }
+                else if (string.Equals(message.Type, "heartbeat", StringComparison.OrdinalIgnoreCase))
+                {
+                    client.MarkHeartbeat();
+                    _logger.LogDebug(
+                        "Received browser extension heartbeat. ClientId={ClientId} LastHeartbeatUtc={LastHeartbeatUtc}",
+                        client.ClientId,
+                        client.LastHeartbeatUtc);
+                }
                 else
                 {
                     _logger.LogWarning(
@@ -230,7 +243,15 @@ public sealed class BrowserTabCommandBridge : IBrowserTabCommandBridge
 
         public string ClientId { get; } = Guid.NewGuid().ToString("N");
         public DateTime ConnectedAtUtc { get; } = DateTime.UtcNow;
+        public DateTime LastHeartbeatUtc { get; private set; } = DateTime.UtcNow;
         public bool IsOpen => webSocket.State == WebSocketState.Open;
+        public bool IsHealthy(DateTime nowUtc, TimeSpan freshnessThreshold) =>
+            IsOpen && nowUtc - LastHeartbeatUtc <= freshnessThreshold;
+
+        public void MarkHeartbeat()
+        {
+            LastHeartbeatUtc = DateTime.UtcNow;
+        }
 
         public async Task<bool> TrySendAsync(BrowserTabCommand command, CancellationToken cancellationToken)
         {

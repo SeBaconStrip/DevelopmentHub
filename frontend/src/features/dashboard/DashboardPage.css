@@ -444,6 +444,7 @@
   align-items: center;
   border-radius: 12px;
   border: 1px solid var(--border-accent);
+  background: var(--surface-muted);
 }
 
 .repo-grid-header {
@@ -455,6 +456,7 @@
   padding: 10px 10px;
   border-bottom: 2px solid var(--border-accent);
   height: 50px;
+  background: transparent;
 }
 
 .repo-cell {
@@ -464,6 +466,7 @@
   border-bottom: 2px solid var(--border-accent);
   height: 50px;
   min-width: 0;
+  background: transparent;
 }
 
 .repo-col-name {
@@ -531,6 +534,7 @@
   border: 1px solid var(--border-accent);
   border-radius: 12px;
   overflow: hidden;
+  background: var(--surface-muted);
 }
 
 /* header cells — styled identically to .repo-grid-header */
@@ -545,6 +549,7 @@
   height: 50px;
   display: flex;
   align-items: center;
+  background: transparent;
 }
 
 /* each <a> row is invisible to the grid — its cells slot into the parent tracks */
@@ -566,6 +571,7 @@
   border-bottom: 2px solid var(--border-accent);
   height: 50px;
   min-width: 0;
+  background: transparent;
 }
 
 .pr-col-title,
@@ -585,6 +591,10 @@
   width: 18px;
   height: 18px;
   object-fit: contain;
+}
+
+[data-theme="dark"] .pr-provider-icon {
+  filter: brightness(0) invert(1);
 }
 
 .pr-col-badges {
