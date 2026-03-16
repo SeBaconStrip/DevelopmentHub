@@ -4,6 +4,7 @@ using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
+using System.Windows.Threading;
 
 namespace DevelopmentHub.App;
 
@@ -18,11 +19,17 @@ public partial class MainWindow : Window
 
     [DllImport("user32.dll")] static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
     [DllImport("user32.dll")] static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+    [DllImport("user32.dll")] static extern IntPtr GetForegroundWindow();
+    [DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr hWnd);
+    [DllImport("user32.dll")] static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
 
     public Action? RequestExit { get; set; }
 
     private string _hotkeyBinding = "Ctrl+Shift+D";
     private bool _hotkeyInitialized = false;
+    private WindowState _lastNonMinimizedWindowState = WindowState.Maximized;
+    private const int SW_RESTORE = 9;
+    private const int SW_SHOWMAXIMIZED = 3;
 
     public MainWindow()
     {
@@ -32,6 +39,11 @@ public partial class MainWindow : Window
             _hotkeyInitialized = true;
             ApplyHotkeyRegistration();
             HwndSource.FromHwnd(new WindowInteropHelper(this).Handle).AddHook(WndProc);
+        };
+        StateChanged += (_, _) =>
+        {
+            if (WindowState != WindowState.Minimized)
+                _lastNonMinimizedWindowState = WindowState;
         };
     }
 
@@ -78,10 +90,69 @@ public partial class MainWindow : Window
     {
         if (msg == 0x0312 && wParam.ToInt32() == HotkeyId) // WM_HOTKEY
         {
-            Show();
-            Activate();
+            ToggleFromHotkey();
+            handled = true;
         }
         return IntPtr.Zero;
+    }
+
+    public void ToggleFromHotkey()
+    {
+        if (IsEffectivelyForeground())
+        {
+            if (WindowState != WindowState.Minimized)
+                _lastNonMinimizedWindowState = WindowState;
+            Hide();
+            return;
+        }
+
+        BringToForeground();
+    }
+
+    public void BringToForeground()
+    {
+        if (!IsVisible)
+            Show();
+
+        var hwnd = new WindowInteropHelper(this).Handle;
+        if (_lastNonMinimizedWindowState == WindowState.Maximized)
+        {
+            WindowState = WindowState.Maximized;
+            ShowWindow(hwnd, SW_SHOWMAXIMIZED);
+        }
+        else
+        {
+            ShowWindow(hwnd, SW_RESTORE);
+            WindowState = _lastNonMinimizedWindowState;
+        }
+
+        Dispatcher.BeginInvoke(() =>
+        {
+            if (_lastNonMinimizedWindowState == WindowState.Maximized)
+            {
+                WindowState = WindowState.Maximized;
+                ShowWindow(hwnd, SW_SHOWMAXIMIZED);
+            }
+            else
+            {
+                WindowState = _lastNonMinimizedWindowState;
+            }
+
+            Activate();
+            SetForegroundWindow(hwnd);
+        }, DispatcherPriority.ApplicationIdle);
+        Activate();
+        SetForegroundWindow(hwnd);
+        Focus();
+    }
+
+    private bool IsEffectivelyForeground()
+    {
+        if (!IsVisible || WindowState == WindowState.Minimized)
+            return false;
+
+        var hwnd = new WindowInteropHelper(this).Handle;
+        return hwnd != IntPtr.Zero && GetForegroundWindow() == hwnd;
     }
 
     private async void Window_Loaded(object sender, RoutedEventArgs e)
