@@ -1,0 +1,82 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  background: #111827;
+  color: #f9fafb;
+}
+
+.popup {
+  width: 360px;
+  padding: 16px;
+}
+
+.title {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+
+.hint {
+  margin: 0 0 14px;
+  font-size: 12px;
+  color: #cbd5e1;
+}
+
+.label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: #cbd5e1;
+}
+
+.input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  background: #0f172a;
+  color: #f8fafc;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+button {
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.primary {
+  flex: 1;
+  background: #2563eb;
+  color: #fff;
+}
+
+.secondary {
+  background: #1e293b;
+  color: #e2e8f0;
+}
+
+.status {
+  min-height: 20px;
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: #cbd5e1;
+}
+
+.status--success {
+  color: #86efac;
+}
+
+.status--error {
+  color: #fca5a5;
+}

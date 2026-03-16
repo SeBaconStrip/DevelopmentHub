@@ -1,5 +1,3 @@
-using DevelopmentHub.Api.Configuration;
-
 namespace DevelopmentHub.Api.Models;
 
 /// <summary>
@@ -11,7 +9,7 @@ public class UserConfigDao
     public string Id { get; set; } = "app_config";
 
     public string[] RepositoryRoots { get; set; } = [];
-    public AzureDevOpsSettings AzureDevOps { get; set; } = new();
+    public Dictionary<string, Dictionary<string, string>> PullRequestProviders { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public int ScanIntervalMinutes { get; set; } = 30;
     public int RepoScanDepth { get; set; } = 5;
     public int EntryPointScanDepth { get; set; } = 2;

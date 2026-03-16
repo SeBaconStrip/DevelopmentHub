@@ -64,13 +64,23 @@ public static class BackendHost
             client.DefaultRequestHeaders.Accept.Add(
                 new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
         });
+        builder.Services.AddHttpClient("GitHub", client =>
+        {
+            client.DefaultRequestHeaders.Accept.Add(
+                new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
+            client.DefaultRequestHeaders.Add("User-Agent", "DevelopmentHub");
+            client.DefaultRequestHeaders.Add("X-GitHub-Api-Version", "2022-11-28");
+        });
 
         // ── Services ──────────────────────────────────────────────────────────
         builder.Services.AddMemoryCache();
+        builder.Services.AddSingleton<IBrowserTabCommandBridge, BrowserTabCommandBridge>();
         builder.Services.AddScoped<IGitService, GitService>();
         builder.Services.AddScoped<ILauncherService, LauncherService>();
+        builder.Services.AddScoped<IPullRequestService, PullRequestService>();
+        builder.Services.AddScoped<IPullRequestProvider, AzureDevOpsPullRequestProvider>();
+        builder.Services.AddScoped<IPullRequestProvider, GitHubPullRequestProvider>();
         builder.Services.AddScoped<IRepositoryService, RepositoryService>();
-        builder.Services.AddScoped<IAzureDevOpsService, AzureDevOpsService>();
         builder.Services.AddSingleton<IUserConfigService, UserConfigService>();
 
         // ── Background Services ───────────────────────────────────────────────
@@ -99,6 +109,23 @@ public static class BackendHost
                       .AllowAnyMethod()
                       .AllowCredentials();
             });
+
+            options.AddPolicy("BrowserExtension", policy =>
+            {
+                policy.SetIsOriginAllowed(origin =>
+                      {
+                          if (Uri.TryCreate(origin, UriKind.Absolute, out var uri))
+                          {
+                              return uri.Scheme is "chrome-extension"
+                                  or "ms-browser-extension"
+                                  or "moz-extension"
+                                  or "safari-extension";
+                          }
+                          return false;
+                      })
+                      .AllowAnyHeader()
+                      .AllowAnyMethod();
+            });
         });
 
         var app = builder.Build();
@@ -108,10 +135,10 @@ public static class BackendHost
         app.UseSwaggerUI();
 
         app.UseRouting();
+        app.UseCors("LocalDev");
 
         if (app.Environment.IsDevelopment())
         {
-            app.UseCors("LocalDev");
         }
         else if (Directory.Exists(wwwroot))
         {

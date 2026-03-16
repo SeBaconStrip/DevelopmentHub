@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DevelopmentHub Tab Reuser</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main class="popup">
+      <h1 class="title">Tab Reuser</h1>
+      <p class="hint">
+        Paste a PR URL. If the tab already exists, Edge will focus it.
+      </p>
+
+      <label class="label" for="url">URL</label>
+      <input
+        id="url"
+        class="input"
+        type="url"
+        placeholder="https://github.com/org/repo/pull/123"
+        autocomplete="off"
+        spellcheck="false"
+      />
+
+      <div class="actions">
+        <button id="current-tab" class="secondary" type="button">
+          Use Current Tab
+        </button>
+        <button id="submit" class="primary" type="button">
+          Focus or Open
+        </button>
+      </div>
+
+      <p id="status" class="status" aria-live="polite"></p>
+    </main>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

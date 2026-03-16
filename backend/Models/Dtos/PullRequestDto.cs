@@ -2,6 +2,7 @@ namespace DevelopmentHub.Api.Models.Dtos;
 
 public class PullRequestDto
 {
+    public string ProviderId { get; set; } = string.Empty;
     public int PrId { get; set; }
     public string Title { get; set; } = string.Empty;
     public string RepositoryName { get; set; } = string.Empty;

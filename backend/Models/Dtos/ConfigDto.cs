@@ -3,19 +3,10 @@ namespace DevelopmentHub.Api.Models.Dtos;
 public class ConfigDto
 {
     public string[] RepositoryRoots { get; set; } = [];
-    public AzureDevOpsConfigDto AzureDevOps { get; set; } = new();
+    public Dictionary<string, Dictionary<string, string>> PullRequestProviders { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public int ScanIntervalMinutes { get; set; }
     public int RepoScanDepth { get; set; }
     public int EntryPointScanDepth { get; set; }
     public string HotkeyBinding { get; set; } = "Ctrl+Shift+D";
     public int PrRefreshIntervalSeconds { get; set; } = 120;
-}
-
-public class AzureDevOpsConfigDto
-{
-    public string? Organization { get; set; }
-    public string? Project { get; set; }
-    public string? UserEmail { get; set; }
-    /// <summary>PAT is write-only from the UI. Returned as empty string on GET.</summary>
-    public string? Pat { get; set; }
 }

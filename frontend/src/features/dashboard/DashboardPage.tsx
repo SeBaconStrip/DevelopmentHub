@@ -11,7 +11,10 @@ import { configApi } from "../../api/config";
 import vscodeIconUrl from "../../assets/icons/vscode.svg";
 import visualStudioIconUrl from "../../assets/icons/visualstudio.svg";
 import explorerIconUrl from "../../assets/icons/windows-explorer.svg";
+import githubIconUrl from "../../assets/icons/github.svg";
+import azureDevOpsIconUrl from "../../assets/icons/azure-devops.svg";
 import { fetchPullRequests } from "../../api/pullRequests";
+import { launcherApi } from "../../api/launcher";
 import {
   useUiStore,
   type BreakpointLayouts,
@@ -133,7 +136,7 @@ export default function DashboardPage() {
         </button>
       ),
     },
-    pullRequests: { body: <PullRequestsBody prs={prs} /> },
+    pullRequests: { body: <PullRequestsBody prs={prs} />, badge: prs.length },
   };
 
   const enabled = dashboardWidgets.filter(
@@ -448,63 +451,97 @@ function RepositoriesBody({
 
 /* ───────────────────────────────────────────────── Pull Requests body ── */
 
-const VOTE_CHIP: Record<number, { bg: string; fg: string; label: string }> = {
-  10: { bg: "#dcfce7", fg: "#15803d", label: "Approved" },
-  5: { bg: "#bbf7d0", fg: "#166534", label: "Approved+" },
-  0: { bg: "#f3f4f6", fg: "#6b7280", label: "No vote" },
-  [-5]: { bg: "#fef3c7", fg: "#d97706", label: "Waiting" },
-  [-10]: { bg: "#fee2e2", fg: "#dc2626", label: "Rejected" },
+const VOTE_LABEL: Record<number, string> = {
+  10: "Approved",
+  5: "Approved w/ suggestions",
+  [-5]: "Waiting for author",
+  [-10]: "Rejected",
+};
+
+const PROVIDER_ICONS: Record<PullRequest["providerId"], string> = {
+  azureDevOps: azureDevOpsIconUrl,
+  github: githubIconUrl,
 };
 
 function PullRequestsBody({ prs }: { prs: PullRequest[] }) {
   if (prs.length === 0) return <Empty text="No pull requests" />;
   return (
-    <div>
-      {prs.map((pr) => {
-        const vote = VOTE_CHIP[pr.reviewerVote] ?? VOTE_CHIP[0];
-        return (
-          <div key={pr.prId} className="item-row">
-            <div className="item-main">
-              <div className="item-pr-top">
-                <Chip
-                  bg={pr.isDraft ? "#f3f4f6" : "#ede9fe"}
-                  fg={pr.isDraft ? "#6b7280" : "#7c3aed"}
-                >
-                  {pr.isDraft ? "DRAFT" : "OPEN"}
-                </Chip>
-                <span className="item-pr-title">{pr.title}</span>
-              </div>
-              <span className="item-meta">{pr.repositoryName}</span>
+    <div className="pr-grid">
+      {/* header cells — direct grid children, same as repo-grid pattern */}
+      <div className="pr-grid-head pr-col-provider" />
+      <div className="pr-grid-head pr-col-title">Title</div>
+      <div className="pr-grid-head pr-col-repo">Repository</div>
+      <div className="pr-grid-head pr-col-branch">Branch</div>
+      <div className="pr-grid-head pr-col-author">Author</div>
+      <div className="pr-grid-head pr-col-badges" />
+
+      {/* rows — display:contents so cells share the parent grid tracks */}
+      {prs.map((pr) => (
+        <div
+          key={`${pr.providerId}-${pr.prId}`}
+          className="pr-grid-row"
+          role="button"
+          tabIndex={0}
+          title={pr.title}
+          onClick={() => launcherApi.openUrl(pr.url)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              launcherApi.openUrl(pr.url);
+            }
+          }}
+        >
+          <div className="pr-cell pr-col-provider">
+            <img
+              src={PROVIDER_ICONS[pr.providerId]}
+              alt={pr.providerId}
+              className="pr-provider-icon"
+              draggable={false}
+            />
+          </div>
+          <div className="pr-cell pr-col-title">
+            <span className="item-name">{pr.title}</span>
+          </div>
+          <div className="pr-cell pr-col-repo">
+            <span className="item-meta">{pr.repositoryName}</span>
+          </div>
+          <div className="pr-cell pr-col-branch">
+            <div className="item-branch-row">
+              <span className="item-branch">{pr.sourceBranch}</span>
+              <span style={{ color: "var(--text-muted)", opacity: 0.4 }}>
+                →
+              </span>
+              <span className="item-branch">{pr.targetBranch}</span>
             </div>
-            {pr.isReviewer && (
-              <Chip bg={vote.bg} fg={vote.fg}>
-                {vote.label}
-              </Chip>
+          </div>
+          <div className="pr-cell pr-col-author">
+            <span className="item-meta">{pr.authorDisplayName}</span>
+          </div>
+          <div className="pr-cell pr-col-badges">
+            {pr.isDraft && (
+              <span className="pr-chip pr-chip--draft">Draft</span>
+            )}
+            {!pr.isDraft && pr.createdByMe && (
+              <span className="pr-chip pr-chip--mine">Mine</span>
+            )}
+            {pr.isReviewer && pr.reviewerVote !== 0 && (
+              <span
+                className={`pr-chip pr-chip--vote pr-chip--vote-${pr.reviewerVote > 0 ? "pos" : pr.reviewerVote === -5 ? "wait" : "neg"}`}
+              >
+                {VOTE_LABEL[pr.reviewerVote] ?? "Reviewed"}
+              </span>
+            )}
+            {pr.isReviewer && pr.reviewerVote === 0 && (
+              <span className="pr-chip pr-chip--reviewer">Reviewer</span>
             )}
           </div>
-        );
-      })}
+        </div>
+      ))}
     </div>
   );
 }
 
 /* ─────────────────────────────────────────────────────────────── shared ── */
-
-function Chip({
-  bg,
-  fg,
-  children,
-}: {
-  bg: string;
-  fg: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <span className="chip" style={{ background: bg, color: fg }}>
-      {children}
-    </span>
-  );
-}
 
 function Empty({ text }: { text: string }) {
   return <p className="empty-msg">{text}</p>;

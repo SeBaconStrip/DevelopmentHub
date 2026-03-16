@@ -270,6 +270,24 @@
   margin-bottom: 8px;
 }
 
+.provider-section-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.provider-radio-icon {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  filter: none;
+}
+
+[data-theme="dark"] .provider-radio-icon {
+  filter: brightness(0) invert(1);
+}
+
 /* ── action buttons ── */
 .btn-remove {
   background: none;

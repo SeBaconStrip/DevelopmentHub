@@ -1,0 +1,49 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "run frontend",
+      "type": "shell",
+      "command": "npm run build; npm run dev",
+      "options": {
+        "cwd": "${workspaceFolder}/frontend"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "frontend"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "run backend",
+      "type": "shell",
+      "command": "dotnet build; dotnet run --launch-profile http",
+      "options": {
+        "cwd": "${workspaceFolder}/backend"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "backend"
+      },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "run all",
+      "dependsOn": ["run frontend", "run backend"],
+      "dependsOrder": "parallel",
+      "problemMatcher": []
+    },
+    {
+      "label": "open current log",
+      "type": "shell",
+      "command": "$logDir = Join-Path $env:LOCALAPPDATA 'DevelopmentHub\\logs'; $logFile = Join-Path $logDir ('app-' + (Get-Date).ToString('yyyyMMdd') + '.log'); if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir | Out-Null }; if (-not (Test-Path $logFile)) { New-Item -ItemType File -Path $logFile | Out-Null }; Start-Process $logFile",
+      "presentation": {
+        "reveal": "never",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    }
+  ]
+}
