@@ -23,6 +23,16 @@ public class WorkflowStepDto
     public string Type { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public string Url { get; set; } = string.Empty;
+    public string Owner { get; set; } = string.Empty;
+    public string Repository { get; set; } = string.Empty;
+    public string ReleaseTag { get; set; } = string.Empty;
+    public string AssetName { get; set; } = string.Empty;
+    public string Organization { get; set; } = string.Empty;
+    public string Project { get; set; } = string.Empty;
+    public string PipelineId { get; set; } = string.Empty;
+    public string RunId { get; set; } = string.Empty;
+    public string BuildId { get; set; } = string.Empty;
+    public string Pat { get; set; } = string.Empty;
     public string TargetPath { get; set; } = string.Empty;
     public bool Overwrite { get; set; }
     public string ArchivePath { get; set; } = string.Empty;

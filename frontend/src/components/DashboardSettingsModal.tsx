@@ -772,7 +772,8 @@ function WorkflowsPage({
         </p>
         <p className="settings-page-hint">
           Supported V1 step types are <code>downloadFile</code>, <code>extractArchive</code>,
-          <code>runInstaller</code>, <code>patchJson</code> and <code>restartWindowsService</code>.
+          <code>runInstaller</code>, <code>patchJson</code>, <code>restartWindowsService</code>,
+          <code>downloadGithubReleaseAsset</code> and <code>downloadAzureDevopsPipelineArtefactAsset</code>.
         </p>
         <Field label="Workflow folder">
           <div className="settings-root-row">

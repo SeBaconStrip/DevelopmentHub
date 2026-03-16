@@ -2,6 +2,7 @@ using DevelopmentHub.Api.Hubs;
 using DevelopmentHub.Api.Models;
 using DevelopmentHub.Api.Models.Dtos;
 using Microsoft.AspNetCore.SignalR;
+using System.Net.Http.Headers;
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Security.Cryptography;
@@ -66,7 +67,8 @@ public class WorkflowService(
         RunWorkflowRequestDto request,
         CancellationToken cancellationToken)
     {
-        var workflowDefinitions = await LoadWorkflowDefinitionsAsync();
+        var config = await userConfigService.GetAsync();
+        var workflowDefinitions = await LoadWorkflowDefinitionsAsync(config);
         var workflow = workflowDefinitions.FirstOrDefault(item =>
             string.Equals(item.Id, workflowId, StringComparison.OrdinalIgnoreCase));
 
@@ -86,7 +88,7 @@ public class WorkflowService(
             foreach (var step in workflow.Steps)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                await ExecuteStepAsync(execution, workflow, step, resolvedInputs, cancellationToken);
+                await ExecuteStepAsync(execution, workflow, step, resolvedInputs, config, cancellationToken);
             }
 
             execution.Status = "succeeded";
@@ -129,6 +131,11 @@ public class WorkflowService(
     private async Task<List<WorkflowDefinitionDao>> LoadWorkflowDefinitionsAsync()
     {
         var config = await userConfigService.GetAsync();
+        return await LoadWorkflowDefinitionsAsync(config);
+    }
+
+    private async Task<List<WorkflowDefinitionDao>> LoadWorkflowDefinitionsAsync(UserConfigDao config)
+    {
         var path = config.WorkflowDefinitionsPath;
         if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
             return [];
@@ -193,6 +200,7 @@ public class WorkflowService(
         WorkflowDefinitionDao workflow,
         WorkflowStepDao step,
         IReadOnlyDictionary<string, string> inputs,
+        UserConfigDao config,
         CancellationToken cancellationToken)
     {
         var stepName = string.IsNullOrWhiteSpace(step.Name) ? step.Type : step.Name;
@@ -202,6 +210,13 @@ public class WorkflowService(
         {
             case "downloadfile":
                 await ExecuteDownloadFileAsync(execution, step, inputs, cancellationToken);
+                break;
+            case "downloadgithubreleaseasset":
+                await ExecuteDownloadGitHubReleaseAssetAsync(execution, step, inputs, config, cancellationToken);
+                break;
+            case "downloadazuredevopspipelineartefactasset":
+            case "downloadazuredevopspipelineartifactasset":
+                await ExecuteDownloadAzureDevOpsPipelineArtifactAssetAsync(execution, step, inputs, config, cancellationToken);
                 break;
             case "extractarchive":
                 ExecuteExtractArchive(step, inputs);
@@ -248,6 +263,133 @@ public class WorkflowService(
         response.EnsureSuccessStatusCode();
 
         await using var source = await response.Content.ReadAsStreamAsync(cancellationToken);
+        await using var target = new FileStream(targetPath, FileMode.Create, FileAccess.Write, FileShare.None);
+        await source.CopyToAsync(target, cancellationToken);
+    }
+
+    private async Task ExecuteDownloadGitHubReleaseAssetAsync(
+        WorkflowExecutionState execution,
+        WorkflowStepDao step,
+        IReadOnlyDictionary<string, string> inputs,
+        UserConfigDao config,
+        CancellationToken cancellationToken)
+    {
+        var owner = Render(step.Owner, inputs);
+        var repository = Render(step.Repository, inputs);
+        var releaseTag = Render(step.ReleaseTag, inputs);
+        var assetName = Render(step.AssetName, inputs);
+        var targetPath = Render(step.TargetPath, inputs);
+        var pat = ResolveProviderSetting(config, "github", "pat", step.Pat, inputs);
+
+        if (string.IsNullOrWhiteSpace(owner) ||
+            string.IsNullOrWhiteSpace(repository) ||
+            string.IsNullOrWhiteSpace(releaseTag) ||
+            string.IsNullOrWhiteSpace(assetName) ||
+            string.IsNullOrWhiteSpace(targetPath))
+        {
+            throw new InvalidOperationException(
+                "downloadGithubReleaseAsset requires owner, repository, releaseTag, assetName and targetPath.");
+        }
+
+        EnsureCanWriteTarget(targetPath, step.Overwrite);
+        await LogAsync(execution, $"Resolving GitHub asset '{assetName}' from {owner}/{repository}@{releaseTag}.", "info");
+
+        using var client = httpClientFactory.CreateClient("GitHub");
+        using var releaseRequest = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"https://api.github.com/repos/{Uri.EscapeDataString(owner)}/{Uri.EscapeDataString(repository)}/releases/tags/{Uri.EscapeDataString(releaseTag)}");
+        AddBearerAuth(releaseRequest, pat);
+
+        using var releaseResponse = await client.SendAsync(releaseRequest, cancellationToken);
+        releaseResponse.EnsureSuccessStatusCode();
+        var releaseNode = JsonNode.Parse(await releaseResponse.Content.ReadAsStringAsync(cancellationToken))
+            ?? throw new InvalidOperationException("GitHub release response was empty.");
+
+        var assetNode = releaseNode["assets"]?.AsArray()
+            .FirstOrDefault(asset => string.Equals(asset?["name"]?.GetValue<string>(), assetName, StringComparison.OrdinalIgnoreCase));
+        if (assetNode is null)
+            throw new InvalidOperationException($"GitHub release asset '{assetName}' was not found.");
+
+        var assetUrl = assetNode["url"]?.GetValue<string>();
+        if (string.IsNullOrWhiteSpace(assetUrl))
+            throw new InvalidOperationException($"GitHub release asset '{assetName}' does not expose an API URL.");
+
+        using var downloadRequest = new HttpRequestMessage(HttpMethod.Get, assetUrl);
+        downloadRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/octet-stream"));
+        AddBearerAuth(downloadRequest, pat);
+
+        await LogAsync(execution, $"Downloading GitHub asset '{assetName}' to '{targetPath}'.", "info");
+        using var downloadResponse = await client.SendAsync(downloadRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        downloadResponse.EnsureSuccessStatusCode();
+        await using var source = await downloadResponse.Content.ReadAsStreamAsync(cancellationToken);
+        await using var target = new FileStream(targetPath, FileMode.Create, FileAccess.Write, FileShare.None);
+        await source.CopyToAsync(target, cancellationToken);
+    }
+
+    private async Task ExecuteDownloadAzureDevOpsPipelineArtifactAssetAsync(
+        WorkflowExecutionState execution,
+        WorkflowStepDao step,
+        IReadOnlyDictionary<string, string> inputs,
+        UserConfigDao config,
+        CancellationToken cancellationToken)
+    {
+        var organization = FirstNonEmpty(
+            Render(step.Organization, inputs),
+            ResolveProviderSetting(config, "azureDevOps", "organization"));
+        var project = FirstNonEmpty(
+            Render(step.Project, inputs),
+            ResolveProviderSetting(config, "azureDevOps", "project"));
+        var pipelineId = Render(step.PipelineId, inputs);
+        var runId = Render(step.RunId, inputs);
+        var buildId = Render(step.BuildId, inputs);
+        var artifactName = Render(step.AssetName, inputs);
+        var targetPath = Render(step.TargetPath, inputs);
+        var pat = ResolveProviderSetting(config, "azureDevOps", "pat", step.Pat, inputs);
+
+        if (string.IsNullOrWhiteSpace(organization) ||
+            string.IsNullOrWhiteSpace(project) ||
+            string.IsNullOrWhiteSpace(artifactName) ||
+            string.IsNullOrWhiteSpace(targetPath))
+        {
+            throw new InvalidOperationException(
+                "downloadAzureDevopsPipelineArtefactAsset requires organization, project, assetName and targetPath.");
+        }
+
+        if (string.IsNullOrWhiteSpace(pat))
+            throw new InvalidOperationException("Azure DevOps PAT is required for downloadAzureDevopsPipelineArtefactAsset.");
+
+        if ((string.IsNullOrWhiteSpace(pipelineId) || string.IsNullOrWhiteSpace(runId)) &&
+            string.IsNullOrWhiteSpace(buildId))
+        {
+            throw new InvalidOperationException(
+                "downloadAzureDevopsPipelineArtefactAsset requires either pipelineId + runId or buildId.");
+        }
+
+        EnsureCanWriteTarget(targetPath, step.Overwrite);
+        var metadataUrl = !string.IsNullOrWhiteSpace(pipelineId) && !string.IsNullOrWhiteSpace(runId)
+            ? $"https://dev.azure.com/{Uri.EscapeDataString(organization)}/{Uri.EscapeDataString(project)}/_apis/pipelines/{Uri.EscapeDataString(pipelineId)}/runs/{Uri.EscapeDataString(runId)}/artifacts?artifactName={Uri.EscapeDataString(artifactName)}&$expand=signedContent&api-version=7.1"
+            : $"https://dev.azure.com/{Uri.EscapeDataString(organization)}/{Uri.EscapeDataString(project)}/_apis/build/builds/{Uri.EscapeDataString(buildId)}/artifacts?artifactName={Uri.EscapeDataString(artifactName)}&api-version=7.1";
+
+        await LogAsync(execution, $"Resolving Azure DevOps artifact '{artifactName}'.", "info");
+
+        using var client = httpClientFactory.CreateClient("AzureDevOps");
+        using var metadataRequest = new HttpRequestMessage(HttpMethod.Get, metadataUrl);
+        AddBasicPatAuth(metadataRequest, pat);
+
+        using var metadataResponse = await client.SendAsync(metadataRequest, cancellationToken);
+        metadataResponse.EnsureSuccessStatusCode();
+        var metadataNode = JsonNode.Parse(await metadataResponse.Content.ReadAsStringAsync(cancellationToken))
+            ?? throw new InvalidOperationException("Azure DevOps artifact response was empty.");
+
+        var downloadUrl = ExtractAzureDevOpsArtifactDownloadUrl(metadataNode);
+        if (string.IsNullOrWhiteSpace(downloadUrl))
+            throw new InvalidOperationException($"Azure DevOps artifact '{artifactName}' does not expose a download URL.");
+
+        await LogAsync(execution, $"Downloading Azure DevOps artifact '{artifactName}' to '{targetPath}'.", "info");
+        using var downloadClient = httpClientFactory.CreateClient();
+        using var downloadResponse = await downloadClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        downloadResponse.EnsureSuccessStatusCode();
+        await using var source = await downloadResponse.Content.ReadAsStreamAsync(cancellationToken);
         await using var target = new FileStream(targetPath, FileMode.Create, FileAccess.Write, FileShare.None);
         await source.CopyToAsync(target, cancellationToken);
     }
@@ -475,7 +617,55 @@ public class WorkflowService(
             ? $"\"{arg.Replace("\"", "\\\"")}\""
             : arg;
 
+    private static void EnsureCanWriteTarget(string targetPath, bool overwrite)
+    {
+        if (File.Exists(targetPath) && !overwrite)
+            throw new InvalidOperationException($"Target file '{targetPath}' already exists.");
+
+        var targetDirectory = Path.GetDirectoryName(targetPath);
+        if (!string.IsNullOrWhiteSpace(targetDirectory))
+            Directory.CreateDirectory(targetDirectory);
+    }
+
     private static string EscapePowerShell(string value) => value.Replace("'", "''");
+
+    private static void AddBearerAuth(HttpRequestMessage request, string? token)
+    {
+        if (!string.IsNullOrWhiteSpace(token))
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+    }
+
+    private static void AddBasicPatAuth(HttpRequestMessage request, string pat)
+    {
+        var raw = Convert.ToBase64String(Encoding.ASCII.GetBytes($":{pat}"));
+        request.Headers.Authorization = new AuthenticationHeaderValue("Basic", raw);
+    }
+
+    private static string ResolveProviderSetting(
+        UserConfigDao config,
+        string providerId,
+        string key,
+        string? overrideValue = null,
+        IReadOnlyDictionary<string, string>? inputs = null)
+    {
+        var renderedOverride = overrideValue is null ? string.Empty : Render(overrideValue, inputs ?? new Dictionary<string, string>());
+        if (!string.IsNullOrWhiteSpace(renderedOverride))
+            return renderedOverride;
+
+        return config.PullRequestProviders.TryGetValue(providerId, out var provider) &&
+               provider.TryGetValue(key, out var value)
+            ? value
+            : string.Empty;
+    }
+
+    private static string FirstNonEmpty(params string[] values) =>
+        values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? string.Empty;
+
+    private static string? ExtractAzureDevOpsArtifactDownloadUrl(JsonNode metadataNode) =>
+        metadataNode["signedContent"]?["url"]?.GetValue<string?>() ??
+        metadataNode["resource"]?["downloadUrl"]?.GetValue<string?>() ??
+        metadataNode["value"]?.AsArray().FirstOrDefault()?["signedContent"]?["url"]?.GetValue<string?>() ??
+        metadataNode["value"]?.AsArray().FirstOrDefault()?["resource"]?["downloadUrl"]?.GetValue<string?>();
 
     private static JsonNode? CreateJsonNode(string? valueJson, IReadOnlyDictionary<string, string> inputs)
     {
@@ -542,6 +732,16 @@ public class WorkflowService(
                 Type = step.Type,
                 Name = step.Name,
                 Url = step.Url,
+                Owner = step.Owner,
+                Repository = step.Repository,
+                ReleaseTag = step.ReleaseTag,
+                AssetName = step.AssetName,
+                Organization = step.Organization,
+                Project = step.Project,
+                PipelineId = step.PipelineId,
+                RunId = step.RunId,
+                BuildId = step.BuildId,
+                Pat = step.Pat,
                 TargetPath = step.TargetPath,
                 Overwrite = step.Overwrite,
                 ArchivePath = step.ArchivePath,
@@ -584,6 +784,16 @@ public class WorkflowService(
                 Type = step.Type,
                 Name = step.Name,
                 Url = step.Url,
+                Owner = step.Owner,
+                Repository = step.Repository,
+                ReleaseTag = step.ReleaseTag,
+                AssetName = step.AssetName,
+                Organization = step.Organization,
+                Project = step.Project,
+                PipelineId = step.PipelineId,
+                RunId = step.RunId,
+                BuildId = step.BuildId,
+                Pat = step.Pat,
                 TargetPath = step.TargetPath,
                 Overwrite = step.Overwrite,
                 ArchivePath = step.ArchivePath,
@@ -631,6 +841,16 @@ public class WorkflowService(
                 Type = step.Type.Trim(),
                 Name = step.Name?.Trim() ?? string.Empty,
                 Url = step.Url?.Trim() ?? string.Empty,
+                Owner = step.Owner?.Trim() ?? string.Empty,
+                Repository = step.Repository?.Trim() ?? string.Empty,
+                ReleaseTag = step.ReleaseTag?.Trim() ?? string.Empty,
+                AssetName = step.AssetName?.Trim() ?? string.Empty,
+                Organization = step.Organization?.Trim() ?? string.Empty,
+                Project = step.Project?.Trim() ?? string.Empty,
+                PipelineId = step.PipelineId?.Trim() ?? string.Empty,
+                RunId = step.RunId?.Trim() ?? string.Empty,
+                BuildId = step.BuildId?.Trim() ?? string.Empty,
+                Pat = step.Pat?.Trim() ?? string.Empty,
                 TargetPath = step.TargetPath?.Trim() ?? string.Empty,
                 Overwrite = step.Overwrite,
                 ArchivePath = step.ArchivePath?.Trim() ?? string.Empty,

@@ -104,6 +104,16 @@ export interface WorkflowStep {
   type: string;
   name: string;
   url: string;
+  owner: string;
+  repository: string;
+  releaseTag: string;
+  assetName: string;
+  organization: string;
+  project: string;
+  pipelineId: string;
+  runId: string;
+  buildId: string;
+  pat: string;
   targetPath: string;
   overwrite: boolean;
   archivePath: string;
