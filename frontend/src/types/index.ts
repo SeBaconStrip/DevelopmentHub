@@ -116,6 +116,7 @@ export interface WorkflowStep {
   pat: string;
   targetPath: string;
   overwrite: boolean;
+  runElevated: boolean;
   archivePath: string;
   destinationPath: string;
   cleanDestination: boolean;

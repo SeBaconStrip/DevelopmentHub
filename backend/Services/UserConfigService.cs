@@ -13,20 +13,27 @@ public interface IUserConfigService
 public class UserConfigService(DashboardDatabase db) : IUserConfigService
 {
     private const string ConfigId = "app_config";
+    private readonly Lock _configLock = new();
 
     public Task<UserConfigDao> GetAsync()
     {
-        var config = db.AppConfig.FindById(ConfigId) ?? new UserConfigDao();
-        Normalize(config);
-        return Task.FromResult(config);
+        lock (_configLock)
+        {
+            var config = db.AppConfig.FindById(ConfigId) ?? new UserConfigDao();
+            Normalize(config);
+            return Task.FromResult(config);
+        }
     }
 
     public Task SaveAsync(UserConfigDao config)
     {
-        Normalize(config);
-        config.Id = ConfigId;
-        db.AppConfig.Upsert(config);
-        return Task.CompletedTask;
+        lock (_configLock)
+        {
+            Normalize(config);
+            config.Id = ConfigId;
+            db.AppConfig.Upsert(config);
+            return Task.CompletedTask;
+        }
     }
 
     private static void Normalize(UserConfigDao config)
@@ -93,6 +100,7 @@ public class UserConfigService(DashboardDatabase db) : IUserConfigService
                 Pat = step.Pat?.Trim() ?? string.Empty,
                 TargetPath = step.TargetPath?.Trim() ?? string.Empty,
                 Overwrite = step.Overwrite,
+                RunElevated = step.RunElevated,
                 ArchivePath = step.ArchivePath?.Trim() ?? string.Empty,
                 DestinationPath = step.DestinationPath?.Trim() ?? string.Empty,
                 CleanDestination = step.CleanDestination,

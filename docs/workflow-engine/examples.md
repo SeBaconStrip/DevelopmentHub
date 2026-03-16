@@ -153,7 +153,8 @@
       "name": "Restart service",
       "serviceName": "MyService",
       "waitForRunning": true,
-      "timeoutSeconds": 60
+      "timeoutSeconds": 60,
+      "runElevated": true
     }
   ]
 }

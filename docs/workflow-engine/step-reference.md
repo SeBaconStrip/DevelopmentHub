@@ -217,6 +217,16 @@ Fields:
 - `serviceName`
 - `waitForRunning`
 - `timeoutSeconds`
+- `runElevated` optional
+
+If `runElevated` is `true`, the backend starts a separate elevated PowerShell process for this step only.
+
+Behavior:
+
+- Windows shows a UAC prompt
+- only this single step runs elevated
+- the main DevelopmentHub process stays non-admin
+- if the user cancels the UAC prompt, the step fails
 
 Example:
 
@@ -226,6 +236,7 @@ Example:
   "name": "Restart service",
   "serviceName": "MyApiService",
   "waitForRunning": true,
-  "timeoutSeconds": 60
+  "timeoutSeconds": 60,
+  "runElevated": true
 }
 ```

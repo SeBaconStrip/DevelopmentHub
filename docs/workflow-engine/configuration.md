@@ -60,3 +60,15 @@ Azure DevOps:
 - `pullRequestProviders.azureDevOps.pat`
 
 Steps can override these values directly.
+
+## Elevated Steps
+
+Some sensitive operations may require administrator rights.
+
+The workflow engine supports per-step elevation for selected steps.
+
+Current support:
+
+- `restartWindowsService` via `runElevated: true`
+
+This keeps the main DevelopmentHub process non-admin and only prompts for elevation when the specific step is executed.

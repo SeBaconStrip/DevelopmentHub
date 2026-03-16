@@ -35,6 +35,7 @@ public class WorkflowStepDto
     public string Pat { get; set; } = string.Empty;
     public string TargetPath { get; set; } = string.Empty;
     public bool Overwrite { get; set; }
+    public bool RunElevated { get; set; }
     public string ArchivePath { get; set; } = string.Empty;
     public string DestinationPath { get; set; } = string.Empty;
     public bool CleanDestination { get; set; }

@@ -9,6 +9,8 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.ComponentModel;
+using System.Globalization;
 
 namespace DevelopmentHub.Api.Services;
 
@@ -530,11 +532,18 @@ public class WorkflowService(
             throw new InvalidOperationException("restartWindowsService requires serviceName.");
 
         var timeoutSeconds = step.TimeoutSeconds <= 0 ? 60 : step.TimeoutSeconds;
+        var waitForRunningLiteral = step.WaitForRunning ? "$true" : "$false";
         var command =
             $"Restart-Service -Name '{EscapePowerShell(serviceName)}' -Force -ErrorAction Stop; " +
-            $"if ({step.WaitForRunning.ToString().ToLowerInvariant()}) {{ " +
+            $"if ({waitForRunningLiteral}) {{ " +
             $"$svc = Get-Service -Name '{EscapePowerShell(serviceName)}'; " +
             $"$svc.WaitForStatus([System.ServiceProcess.ServiceControllerStatus]::Running, [TimeSpan]::FromSeconds({timeoutSeconds})) }}";
+
+        if (step.RunElevated)
+        {
+            ExecuteElevatedPowerShell(command, serviceName);
+            return;
+        }
 
         var psi = new ProcessStartInfo
         {
@@ -557,6 +566,76 @@ public class WorkflowService(
                 string.IsNullOrWhiteSpace(error)
                     ? $"Service '{serviceName}' restart failed with exit code {process.ExitCode}."
                     : error.Trim());
+        }
+    }
+
+    private static void ExecuteElevatedPowerShell(string command, string serviceName)
+    {
+        var tempScriptPath = Path.Combine(Path.GetTempPath(), $"developmenthub-elevated-{Guid.NewGuid():N}.ps1");
+        var tempResultPath = Path.Combine(Path.GetTempPath(), $"developmenthub-elevated-{Guid.NewGuid():N}.json");
+
+        try
+        {
+            var script = $$"""
+$ErrorActionPreference = 'Stop'
+
+try {
+    {{command}}
+
+    @{
+        success = $true
+        message = ''
+    } | ConvertTo-Json -Compress | Set-Content -Path '{{EscapePowerShellPath(tempResultPath)}}' -Encoding UTF8
+
+    exit 0
+}
+catch {
+    @{
+        success = $false
+        message = $_ | Out-String
+    } | ConvertTo-Json -Compress | Set-Content -Path '{{EscapePowerShellPath(tempResultPath)}}' -Encoding UTF8
+
+    exit 1
+}
+""";
+
+            File.WriteAllText(tempScriptPath, script, Encoding.UTF8);
+
+            var psi = new ProcessStartInfo
+            {
+                FileName = "powershell.exe",
+                Arguments = string.Format(
+                    CultureInfo.InvariantCulture,
+                    "-NoProfile -ExecutionPolicy Bypass -File \"{0}\"",
+                    tempScriptPath),
+                UseShellExecute = true,
+                Verb = "runas",
+                WindowStyle = ProcessWindowStyle.Hidden
+            };
+
+            using var process = Process.Start(psi)
+                ?? throw new InvalidOperationException(
+                    $"Elevated restart for service '{serviceName}' could not be started.");
+            process.WaitForExit();
+
+            if (process.ExitCode != 0)
+            {
+                var detailedError = ReadElevatedResultMessage(tempResultPath);
+                throw new InvalidOperationException(
+                    string.IsNullOrWhiteSpace(detailedError)
+                        ? $"Elevated restart for service '{serviceName}' failed with exit code {process.ExitCode}."
+                        : detailedError.Trim());
+            }
+        }
+        catch (Win32Exception ex) when (ex.NativeErrorCode == 1223)
+        {
+            throw new InvalidOperationException(
+                $"Elevated restart for service '{serviceName}' was cancelled by the user.");
+        }
+        finally
+        {
+            TryDeleteFile(tempScriptPath);
+            TryDeleteFile(tempResultPath);
         }
     }
 
@@ -629,6 +708,8 @@ public class WorkflowService(
 
     private static string EscapePowerShell(string value) => value.Replace("'", "''");
 
+    private static string EscapePowerShellPath(string value) => value.Replace("'", "''");
+
     private static void AddBearerAuth(HttpRequestMessage request, string? token)
     {
         if (!string.IsNullOrWhiteSpace(token))
@@ -666,6 +747,34 @@ public class WorkflowService(
         metadataNode["resource"]?["downloadUrl"]?.GetValue<string?>() ??
         metadataNode["value"]?.AsArray().FirstOrDefault()?["signedContent"]?["url"]?.GetValue<string?>() ??
         metadataNode["value"]?.AsArray().FirstOrDefault()?["resource"]?["downloadUrl"]?.GetValue<string?>();
+
+    private static string? ReadElevatedResultMessage(string resultPath)
+    {
+        if (!File.Exists(resultPath))
+            return null;
+
+        try
+        {
+            var node = JsonNode.Parse(File.ReadAllText(resultPath));
+            return node?["message"]?.GetValue<string?>();
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static void TryDeleteFile(string path)
+    {
+        try
+        {
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+        catch
+        {
+        }
+    }
 
     private static JsonNode? CreateJsonNode(string? valueJson, IReadOnlyDictionary<string, string> inputs)
     {
@@ -744,6 +853,7 @@ public class WorkflowService(
                 Pat = step.Pat,
                 TargetPath = step.TargetPath,
                 Overwrite = step.Overwrite,
+                RunElevated = step.RunElevated,
                 ArchivePath = step.ArchivePath,
                 DestinationPath = step.DestinationPath,
                 CleanDestination = step.CleanDestination,
@@ -796,6 +906,7 @@ public class WorkflowService(
                 Pat = step.Pat,
                 TargetPath = step.TargetPath,
                 Overwrite = step.Overwrite,
+                RunElevated = step.RunElevated,
                 ArchivePath = step.ArchivePath,
                 DestinationPath = step.DestinationPath,
                 CleanDestination = step.CleanDestination,
@@ -853,6 +964,7 @@ public class WorkflowService(
                 Pat = step.Pat?.Trim() ?? string.Empty,
                 TargetPath = step.TargetPath?.Trim() ?? string.Empty,
                 Overwrite = step.Overwrite,
+                RunElevated = step.RunElevated,
                 ArchivePath = step.ArchivePath?.Trim() ?? string.Empty,
                 DestinationPath = step.DestinationPath?.Trim() ?? string.Empty,
                 CleanDestination = step.CleanDestination,

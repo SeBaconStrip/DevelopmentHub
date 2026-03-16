@@ -51,6 +51,7 @@ export default function DashboardPage() {
   const [showSettings, setShowSettings] = useState(false);
   const [workflowRunError, setWorkflowRunError] = useState<string | null>(null);
   const [workflowInputModal, setWorkflowInputModal] = useState<WorkflowDefinition | null>(null);
+  const [runningWorkflowId, setRunningWorkflowId] = useState<string | null>(null);
   const [workflowModal, setWorkflowModal] = useState<{
     workflow: WorkflowDefinition;
     executionId: string | null;
@@ -177,7 +178,10 @@ export default function DashboardPage() {
     }: {
       workflowId: string;
       request: RunWorkflowRequest;
-    }) => workflowsApi.run(workflowId, request),
+    }) => {
+      setRunningWorkflowId(workflowId);
+      return workflowsApi.run(workflowId, request);
+    },
     onSuccess: (execution, variables) => {
       setWorkflowRunError(null);
       queryClient.invalidateQueries({ queryKey: ["workflow-executions"] });
@@ -191,6 +195,7 @@ export default function DashboardPage() {
       }
     },
     onError: (err) => setWorkflowRunError(err.message),
+    onSettled: () => setRunningWorkflowId(null),
   });
 
   type WidgetConfig = {
@@ -271,7 +276,7 @@ export default function DashboardPage() {
           <WorkflowsBody
             workflows={workflows}
             executions={workflowExecutions}
-            isRunning={runWorkflow.isPending}
+            runningWorkflowId={runningWorkflowId}
             onRun={(workflow) => {
               if (workflow.inputs.length > 0) {
                 setWorkflowInputModal(workflow);
@@ -789,13 +794,13 @@ function QuickLinksBody({ links }: { links: CustomLink[] }) {
 function WorkflowsBody({
   workflows,
   executions,
-  isRunning,
+  runningWorkflowId,
   onRun,
   onOpenExecution,
 }: {
   workflows: WorkflowDefinition[];
   executions: WorkflowExecution[];
-  isRunning: boolean;
+  runningWorkflowId: string | null;
   onRun: (workflow: WorkflowDefinition) => void;
   onOpenExecution: (workflowId: string) => void;
 }) {
@@ -809,6 +814,7 @@ function WorkflowsBody({
         const latestExecution = executions.find(
           (execution) => execution.workflowId === workflow.id,
         );
+        const isRunning = runningWorkflowId === workflow.id;
 
         return (
           <div key={workflow.id} className="workflow-card">

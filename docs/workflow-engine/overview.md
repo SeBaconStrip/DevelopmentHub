@@ -14,6 +14,8 @@ Typical use cases:
 - patching JSON configuration files
 - restarting Windows services
 
+The workflow engine can also elevate individual sensitive steps when needed, instead of requiring the whole application to run as administrator.
+
 ## How It Works
 
 1. The backend loads workflow definitions from a configured folder.
