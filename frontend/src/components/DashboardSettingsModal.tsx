@@ -12,13 +12,14 @@ import githubIcon from "../assets/icons/github.svg";
 import azureDevOpsIcon from "../assets/icons/azure-devops.svg";
 import "./DashboardSettingsModal.css";
 
-type NavPage = "general" | "repositories" | "pullRequests" | "quickLinks" | "appearance";
+type NavPage = "general" | "repositories" | "pullRequests" | "quickLinks" | "todos" | "appearance";
 
 const NAV_ITEMS: { id: NavPage; icon: string; label: string }[] = [
   { id: "general", icon: "⚙", label: "General" },
   { id: "repositories", icon: "📁", label: "Repositories" },
   { id: "pullRequests", icon: "⎇", label: "Pull Requests" },
   { id: "quickLinks", icon: "🔗", label: "Quick Links" },
+  { id: "todos", icon: "✅", label: "Todos" },
   { id: "appearance", icon: "🎨", label: "Appearance" },
 ];
 
@@ -203,6 +204,8 @@ export function DashboardSettingsModal({ onClose }: Props) {
         );
       case "quickLinks":
         return <QuickLinksPage form={form} setField={setField} />;
+      case "todos":
+        return <TodosPage />;
       case "appearance":
         return <AppearancePage />;
     }
@@ -692,6 +695,30 @@ function QuickLinksPage({ form, setField }: QuickLinksPageProps) {
         ))}
 
         <AddLink onClick={addLink}>+ Add link</AddLink>
+      </Section>
+    </>
+  );
+}
+
+function TodosPage() {
+  const { dashboardWidgets, toggleWidget } = useUiStore();
+  const widget = dashboardWidgets.find((w) => w.id === "todos");
+
+  return (
+    <>
+      <Section title="Panel">
+        {widget && <WidgetRow widget={widget} onToggle={() => toggleWidget("todos")} />}
+      </Section>
+
+      <Section title="Completed Todos">
+        <p className="settings-page-hint">
+          Completed todos stay in a collapsed Done section instead of disappearing immediately.
+          That makes it easy to restore something you checked off too early.
+        </p>
+        <p className="settings-page-hint">
+          You can restore individual done items, delete them one by one, or clear all completed
+          todos from the widget.
+        </p>
       </Section>
     </>
   );

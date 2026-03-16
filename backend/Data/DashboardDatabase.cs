@@ -13,6 +13,7 @@ public sealed class DashboardDatabase : IDisposable
 
     public ILiteCollection<RepositoryDao> Repositories { get; }
     public ILiteCollection<UserConfigDao> AppConfig { get; }
+    public ILiteCollection<TodoItemDao> Todos { get; }
 
     public DashboardDatabase(string databasePath)
     {
@@ -22,9 +23,12 @@ public sealed class DashboardDatabase : IDisposable
         _db = new LiteDatabase(databasePath);
         Repositories = _db.GetCollection<RepositoryDao>("repositories");
         AppConfig = _db.GetCollection<UserConfigDao>("app_config");
+        Todos = _db.GetCollection<TodoItemDao>("todos");
 
         // Unique index on Path — prevents duplicate repository documents
         Repositories.EnsureIndex(r => r.Path, unique: true);
+        Todos.EnsureIndex(t => t.CreatedAt);
+        Todos.EnsureIndex(t => t.Completed);
     }
 
     public void Dispose() => _db.Dispose();

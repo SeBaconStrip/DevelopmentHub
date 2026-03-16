@@ -97,6 +97,7 @@ public partial class MainWindow : Window
 
         var env = await CoreWebView2Environment.CreateAsync(null, userDataFolder);
         await WebView.EnsureCoreWebView2Async(env);
+        WebView.ZoomFactor = 1.0;
 
         WebView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = _isDev;
         WebView.CoreWebView2.Settings.AreDevToolsEnabled = _isDev;

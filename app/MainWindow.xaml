@@ -7,6 +7,8 @@
         Title="DevelopmentHub"
         WindowState="Maximized"
         WindowStyle="SingleBorderWindow"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
         Loaded="Window_Loaded">
     <Grid>
         <wv2:WebView2 x:Name="WebView" />
