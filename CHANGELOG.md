@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7 - 2026-03-16
+
+- Added a new Todo widget with create, edit, complete, restore, delete, and clear-completed actions
+- Todos can now include inline links by writing text and a URL in a single field, and the widget extracts and opens those links directly
+- Refined Todo widget actions with consistent button styling and Font Awesome Free icons
+- Improved Todo widget usability with a collapsed Done section and cleaner action layout
+
 ## 0.6 - 2026-03-16
 
 - Added a Microsoft Edge tab-reuse extension prototype and a WebSocket bridge so PR links can reuse existing browser tabs
