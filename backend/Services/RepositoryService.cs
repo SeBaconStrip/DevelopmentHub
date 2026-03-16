@@ -25,6 +25,7 @@ public class RepositoryService(
     public Task<List<RepositoryDto>> GetAllAsync()
     {
         var entities = db.Repositories.FindAll().ToList();
+        logger.LogDebug("Loading repositories from database. RepositoryCount={RepositoryCount}", entities.Count);
 
         var result = entities
             .Select(MapToDto)
@@ -114,6 +115,11 @@ public class RepositoryService(
 
         entity.IsFavorite = !entity.IsFavorite;
         db.Repositories.Update(entity);
+        logger.LogInformation(
+            "Toggled repository favorite state. RepositoryId={RepositoryId} RepositoryName={RepositoryName} IsFavorite={IsFavorite}",
+            entity.Id,
+            entity.Name,
+            entity.IsFavorite);
         return Task.FromResult<RepositoryDto?>(MapToDto(entity));
     }
 
@@ -121,6 +127,12 @@ public class RepositoryService(
     {
         var entity = db.Repositories.FindOne(r => r.Id == id);
         if (entity is null) return null;
+        logger.LogInformation(
+            "Opening repository. RepositoryId={RepositoryId} RepositoryName={RepositoryName} OpenWith={OpenWith} EntryPointPath={EntryPointPath}",
+            entity.Id,
+            entity.Name,
+            request.OpenWith,
+            request.EntryPointPath ?? "(auto)");
 
         var cfg = await userConfigService.GetAsync();
         if (!IsUnderKnownRoot(entity.Path, cfg.RepositoryRoots))
@@ -158,6 +170,19 @@ public class RepositoryService(
             entity.OpenCount++;
             entity.LastOpenedAt = now;
             db.Repositories.Update(entity);
+            logger.LogInformation(
+                "Repository open succeeded. RepositoryId={RepositoryId} RepositoryName={RepositoryName} OpenCount={OpenCount}",
+                entity.Id,
+                entity.Name,
+                entity.OpenCount);
+        }
+        else
+        {
+            logger.LogWarning(
+                "Repository open failed. RepositoryId={RepositoryId} RepositoryName={RepositoryName} OpenWith={OpenWith}",
+                entity.Id,
+                entity.Name,
+                request.OpenWith);
         }
 
         return MapToDto(entity);
@@ -173,6 +198,11 @@ public class RepositoryService(
             return (false, "Path is outside known repository roots.");
 
         var (success, output) = await gitService.SyncRepositoryAsync(entity.Path, cancellationToken);
+        logger.LogInformation(
+            "Repository sync finished. RepositoryId={RepositoryId} RepositoryName={RepositoryName} Success={Success}",
+            entity.Id,
+            entity.Name,
+            success);
 
         if (success)
         {
@@ -189,6 +219,7 @@ public class RepositoryService(
 
     public Task<int> RemoveOrphanedAsync(string[] activeRoots)
     {
+        logger.LogDebug("Removing orphaned repositories. ActiveRootCount={ActiveRootCount}", activeRoots.Length);
         var all = db.Repositories.FindAll().ToList();
         var orphans = all
             .Where(r => !IsUnderKnownRoot(r.Path, activeRoots))

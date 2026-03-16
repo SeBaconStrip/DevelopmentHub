@@ -2,6 +2,7 @@ using DevelopmentHub.Api.BackgroundServices;
 using DevelopmentHub.Api.Configuration;
 using DevelopmentHub.Api.Data;
 using DevelopmentHub.Api.Hubs;
+using DevelopmentHub.Api.Logging;
 using DevelopmentHub.Api.Services;
 using Serilog;
 using Serilog.Events;
@@ -19,15 +20,17 @@ public static class BackendHost
 
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Information()
+            .MinimumLevel.Override("DevelopmentHub.Api", LogEventLevel.Debug)
             .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
             .MinimumLevel.Override("Microsoft.Hosting", LogEventLevel.Warning)
             .Enrich.FromLogContext()
-            .WriteTo.Console(outputTemplate: "{Timestamp:HH:mm:ss} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
+            .Enrich.With(new CallerInfoEnricher())
+            .WriteTo.Console(outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {CallerClass}.{CallerMethod} {Message:lj}{NewLine}{Exception}")
             .WriteTo.File(
                 Path.Combine(logDir, "app-.log"),
                 rollingInterval: RollingInterval.Day,
-                retainedFileCountLimit: 14,
-                outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
+                retainedFileCountLimit: 10,
+                outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {CallerClass}.{CallerMethod} {Message:lj}{NewLine}{Exception}")
             .CreateLogger();
 
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
@@ -130,8 +133,23 @@ public static class BackendHost
         });
 
         var app = builder.Build();
+        var startupLogger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Startup");
+
+        startupLogger.LogInformation(
+            "DevelopmentHub backend starting. Version={Version} Environment={Environment} ContentRoot={ContentRoot} WebRoot={WebRoot} LiteDbPath={LiteDbPath} LogDir={LogDir}",
+            ResolveBackendVersion(),
+            app.Environment.EnvironmentName,
+            app.Environment.ContentRootPath,
+            app.Environment.WebRootPath ?? "(none)",
+            liteDbPath,
+            logDir);
 
         // ── Middleware pipeline ───────────────────────────────────────────────
+        app.UseSerilogRequestLogging(options =>
+        {
+            options.MessageTemplate =
+                "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms";
+        });
         app.UseSwagger();
         app.UseSwaggerUI();
 
@@ -152,17 +170,33 @@ public static class BackendHost
         app.MapHub<LogHub>("/hubs/log");
         app.Map("/ws/browser-tab-bridge", async context =>
         {
+            var logger = context.RequestServices.GetRequiredService<ILoggerFactory>()
+                .CreateLogger("BrowserTabBridgeEndpoint");
+
             if (!context.WebSockets.IsWebSocketRequest)
             {
+                logger.LogWarning(
+                    "Rejected non-WebSocket request for browser tab bridge from {RemoteIp}",
+                    context.Connection.RemoteIpAddress?.ToString() ?? "(unknown)");
                 context.Response.StatusCode = StatusCodes.Status400BadRequest;
                 await context.Response.WriteAsync("WebSocket connection expected.");
                 return;
             }
 
+            logger.LogInformation(
+                "Accepting browser tab bridge WebSocket from {RemoteIp} UserAgent={UserAgent}",
+                context.Connection.RemoteIpAddress?.ToString() ?? "(unknown)",
+                context.Request.Headers.UserAgent.ToString());
+
             var bridge = context.RequestServices.GetRequiredService<IBrowserTabCommandBridge>();
             using var webSocket = await context.WebSockets.AcceptWebSocketAsync();
             await bridge.HandleConnectionAsync(webSocket, context.RequestAborted);
         });
+
+        startupLogger.LogInformation(
+            "DevelopmentHub backend configured. BrowserTabBridgePath={BridgePath} LogHubPath={LogHubPath}",
+            "/ws/browser-tab-bridge",
+            "/hubs/log");
 
         if (!app.Environment.IsDevelopment() && Directory.Exists(wwwroot))
         {
@@ -170,5 +204,35 @@ public static class BackendHost
         }
 
         return app;
+    }
+
+    private static string ResolveBackendVersion()
+    {
+        var baseDirectory = AppContext.BaseDirectory;
+        var candidateDirectories = new[]
+        {
+            baseDirectory,
+            Directory.GetParent(baseDirectory)?.FullName,
+            Directory.GetParent(Directory.GetParent(baseDirectory ?? string.Empty)?.FullName ?? string.Empty)?.FullName,
+            Directory.GetCurrentDirectory()
+        }
+        .Where(path => !string.IsNullOrWhiteSpace(path))
+        .Distinct(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var directory in candidateDirectories)
+        {
+            var versionFile = Path.Combine(directory!, "version.txt");
+            if (!File.Exists(versionFile))
+                continue;
+
+            var version = File.ReadAllText(versionFile).Trim();
+            if (!string.IsNullOrWhiteSpace(version))
+                return version;
+        }
+
+        return typeof(BackendHost).Assembly
+            .GetName()
+            .Version?
+            .ToString() ?? "unknown";
     }
 }

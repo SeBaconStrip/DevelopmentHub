@@ -19,7 +19,10 @@ public class AzureDevOpsPullRequestProvider(
     public async Task<List<PullRequestDto>> GetOpenPullRequestsAsync(UserConfigDao userConfig, CancellationToken cancellationToken = default)
     {
         if (cache.TryGetValue<List<PullRequestDto>>(CacheKey, out var cached) && cached is not null)
+        {
+            logger.LogDebug("Returning Azure DevOps pull requests from cache. PullRequestCount={PullRequestCount}", cached.Count);
             return cached;
+        }
 
         var cfg = GetSettings(userConfig);
         var cacheDuration = TimeSpan.FromSeconds(Math.Max(30, userConfig.PrRefreshIntervalSeconds / 2));
@@ -31,6 +34,11 @@ public class AzureDevOpsPullRequestProvider(
         }
 
         var client = CreateAuthorizedClient(cfg.Pat);
+        logger.LogInformation(
+            "Fetching Azure DevOps pull requests. Organization={Organization} Project={Project} CacheDurationSeconds={CacheDurationSeconds}",
+            cfg.Organization,
+            cfg.Project,
+            cacheDuration.TotalSeconds);
         var result = await FetchPullRequestsAsync(client, cfg, cancellationToken);
         cache.Set(CacheKey, result, cacheDuration);
         return result;
@@ -71,12 +79,19 @@ public class AzureDevOpsPullRequestProvider(
             var values = json?["value"]?.AsArray();
 
             if (values is null) return [];
-
-            return values
+            var pullRequests = values
                 .Where(v => v is not null)
                 .Select(v => MapPullRequest(v!, cfg, cfg.UserEmail))
                 .OrderByDescending(p => p.CreatedAt)
                 .ToList();
+
+            logger.LogInformation(
+                "Fetched Azure DevOps pull requests. Organization={Organization} Project={Project} PullRequestCount={PullRequestCount}",
+                cfg.Organization,
+                cfg.Project,
+                pullRequests.Count);
+
+            return pullRequests;
         }
         catch (Exception ex)
         {

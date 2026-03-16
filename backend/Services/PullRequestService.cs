@@ -9,18 +9,31 @@ public interface IPullRequestService
 
 public class PullRequestService(
     IEnumerable<IPullRequestProvider> providers,
-    IUserConfigService userConfigService) : IPullRequestService
+    IUserConfigService userConfigService,
+    ILogger<PullRequestService> logger) : IPullRequestService
 {
     public async Task<List<PullRequestDto>> GetOpenPullRequestsAsync(CancellationToken cancellationToken = default)
     {
         var userConfig = await userConfigService.GetAsync();
+        var providerList = providers.ToList();
+        logger.LogDebug(
+            "Fetching pull requests across {ProviderCount} provider(s). RefreshIntervalSeconds={RefreshIntervalSeconds}",
+            providerList.Count,
+            userConfig.PrRefreshIntervalSeconds);
         var results = await Task.WhenAll(
-            providers.Select(provider =>
+            providerList.Select(provider =>
                 provider.GetOpenPullRequestsAsync(userConfig, cancellationToken)));
 
-        return results
+        var combined = results
             .SelectMany(prs => prs)
             .OrderByDescending(pr => pr.CreatedAt)
             .ToList();
+
+        logger.LogInformation(
+            "Fetched pull requests. ProviderCount={ProviderCount} PullRequestCount={PullRequestCount}",
+            providerList.Count,
+            combined.Count);
+
+        return combined;
     }
 }

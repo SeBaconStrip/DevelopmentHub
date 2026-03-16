@@ -17,6 +17,11 @@ public class ConfigController(
     public async Task<ActionResult<ConfigDto>> Get()
     {
         var cfg = await userConfigService.GetAsync();
+        logger.LogDebug(
+            "Returning configuration. RepositoryRoots={RepositoryRoots} CustomLinks={CustomLinks} PullRequestProviders={PullRequestProviders}",
+            cfg.RepositoryRoots.Length,
+            cfg.CustomLinks.Count,
+            cfg.PullRequestProviders.Count);
         return Ok(new ConfigDto
         {
             RepositoryRoots = cfg.RepositoryRoots,
@@ -40,6 +45,13 @@ public class ConfigController(
     {
         try
         {
+            logger.LogInformation(
+                "Updating configuration. RepositoryRoots={RepositoryRoots} CustomLinks={CustomLinks} PullRequestProviders={PullRequestProviders} ScanIntervalMinutes={ScanIntervalMinutes} PrRefreshIntervalSeconds={PrRefreshIntervalSeconds}",
+                dto.RepositoryRoots?.Length ?? 0,
+                dto.CustomLinks?.Count ?? 0,
+                dto.PullRequestProviders?.Count ?? 0,
+                dto.ScanIntervalMinutes,
+                dto.PrRefreshIntervalSeconds);
             var current = await userConfigService.GetAsync();
 
             current.RepositoryRoots = dto.RepositoryRoots;

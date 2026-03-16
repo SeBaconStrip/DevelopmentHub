@@ -19,7 +19,10 @@ public class GitHubPullRequestProvider(
     public async Task<List<PullRequestDto>> GetOpenPullRequestsAsync(UserConfigDao userConfig, CancellationToken cancellationToken = default)
     {
         if (cache.TryGetValue<List<PullRequestDto>>(CacheKey, out var cached) && cached is not null)
+        {
+            logger.LogDebug("Returning GitHub pull requests from cache. PullRequestCount={PullRequestCount}", cached.Count);
             return cached;
+        }
 
         var cfg = GetSettings(userConfig);
         var cacheDuration = TimeSpan.FromSeconds(Math.Max(30, userConfig.PrRefreshIntervalSeconds / 2));
@@ -31,6 +34,11 @@ public class GitHubPullRequestProvider(
         }
 
         var client = CreateAuthorizedClient(cfg.Pat);
+        logger.LogInformation(
+            "Fetching GitHub pull requests. UserLogin={UserLogin} HasSearchQuery={HasSearchQuery} CacheDurationSeconds={CacheDurationSeconds}",
+            cfg.UserLogin,
+            !string.IsNullOrWhiteSpace(cfg.SearchQuery),
+            cacheDuration.TotalSeconds);
         var result = await FetchPullRequestsAsync(client, cfg, cancellationToken);
         cache.Set(CacheKey, result, cacheDuration);
         return result;
@@ -80,11 +88,18 @@ public class GitHubPullRequestProvider(
                     cancellationToken));
 
             var pullRequests = await Task.WhenAll(detailTasks);
-            return pullRequests
+            var mapped = pullRequests
                 .Where(pr => pr is not null)
                 .Cast<PullRequestDto>()
                 .OrderByDescending(p => p.CreatedAt)
                 .ToList();
+
+            logger.LogInformation(
+                "Fetched GitHub pull requests. UserLogin={UserLogin} PullRequestCount={PullRequestCount}",
+                cfg.UserLogin,
+                mapped.Count);
+
+            return mapped;
         }
         catch (Exception ex)
         {
