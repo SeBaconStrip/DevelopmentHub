@@ -42,6 +42,15 @@ export interface PullRequest {
   authorDisplayName: string;
 }
 
+export interface TodoItem {
+  id: string;
+  title: string;
+  linkUrl: string | null;
+  completed: boolean;
+  createdAt: string;
+  completedAt: string | null;
+}
+
 export type PullRequestProvider = 'azureDevOps' | 'github';
 export type PullRequestProviderConfig = Record<string, string>;
 export type PullRequestProvidersConfig = Record<string, PullRequestProviderConfig>;
