@@ -4,6 +4,8 @@ public class ConfigDto
 {
     public string[] RepositoryRoots { get; set; } = [];
     public List<CustomLinkDto> CustomLinks { get; set; } = [];
+    public List<WorkflowDefinitionDto> Workflows { get; set; } = [];
+    public string WorkflowDefinitionsPath { get; set; } = string.Empty;
     public Dictionary<string, Dictionary<string, string>> PullRequestProviders { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public int ScanIntervalMinutes { get; set; }
     public int RepoScanDepth { get; set; }

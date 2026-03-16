@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { LayoutItem } from '../types';
 
-export type WidgetId = 'repositories' | 'pullRequests' | 'quickLinks' | 'todos';
+export type WidgetId = 'repositories' | 'pullRequests' | 'quickLinks' | 'todos' | 'workflows';
 export type ThemeId = 'violet' | 'dark' | 'ocean' | 'orange' | 'nature';
 
 export type { LayoutItem };
@@ -13,19 +13,22 @@ export const DEFAULT_LAYOUTS: BreakpointLayouts = {
     { i: 'repositories', x: 0, y: 0,  w: 8, h: 10, minW: 3, minH: 4 },
     { i: 'pullRequests',  x: 8, y: 0,  w: 4, h: 10, minW: 3, minH: 4 },
     { i: 'quickLinks', x: 8, y: 10, w: 4, h: 6, minW: 3, minH: 4 },
-    { i: 'todos', x: 0, y: 10, w: 8, h: 6, minW: 3, minH: 4 },
+    { i: 'todos', x: 0, y: 10, w: 4, h: 6, minW: 3, minH: 4 },
+    { i: 'workflows', x: 4, y: 10, w: 4, h: 6, minW: 3, minH: 4 },
   ],
   md: [
     { i: 'repositories', x: 0, y: 0,  w: 6, h: 10, minW: 3, minH: 4 },
     { i: 'pullRequests',  x: 6, y: 0,  w: 4, h: 10, minW: 3, minH: 4 },
     { i: 'quickLinks', x: 0, y: 10, w: 5, h: 6, minW: 3, minH: 4 },
     { i: 'todos', x: 5, y: 10, w: 5, h: 6, minW: 3, minH: 4 },
+    { i: 'workflows', x: 0, y: 16, w: 10, h: 6, minW: 3, minH: 4 },
   ],
   sm: [
     { i: 'repositories', x: 0, y: 0,  w: 6, h: 8,  minW: 3, minH: 4 },
     { i: 'pullRequests',  x: 0, y: 8,  w: 6, h: 8,  minW: 3, minH: 4 },
     { i: 'quickLinks', x: 0, y: 16, w: 6, h: 6, minW: 3, minH: 4 },
     { i: 'todos', x: 0, y: 22, w: 6, h: 6, minW: 3, minH: 4 },
+    { i: 'workflows', x: 0, y: 28, w: 6, h: 6, minW: 3, minH: 4 },
   ],
 };
 
@@ -58,6 +61,7 @@ const defaultWidgets: DashboardWidget[] = [
   { id: 'pullRequests', label: 'Pull Requests',     icon: '\uD83D\uDD00', enabled: true },
   { id: 'quickLinks', label: 'Quick Links', icon: '\uD83D\uDD17', enabled: true },
   { id: 'todos', label: 'Todos', icon: '\u2705', enabled: true },
+  { id: 'workflows', label: 'Workflows', icon: '\u2699', enabled: true },
 ];
 
 const THEME_IDS: ThemeId[] = ['violet', 'dark', 'ocean', 'orange', 'nature'];

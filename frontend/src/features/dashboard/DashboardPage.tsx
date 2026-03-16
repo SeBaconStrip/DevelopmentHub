@@ -25,19 +25,36 @@ import {
 import { fetchPullRequests } from "../../api/pullRequests";
 import { launcherApi } from "../../api/launcher";
 import { todosApi } from "../../api/todos";
+import { workflowsApi } from "../../api/workflows";
 import {
   useUiStore,
   type BreakpointLayouts,
   type WidgetId,
 } from "../../store/uiStore";
 import { DashboardSettingsModal } from "../../components/DashboardSettingsModal";
-import type { CustomLink, Repository, PullRequest, TodoItem } from "../../types";
+import { useLogHub } from "../../hooks/useLogHub";
+import type {
+  CustomLink,
+  Repository,
+  PullRequest,
+  RunWorkflowRequest,
+  TodoItem,
+  WorkflowDefinition,
+  WorkflowExecution,
+  WorkflowExecutionDetail,
+} from "../../types";
 
 /* ─────────────────────────────────────────────────────────────── layout ── */
 
 export default function DashboardPage() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [workflowRunError, setWorkflowRunError] = useState<string | null>(null);
+  const [workflowInputModal, setWorkflowInputModal] = useState<WorkflowDefinition | null>(null);
+  const [workflowModal, setWorkflowModal] = useState<{
+    workflow: WorkflowDefinition;
+    executionId: string | null;
+  } | null>(null);
 
   const {
     dashboardWidgets,
@@ -113,6 +130,15 @@ export default function DashboardPage() {
     queryKey: ["todos"],
     queryFn: todosApi.getAll,
   });
+  const { data: workflowExecutions = [] } = useQuery<WorkflowExecution[]>({
+    queryKey: ["workflow-executions"],
+    queryFn: workflowsApi.listExecutions,
+    refetchInterval: 5000,
+  });
+  const { data: workflows = [] } = useQuery<WorkflowDefinition[]>({
+    queryKey: ["workflows"],
+    queryFn: workflowsApi.list,
+  });
 
   const createTodo = useMutation({
     mutationFn: ({ title, linkUrl }: { title: string; linkUrl?: string }) =>
@@ -143,6 +169,28 @@ export default function DashboardPage() {
   const clearCompletedTodos = useMutation({
     mutationFn: todosApi.clearCompleted,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["todos"] }),
+  });
+  const runWorkflow = useMutation({
+    mutationFn: ({
+      workflowId,
+      request,
+    }: {
+      workflowId: string;
+      request: RunWorkflowRequest;
+    }) => workflowsApi.run(workflowId, request),
+    onSuccess: (execution, variables) => {
+      setWorkflowRunError(null);
+      queryClient.invalidateQueries({ queryKey: ["workflow-executions"] });
+
+      const workflow = workflows.find((item) => item.id === variables.workflowId);
+      if (workflow) {
+        setWorkflowModal({
+          workflow,
+          executionId: execution.id,
+        });
+      }
+    },
+    onError: (err) => setWorkflowRunError(err.message),
   });
 
   type WidgetConfig = {
@@ -210,6 +258,42 @@ export default function DashboardPage() {
         />
       ),
       badge: todos.filter((todo) => !todo.completed).length,
+    },
+    workflows: {
+      body: (
+        <>
+          {workflowRunError && (
+            <div className="panel-error-bar">
+              <span>⚠ {workflowRunError}</span>
+              <button onClick={() => setWorkflowRunError(null)}>✕</button>
+            </div>
+          )}
+          <WorkflowsBody
+            workflows={workflows}
+            executions={workflowExecutions}
+            isRunning={runWorkflow.isPending}
+            onRun={(workflow) => {
+              if (workflow.inputs.length > 0) {
+                setWorkflowInputModal(workflow);
+                return;
+              }
+
+              runWorkflowWithInputs(workflow, {});
+            }}
+            onOpenExecution={(workflowId) => {
+              const workflow = workflows.find((item) => item.id === workflowId);
+              const execution = workflowExecutions.find((item) => item.workflowId === workflowId);
+              if (!workflow || !execution) return;
+
+              setWorkflowModal({
+                workflow,
+                executionId: execution.id,
+              });
+            }}
+          />
+        </>
+      ),
+      badge: workflows.length,
     },
   };
 
@@ -344,9 +428,47 @@ export default function DashboardPage() {
         {showSettings && (
           <DashboardSettingsModal onClose={() => setShowSettings(false)} />
         )}
+        {workflowInputModal && (
+          <WorkflowInputModal
+            workflow={workflowInputModal}
+            onClose={() => setWorkflowInputModal(null)}
+            onSubmit={(inputs) => {
+              const workflow = workflowInputModal;
+              if (!workflow) return;
+              setWorkflowInputModal(null);
+              runWorkflowWithInputs(workflow, inputs);
+            }}
+          />
+        )}
+        {workflowModal && (
+          <WorkflowExecutionModal
+            workflow={workflowModal.workflow}
+            executionId={workflowModal.executionId}
+            onClose={() => setWorkflowModal(null)}
+          />
+        )}
       </div>
     </div>
   );
+
+  function runWorkflowWithInputs(
+    workflow: WorkflowDefinition,
+    inputs: Record<string, string>,
+  ) {
+    const confirmed =
+      !workflow.requiresConfirmation ||
+      window.confirm(`Workflow "${workflow.name}" ausführen?`);
+    if (!confirmed) return;
+
+    setWorkflowRunError(null);
+    runWorkflow.mutate({
+      workflowId: workflow.id,
+      request: {
+        inputs,
+        confirmed,
+      },
+    });
+  }
 }
 
 /* ─────────────────────────────────────────────────────────────── Panel ── */
@@ -660,6 +782,137 @@ function QuickLinksBody({ links }: { links: CustomLink[] }) {
           </span>
         </button>
       ))}
+    </div>
+  );
+}
+
+function WorkflowsBody({
+  workflows,
+  executions,
+  isRunning,
+  onRun,
+  onOpenExecution,
+}: {
+  workflows: WorkflowDefinition[];
+  executions: WorkflowExecution[];
+  isRunning: boolean;
+  onRun: (workflow: WorkflowDefinition) => void;
+  onOpenExecution: (workflowId: string) => void;
+}) {
+  if (workflows.length === 0) {
+    return <Empty text="No workflows yet. Add them in Settings > Workflows." />;
+  }
+
+  return (
+    <div className="workflow-list">
+      {workflows.map((workflow) => {
+        const latestExecution = executions.find(
+          (execution) => execution.workflowId === workflow.id,
+        );
+
+        return (
+          <div key={workflow.id} className="workflow-card">
+            <div className="workflow-copy">
+              <div className="workflow-title-row">
+                <span className="item-name">{workflow.name}</span>
+                <span
+                  className={`workflow-status workflow-status--${latestExecution?.status ?? "idle"}`}
+                >
+                  {latestExecution?.status ?? "idle"}
+                </span>
+              </div>
+              {workflow.description && (
+                <span className="item-meta">{workflow.description}</span>
+              )}
+              <span className="item-meta">
+                {workflow.steps.length} step
+                {workflow.steps.length !== 1 ? "s" : ""}
+                {workflow.inputs.length > 0
+                  ? ` · ${workflow.inputs.length} input${workflow.inputs.length !== 1 ? "s" : ""}`
+                  : ""}
+              </span>
+              {latestExecution && (
+                <button
+                  className="workflow-link-btn"
+                  onClick={() => onOpenExecution(workflow.id)}
+                >
+                  Last run: {latestExecution.status} ·{" "}
+                  {new Date(latestExecution.startedAt).toLocaleString()}
+                </button>
+              )}
+            </div>
+            <button
+              className="btn-primary workflow-run-btn"
+              onClick={() => onRun(workflow)}
+              disabled={isRunning}
+            >
+              {isRunning ? "Running..." : "Run"}
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function WorkflowInputModal({
+  workflow,
+  onClose,
+  onSubmit,
+}: {
+  workflow: WorkflowDefinition;
+  onClose: () => void;
+  onSubmit: (inputs: Record<string, string>) => void;
+}) {
+  const [values, setValues] = useState<Record<string, string>>(
+    Object.fromEntries(
+      workflow.inputs.map((input) => [input.name, input.defaultValue ?? ""]),
+    ),
+  );
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div
+        className="modal-card workflow-input-modal"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="workflow-modal-header">
+          <div>
+            <h2 className="settings-modal-title">{workflow.name}</h2>
+            <p className="settings-modal-sub">Enter the workflow inputs.</p>
+          </div>
+          <button className="settings-modal-close" onClick={onClose}>
+            ×
+          </button>
+        </div>
+        <div className="workflow-input-fields">
+          {workflow.inputs.map((input) => (
+            <label key={input.name} className="settings-field">
+              <span className="settings-field-label">
+                {input.label || input.name}
+              </span>
+              <input
+                className="settings-input"
+                value={values[input.name] ?? ""}
+                onChange={(e) =>
+                  setValues((prev) => ({
+                    ...prev,
+                    [input.name]: e.target.value,
+                  }))
+                }
+              />
+            </label>
+          ))}
+        </div>
+        <div className="settings-save-bar">
+          <button className="btn-primary" onClick={() => onSubmit(values)}>
+            Run workflow
+          </button>
+          <button className="btn-close" onClick={onClose}>
+            Cancel
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -986,6 +1239,80 @@ function TodosBody({
             ))}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function WorkflowExecutionModal({
+  workflow,
+  executionId,
+  onClose,
+}: {
+  workflow: WorkflowDefinition;
+  executionId: string | null;
+  onClose: () => void;
+}) {
+  const [logLines, setLogLines] = useState<WorkflowExecutionDetail["logLines"]>(
+    [],
+  );
+  const [status, setStatus] = useState<string>("running");
+  const { data } = useQuery({
+    queryKey: ["workflow-execution", executionId],
+    queryFn: () =>
+      executionId ? workflowsApi.getExecution(executionId) : Promise.resolve(null),
+    enabled: executionId !== null,
+  });
+
+  useEffect(() => {
+    if (!data) return;
+    setLogLines(data.logLines);
+    setStatus(data.status);
+  }, [data]);
+
+  useLogHub(
+    executionId,
+    (line) => setLogLines((prev) => [...prev, line]),
+    (completed) => setStatus(completed.status),
+  );
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div
+        className="modal-card workflow-modal"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="workflow-modal-header">
+          <div>
+            <h2 className="settings-modal-title">{workflow.name}</h2>
+            <p className="settings-modal-sub">
+              Status:{" "}
+              <span className={`workflow-status workflow-status--${status}`}>
+                {status}
+              </span>
+            </p>
+          </div>
+          <button className="settings-modal-close" onClick={onClose}>
+            ×
+          </button>
+        </div>
+        <div className="workflow-log">
+          {logLines.length === 0 ? (
+            <p className="empty-msg">Waiting for log output...</p>
+          ) : (
+            logLines.map((line, index) => (
+              <div
+                key={`${line.timestamp}-${index}`}
+                className={`workflow-log-line workflow-log-line--${line.stream}`}
+              >
+                <span className="workflow-log-time">
+                  {new Date(line.timestamp).toLocaleTimeString()}
+                </span>
+                <span>{line.text}</span>
+              </div>
+            ))
+          )}
+        </div>
       </div>
     </div>
   );

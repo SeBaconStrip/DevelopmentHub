@@ -86,6 +86,7 @@ public static class BackendHost
         builder.Services.AddScoped<IPullRequestProvider, GitHubPullRequestProvider>();
         builder.Services.AddScoped<IRepositoryService, RepositoryService>();
         builder.Services.AddScoped<ITodoService, TodoService>();
+        builder.Services.AddSingleton<IWorkflowService, WorkflowService>();
         builder.Services.AddSingleton<IUserConfigService, UserConfigService>();
 
         // ── Background Services ───────────────────────────────────────────────

@@ -12,13 +12,14 @@ import githubIcon from "../assets/icons/github.svg";
 import azureDevOpsIcon from "../assets/icons/azure-devops.svg";
 import "./DashboardSettingsModal.css";
 
-type NavPage = "general" | "repositories" | "pullRequests" | "quickLinks" | "todos" | "appearance";
+type NavPage = "general" | "repositories" | "pullRequests" | "quickLinks" | "workflows" | "todos" | "appearance";
 
 const NAV_ITEMS: { id: NavPage; icon: string; label: string }[] = [
   { id: "general", icon: "⚙", label: "General" },
   { id: "repositories", icon: "📁", label: "Repositories" },
   { id: "pullRequests", icon: "⎇", label: "Pull Requests" },
   { id: "quickLinks", icon: "🔗", label: "Quick Links" },
+  { id: "workflows", icon: "⚙", label: "Workflows" },
   { id: "todos", icon: "✅", label: "Todos" },
   { id: "appearance", icon: "🎨", label: "Appearance" },
 ];
@@ -55,6 +56,12 @@ function normalizeConfig(config: AppConfig): AppConfig {
       target: link.target ?? "",
       type: link.type === "explorer" ? "explorer" : "web",
     })),
+    workflows: (config.workflows ?? []).map((workflow) => ({
+      ...workflow,
+      inputs: workflow.inputs ?? [],
+      steps: workflow.steps ?? [],
+    })),
+    workflowDefinitionsPath: config.workflowDefinitionsPath ?? "",
     pullRequestProviders: {
       ...existingProviders,
       azureDevOps: {
@@ -91,6 +98,7 @@ export function DashboardSettingsModal({ onClose }: Props) {
     mutationFn: configApi.save,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["config"] });
+      queryClient.invalidateQueries({ queryKey: ["workflows"] });
       scan.mutate();
     },
   });
@@ -99,7 +107,10 @@ export function DashboardSettingsModal({ onClose }: Props) {
   const [isCapturingHotkey, setIsCapturingHotkey] = useState(false);
 
   useEffect(() => {
-    if (data) setForm(normalizeConfig(JSON.parse(JSON.stringify(data))));
+    if (!data) return;
+
+    const normalized = normalizeConfig(JSON.parse(JSON.stringify(data)));
+    setForm(normalized);
   }, [data]);
 
   const setField = <K extends keyof AppConfig>(key: K, value: AppConfig[K]) =>
@@ -204,6 +215,13 @@ export function DashboardSettingsModal({ onClose }: Props) {
         );
       case "quickLinks":
         return <QuickLinksPage form={form} setField={setField} />;
+      case "workflows":
+        return (
+          <WorkflowsPage
+            form={form}
+            setField={setField}
+          />
+        );
       case "todos":
         return <TodosPage />;
       case "appearance":
@@ -718,6 +736,69 @@ function TodosPage() {
         <p className="settings-page-hint">
           You can restore individual done items, delete them one by one, or clear all completed
           todos from the widget.
+        </p>
+      </Section>
+    </>
+  );
+}
+
+interface WorkflowsPageProps {
+  form: AppConfig;
+  setField: <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => void;
+}
+
+function WorkflowsPage({
+  form,
+  setField,
+}: WorkflowsPageProps) {
+  const { dashboardWidgets, toggleWidget } = useUiStore();
+  const widget = dashboardWidgets.find((w) => w.id === "workflows");
+
+  const browseWorkflowFolder = async () => {
+    const path = await configApi.pickFolder();
+    if (path) setField("workflowDefinitionsPath", path);
+  };
+
+  return (
+    <>
+      <Section title="Panel">
+        {widget && <WidgetRow widget={widget} onToggle={() => toggleWidget("workflows")} />}
+      </Section>
+
+      <Section title="Workflow Definitions">
+        <p className="settings-page-hint">
+          Point this to a folder containing workflow `*.json` files. Each file can contain
+          either a single workflow object or an array of workflows.
+        </p>
+        <p className="settings-page-hint">
+          Supported V1 step types are <code>downloadFile</code>, <code>extractArchive</code>,
+          <code>runInstaller</code>, <code>patchJson</code> and <code>restartWindowsService</code>.
+        </p>
+        <Field label="Workflow folder">
+          <div className="settings-root-row">
+            <input
+              className="settings-input"
+              value={form.workflowDefinitionsPath}
+              onChange={(e) =>
+                setField("workflowDefinitionsPath", e.target.value)
+              }
+              placeholder="C:\\Workflows"
+            />
+            <button
+              type="button"
+              className="btn-ghost"
+              title="Browse…"
+              onClick={browseWorkflowFolder}
+            >
+              📁
+            </button>
+          </div>
+        </Field>
+        <p className="settings-page-hint">
+          Example placeholders inside files: <code>{'{{version}}'}</code>, <code>{'{{serviceName}}'}</code>.
+        </p>
+        <p className="settings-page-hint">
+          The folder is loaded by the backend, so after saving you can just drop new JSON files there.
         </p>
       </Section>
     </>

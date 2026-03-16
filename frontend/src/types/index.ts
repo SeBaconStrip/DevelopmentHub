@@ -68,6 +68,8 @@ export interface LayoutItem {
 export interface AppConfig {
   repositoryRoots: string[];
   customLinks: CustomLink[];
+  workflows: WorkflowDefinition[];
+  workflowDefinitionsPath: string;
   pullRequestProviders: PullRequestProvidersConfig;
   scanIntervalMinutes: number;
   repoScanDepth: number;
@@ -80,5 +82,72 @@ export interface CustomLink {
   name: string;
   target: string;
   type: 'web' | 'explorer';
+}
+
+export interface WorkflowDefinition {
+  id: string;
+  name: string;
+  description: string;
+  requiresConfirmation: boolean;
+  inputs: WorkflowInput[];
+  steps: WorkflowStep[];
+}
+
+export interface WorkflowInput {
+  name: string;
+  label: string;
+  type: "text";
+  defaultValue: string;
+}
+
+export interface WorkflowStep {
+  type: string;
+  name: string;
+  url: string;
+  targetPath: string;
+  overwrite: boolean;
+  archivePath: string;
+  destinationPath: string;
+  cleanDestination: boolean;
+  filePath: string;
+  arguments: string[];
+  waitForExit: boolean;
+  successExitCodes: number[];
+  operations: JsonPatchOperation[];
+  serviceName: string;
+  waitForRunning: boolean;
+  timeoutSeconds: number;
+}
+
+export interface JsonPatchOperation {
+  op: "set" | "remove" | "append";
+  path: string;
+  value?: unknown;
+}
+
+export interface RunWorkflowRequest {
+  inputs: Record<string, string>;
+  confirmed: boolean;
+}
+
+export interface WorkflowExecution {
+  id: string;
+  workflowId: string;
+  workflowName: string;
+  startedAt: string;
+  finishedAt: string | null;
+  status: string;
+  exitCode: number | null;
+  summary: string;
+}
+
+export interface WorkflowExecutionDetail extends WorkflowExecution {
+  logLines: WorkflowLogLine[];
+}
+
+export interface WorkflowLogLine {
+  text: string;
+  stream: string;
+  timestamp: string;
 }
 

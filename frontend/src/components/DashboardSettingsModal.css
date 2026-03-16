@@ -255,6 +255,10 @@
   resize: vertical;
 }
 
+.settings-textarea--xl {
+  min-height: 360px;
+}
+
 .settings-input--narrow {
   width: 100px;
 }
