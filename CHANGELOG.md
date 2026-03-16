@@ -12,6 +12,10 @@
 
 ## 0.7 - 2026-03-16
 
+- Improved dashboard panel editing by allowing dragging from the full widget area, simplifying resize affordances, and reducing the minimum width of the quick links panel
+- Updated focus and panel control styling to better follow the active theme across grips, close buttons, quick links, and resize borders
+- Fixed the global hotkey toggle so DevelopmentHub reliably comes to the foreground, hides when already focused, and restores maximized windows correctly
+- Improved Explorer launching to reuse an already open Explorer window for the same folder when possible instead of always opening a new window
 - Added a new Todo widget with create, edit, complete, restore, delete, and clear-completed actions
 - Todos can now include inline links by writing text and a URL in a single field, and the widget extracts and opens those links directly
 - Refined Todo widget actions with consistent button styling and Font Awesome Free icons

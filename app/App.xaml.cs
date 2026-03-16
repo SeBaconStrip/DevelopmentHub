@@ -114,11 +114,11 @@ public partial class App : Application
             };
 
             var menu = new System.Windows.Forms.ContextMenuStrip();
-            menu.Items.Add("Öffnen", null, (_, _) => Dispatcher.Invoke(() => { window.Show(); window.Activate(); }));
+            menu.Items.Add("Öffnen", null, (_, _) => Dispatcher.Invoke(window.BringToForeground));
             menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
             menu.Items.Add("Beenden", null, (_, _) => Dispatcher.Invoke(ExitApp));
             _trayIcon.ContextMenuStrip = menu;
-            _trayIcon.DoubleClick += (_, _) => Dispatcher.Invoke(() => { window.Show(); window.Activate(); });
+            _trayIcon.DoubleClick += (_, _) => Dispatcher.Invoke(window.BringToForeground);
 
             window.RequestExit = ExitApp;
             window.Show();

@@ -42,6 +42,16 @@
   --widget-border:         #e5e7eb;
   --widget-bg:             #fafafa;
   --widget-enabled-bg:     #fafbff;
+  --focus-ring:            color-mix(in srgb, var(--color-accent) 45%, white);
+  --panel-grip:            #8b95a7;
+  --panel-control-bg:      #eef2f7;
+  --panel-control-bg-hover:#e4e9f1;
+  --panel-control-fg:      #4b5563;
+  --resize-handle:         #7b6ebe;
+  --resize-handle-soft:    rgba(123, 110, 190, 0.18);
+  --resize-handle-strong:  #5f4fb3;
+  --resize-zone-bg:        rgba(123, 110, 190, 0.08);
+  --resize-border-hover:   #8e7fca;
 }
 
 [data-theme="dark"] {
@@ -83,6 +93,16 @@
   --widget-border:         #313244;
   --widget-bg:             #181825;
   --widget-enabled-bg:     #222235;
+  --focus-ring:            color-mix(in srgb, var(--color-accent) 55%, white);
+  --panel-grip:            #7f849c;
+  --panel-control-bg:      #2a2a3d;
+  --panel-control-bg-hover:#34364b;
+  --panel-control-fg:      #cdd6f4;
+  --resize-handle:         #a78bfa;
+  --resize-handle-soft:    rgba(167, 139, 250, 0.22);
+  --resize-handle-strong:  #c4b5fd;
+  --resize-zone-bg:        rgba(167, 139, 250, 0.12);
+  --resize-border-hover:   #c4b5fd;
 }
 
 [data-theme="ocean"] {
@@ -124,6 +144,16 @@
   --widget-border:         #dbeafe;
   --widget-bg:             #f8faff;
   --widget-enabled-bg:     #eff6ff;
+  --focus-ring:            color-mix(in srgb, var(--color-accent) 50%, white);
+  --panel-grip:            #6b87a8;
+  --panel-control-bg:      #e8f1ff;
+  --panel-control-bg-hover:#dbeafe;
+  --panel-control-fg:      #1e3a5f;
+  --resize-handle:         #3b82f6;
+  --resize-handle-soft:    rgba(59, 130, 246, 0.18);
+  --resize-handle-strong:  #2563eb;
+  --resize-zone-bg:        rgba(59, 130, 246, 0.1);
+  --resize-border-hover:   #60a5fa;
 }
 
 [data-theme="orange"] {
@@ -165,6 +195,16 @@
   --widget-border:         #fed7aa;
   --widget-bg:             #fff8f5;
   --widget-enabled-bg:     #fff7ed;
+  --focus-ring:            color-mix(in srgb, var(--color-accent) 50%, white);
+  --panel-grip:            #9a3412;
+  --panel-control-bg:      #fff0e6;
+  --panel-control-bg-hover:#ffe4d1;
+  --panel-control-fg:      #7c2d12;
+  --resize-handle:         #ea580c;
+  --resize-handle-soft:    rgba(234, 88, 12, 0.18);
+  --resize-handle-strong:  #c2410c;
+  --resize-zone-bg:        rgba(234, 88, 12, 0.1);
+  --resize-border-hover:   #f97316;
 }
 
 [data-theme="nature"] {
@@ -206,6 +246,16 @@
   --widget-border:         #c8e6d0;
   --widget-bg:             #f5faf8;
   --widget-enabled-bg:     #edf7f2;
+  --focus-ring:            color-mix(in srgb, var(--color-accent) 45%, white);
+  --panel-grip:            #4a7a60;
+  --panel-control-bg:      #e7f3ed;
+  --panel-control-bg-hover:#dceee5;
+  --panel-control-fg:      #1a3d30;
+  --resize-handle:         #2ca390;
+  --resize-handle-soft:    rgba(44, 163, 144, 0.18);
+  --resize-handle-strong:  #1f8a79;
+  --resize-zone-bg:        rgba(44, 163, 144, 0.1);
+  --resize-border-hover:   #38b2a0;
 }
 
 /* ── Base ─────────────────────────────────────────────────────────────────── */
@@ -245,8 +295,20 @@ button {
 }
 
 button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+button:focus-visible,
+a:focus,
+a:focus-visible,
+[role="button"]:focus,
+[role="button"]:focus-visible,
+input:focus,
+input:focus-visible,
+select:focus,
+select:focus-visible,
+textarea:focus,
+textarea:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--focus-ring) 28%, transparent);
 }
 
 .card {

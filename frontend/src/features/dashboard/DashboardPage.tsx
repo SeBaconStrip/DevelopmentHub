@@ -382,7 +382,7 @@ export default function DashboardPage() {
         {isEditMode && (
           <div className="dash-edit-hint">
             <span>✋</span>
-            Drag panels by their header · resize from any edge · click ✕ to hide
+            Drag panels from anywhere · resize from the right, bottom or corner · click ✕ to hide
           </div>
         )}
 
@@ -403,7 +403,7 @@ export default function DashboardPage() {
               cols={{ lg: 12, md: 10, sm: 6, xs: 4 }}
               rowHeight={54}
               dragConfig={
-                { enabled: isEditMode, handle: ".drag-handle" } as object
+                { enabled: isEditMode, cancel: ".panel-close-btn" } as object
               }
               resizeConfig={
                 { enabled: isEditMode, handles: ["se", "s", "e"] } as object
@@ -497,10 +497,7 @@ function Panel({
 }) {
   return (
     <div className={`panel${isEditMode ? " panel--editing" : ""}`}>
-      <div
-        className={`panel-header${isEditMode ? " drag-handle panel-header--draggable" : ""}`}
-      >
-        {isEditMode && <span className="panel-grip">⠿</span>}
+      <div className="panel-header">
         <span className="panel-icon">{icon}</span>
         <span className="panel-title">{title}</span>
         {badge != null && <span className="panel-badge">{badge}</span>}
