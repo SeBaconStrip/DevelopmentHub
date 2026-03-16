@@ -1,4 +1,5 @@
 using DevelopmentHub.Api.Models.Dtos;
+using System.Runtime.InteropServices;
 
 namespace DevelopmentHub.Api.Services;
 
@@ -29,6 +30,10 @@ public class LauncherService(
     public Task<bool> OpenWithExplorerAsync(string targetPath)
     {
         logger.LogInformation("Opening {Path} in Explorer", targetPath);
+
+        if (TryActivateOpenExplorerWindow(targetPath))
+            return Task.FromResult(true);
+
         return LaunchAsync("explorer.exe", [targetPath]);
     }
 
@@ -87,4 +92,105 @@ public class LauncherService(
             return false;
         }
     }
+
+    private bool TryActivateOpenExplorerWindow(string targetPath)
+    {
+        try
+        {
+            var matchPath = NormalizeExplorerComparisonPath(targetPath);
+            if (string.IsNullOrWhiteSpace(matchPath))
+                return false;
+
+            var shellType = Type.GetTypeFromProgID("Shell.Application");
+            if (shellType is null)
+                return false;
+
+            dynamic shell = Activator.CreateInstance(shellType)!;
+            dynamic windows = shell.Windows();
+
+            try
+            {
+                var count = (int)windows.Count;
+                for (var i = 0; i < count; i++)
+                {
+                    dynamic window = windows.Item(i);
+                    if (window is null)
+                        continue;
+
+                    try
+                    {
+                        var document = window.Document;
+                        var folder = document?.Folder;
+                        var self = folder?.Self;
+                        string? openPath = self?.Path as string;
+                        if (string.IsNullOrWhiteSpace(openPath))
+                            continue;
+
+                        if (!string.Equals(
+                                NormalizeExplorerComparisonPath(openPath),
+                                matchPath,
+                                StringComparison.OrdinalIgnoreCase))
+                        {
+                            continue;
+                        }
+
+                        var hwnd = new IntPtr((int)window.HWND);
+                        if (hwnd == IntPtr.Zero)
+                            return false;
+
+                        ShowWindowAsync(hwnd, SwRestore);
+                        SetForegroundWindow(hwnd);
+                        logger.LogInformation("Reused open Explorer window for {Path}", targetPath);
+                        return true;
+                    }
+                    catch
+                    {
+                        // Ignore non-Explorer shell windows and continue scanning.
+                    }
+                    finally
+                    {
+                        if (window is not null && Marshal.IsComObject(window))
+                            Marshal.ReleaseComObject(window);
+                    }
+                }
+            }
+            finally
+            {
+                if (windows is not null && Marshal.IsComObject(windows))
+                    Marshal.ReleaseComObject(windows);
+                if (shell is not null && Marshal.IsComObject(shell))
+                    Marshal.ReleaseComObject(shell);
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "Failed to inspect open Explorer windows for {Path}", targetPath);
+        }
+
+        return false;
+    }
+
+    private static string NormalizeExplorerComparisonPath(string targetPath)
+    {
+        try
+        {
+            var normalized = Path.GetFullPath(targetPath.Trim());
+            if (File.Exists(normalized))
+                normalized = Path.GetDirectoryName(normalized) ?? normalized;
+
+            return normalized.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        }
+        catch
+        {
+            return string.Empty;
+        }
+    }
+
+    [DllImport("user32.dll")]
+    private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
+
+    private const int SwRestore = 9;
 }

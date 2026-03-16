@@ -180,15 +180,6 @@
   cursor: default;
 }
 
-.panel-header--draggable {
-  cursor: grab;
-}
-
-.panel-grip {
-  color: var(--text-on-overlay-dim);
-  font-size: 14px;
-}
-
 .panel-icon {
   font-size: 17px;
 }
@@ -201,17 +192,29 @@
 }
 
 .panel-close-btn {
-  background: var(--surface-subtle);
+  background: var(--panel-control-bg);
   border: none;
   border-radius: 6px;
   width: 24px;
   height: 24px;
   cursor: pointer;
-  color: var(--text-on-overlay);
+  color: var(--panel-control-fg);
   font-size: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.panel-close-btn:hover {
+  background: var(--panel-control-bg-hover);
+}
+
+.panel--editing {
+  cursor: move;
+}
+
+.panel--editing .panel-close-btn {
+  cursor: pointer;
 }
 
 .panel-body {
@@ -624,6 +627,8 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  padding-top: 2px;
+  padding-inline: 2px;
 }
 
 .quick-link-item {
@@ -645,6 +650,13 @@
   transform: translateY(-1px);
   border-color: var(--color-primary);
   background: var(--widget-enabled-bg);
+}
+
+.quick-link-item:focus,
+.quick-link-item:focus-visible {
+  outline: none;
+  border-color: var(--focus-ring);
+  box-shadow: inset 0 0 0 2px var(--focus-ring);
 }
 
 .quick-link-icon {
