@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.8 - 2026-03-16
+
+- Added a file-based workflow engine that loads workflow definitions from a configured folder and runs them from a new dashboard widget
+- Added a custom workflow input modal, live execution log modal, and workflow execution status updates in the dashboard
+- Added workflow step support for direct downloads, ZIP extraction, installer execution, JSON patching, and Windows service restarts
+- Added authenticated download steps for GitHub release assets and Azure DevOps pipeline artifacts using configured provider credentials
+- Added optional per-step elevation for Windows service restarts so only the selected action prompts for UAC instead of the whole app running as admin
+- Hardened workflow loading with case-insensitive JSON parsing, stable fallback IDs, invalid-workflow filtering, and improved elevated-step error reporting
+- Added structured documentation under `docs/workflow-engine/`
+
 ## 0.7 - 2026-03-16
 
 - Added a new Todo widget with create, edit, complete, restore, delete, and clear-completed actions
