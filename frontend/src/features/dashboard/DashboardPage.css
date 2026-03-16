@@ -454,7 +454,6 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
   padding: 10px 10px;
-  border-bottom: 2px solid var(--border-accent);
   height: 50px;
   background: transparent;
 }
@@ -463,7 +462,7 @@
   display: flex;
   align-items: center;
   padding: 7px 10px;
-  border-bottom: 2px solid var(--border-accent);
+  border-top: 2px solid var(--border-accent);
   height: 50px;
   min-width: 0;
   background: transparent;
@@ -545,7 +544,6 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
   padding: 10px 10px;
-  border-bottom: 2px solid var(--border-accent);
   height: 50px;
   display: flex;
   align-items: center;
@@ -568,7 +566,7 @@
   display: flex;
   align-items: center;
   padding: 7px 10px;
-  border-bottom: 2px solid var(--border-accent);
+  border-top: 2px solid var(--border-accent);
   height: 50px;
   min-width: 0;
   background: transparent;
