@@ -83,14 +83,29 @@ public class WorkflowService(
         var resolvedInputs = ResolveInputs(workflow, request.Inputs);
         var execution = CreateExecution(workflow);
 
+        _ = Task.Run(
+            () => ExecuteWorkflowAsync(execution, workflow, resolvedInputs, config),
+            CancellationToken.None);
+
+        return MapExecution(execution);
+    }
+
+    private async Task ExecuteWorkflowAsync(
+        WorkflowExecutionState execution,
+        WorkflowDefinitionDao workflow,
+        IReadOnlyDictionary<string, string> resolvedInputs,
+        UserConfigDao config)
+    {
+        using var cts = new CancellationTokenSource();
+
         try
         {
             await LogAsync(execution, $"Starting workflow '{workflow.Name}'.", "info");
 
             foreach (var step in workflow.Steps)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                await ExecuteStepAsync(execution, workflow, step, resolvedInputs, config, cancellationToken);
+                cts.Token.ThrowIfCancellationRequested();
+                await ExecuteStepAsync(execution, workflow, step, resolvedInputs, config, cts.Token);
             }
 
             execution.Status = "succeeded";
@@ -124,10 +139,8 @@ public class WorkflowService(
                     exitCode = execution.ExitCode ?? -1,
                     status = execution.Status
                 },
-                cancellationToken);
+                CancellationToken.None);
         }
-
-        return MapExecution(execution);
     }
 
     private async Task<List<WorkflowDefinitionDao>> LoadWorkflowDefinitionsAsync()
