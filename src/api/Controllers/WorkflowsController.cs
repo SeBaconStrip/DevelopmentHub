@@ -1,5 +1,6 @@
 using DevelopmentHub.Api.Models.Dtos;
 using DevelopmentHub.Api.Services;
+using DevelopmentHub.Workflow;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DevelopmentHub.Api.Controllers;
@@ -11,7 +12,7 @@ public class WorkflowsController(
     ILogger<WorkflowsController> logger) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<WorkflowDefinitionDto>>> GetDefinitions()
+    public async Task<ActionResult<IReadOnlyList<WorkflowDefinition>>> GetDefinitions()
     {
         var workflows = await workflowService.GetDefinitionsAsync();
         return Ok(workflows);

@@ -13,7 +13,7 @@ public sealed class WorkflowDefinition
     public IReadOnlyList<Steps.WorkflowStep> Steps { get; init; } = [];
 }
 
-public sealed class WorkflowInput
+public sealed record WorkflowInput
 {
     public string Name { get; init; } = string.Empty;
     public string Label { get; init; } = string.Empty;
