@@ -1,8 +1,7 @@
-using DevelopmentHub.Api.Models;
 using System.Net.Http.Headers;
 using System.Text;
 
-namespace DevelopmentHub.Api.Workflows;
+namespace DevelopmentHub.Workflow;
 
 /// <summary>
 /// Pure static helpers shared across step executors.
@@ -58,10 +57,10 @@ internal static class WorkflowHelpers
 
     /// <summary>
     /// Returns <paramref name="overrideValue"/> (after template rendering) when non-empty;
-    /// otherwise falls back to the provider setting in <paramref name="config"/>.
+    /// otherwise falls back to the provider setting in <paramref name="providers"/>.
     /// </summary>
     public static string ResolveProviderSetting(
-        UserConfigDao config,
+        ProviderSettings providers,
         string providerId,
         string key,
         string? overrideValue = null,
@@ -71,13 +70,7 @@ internal static class WorkflowHelpers
             ? string.Empty
             : Render(overrideValue, inputs ?? new Dictionary<string, string>());
 
-        if (!string.IsNullOrWhiteSpace(rendered))
-            return rendered;
-
-        return config.PullRequestProviders.TryGetValue(providerId, out var provider) &&
-               provider.TryGetValue(key, out var value)
-            ? value
-            : string.Empty;
+        return !string.IsNullOrWhiteSpace(rendered) ? rendered : providers.Get(providerId, key);
     }
 
     public static string FirstNonEmpty(params string[] values) =>

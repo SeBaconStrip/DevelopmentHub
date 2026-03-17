@@ -1,4 +1,6 @@
-namespace DevelopmentHub.Api.Workflows;
+using DevelopmentHub.Workflow.Steps;
+
+namespace DevelopmentHub.Workflow;
 
 /// <summary>
 /// Marker interface for step executors, used for DI registration and dispatch.
@@ -6,7 +8,7 @@ namespace DevelopmentHub.Api.Workflows;
 public interface IWorkflowStepExecutor
 {
     /// <summary>
-    /// Lowercase step type string that this executor handles (e.g. "downloadfile").
+    /// Lowercase step type string this executor handles (e.g. "downloadfile").
     /// Compared case-insensitively against the step's <see cref="WorkflowStep.Type"/>.
     /// </summary>
     string StepType { get; }
@@ -15,8 +17,8 @@ public interface IWorkflowStepExecutor
 }
 
 /// <summary>
-/// Generic base class that provides typed dispatch and removes the need for manual casting
-/// in concrete executor implementations.
+/// Generic base class that provides typed dispatch and removes the need for manual
+/// casting in concrete executor implementations.
 /// </summary>
 public abstract class WorkflowStepExecutor<TStep> : IWorkflowStepExecutor
     where TStep : WorkflowStep

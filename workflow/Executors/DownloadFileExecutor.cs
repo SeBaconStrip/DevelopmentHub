@@ -1,4 +1,6 @@
-namespace DevelopmentHub.Api.Workflows.Executors;
+using DevelopmentHub.Workflow.Steps;
+
+namespace DevelopmentHub.Workflow.Executors;
 
 public sealed class DownloadFileExecutor(IHttpClientFactory httpClientFactory)
     : WorkflowStepExecutor<DownloadFileStep>

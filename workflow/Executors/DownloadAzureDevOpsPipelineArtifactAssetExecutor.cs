@@ -1,6 +1,7 @@
+using DevelopmentHub.Workflow.Steps;
 using System.Text.Json.Nodes;
 
-namespace DevelopmentHub.Api.Workflows.Executors;
+namespace DevelopmentHub.Workflow.Executors;
 
 public sealed class DownloadAzureDevOpsPipelineArtifactAssetExecutor(IHttpClientFactory httpClientFactory)
     : WorkflowStepExecutor<DownloadAzureDevOpsPipelineArtifactAssetStep>
@@ -14,16 +15,16 @@ public sealed class DownloadAzureDevOpsPipelineArtifactAssetExecutor(IHttpClient
     {
         var organization = WorkflowHelpers.FirstNonEmpty(
             WorkflowHelpers.Render(step.Organization, context.Inputs),
-            WorkflowHelpers.ResolveProviderSetting(context.Config, "azureDevOps", "organization"));
+            WorkflowHelpers.ResolveProviderSetting(context.Providers, "azureDevOps", "organization"));
         var project = WorkflowHelpers.FirstNonEmpty(
             WorkflowHelpers.Render(step.Project, context.Inputs),
-            WorkflowHelpers.ResolveProviderSetting(context.Config, "azureDevOps", "project"));
+            WorkflowHelpers.ResolveProviderSetting(context.Providers, "azureDevOps", "project"));
         var pipelineId = WorkflowHelpers.Render(step.PipelineId, context.Inputs);
         var runId = WorkflowHelpers.Render(step.RunId, context.Inputs);
         var buildId = WorkflowHelpers.Render(step.BuildId, context.Inputs);
         var artifactName = WorkflowHelpers.Render(step.AssetName, context.Inputs);
         var targetPath = WorkflowHelpers.Render(step.TargetPath, context.Inputs);
-        var pat = WorkflowHelpers.ResolveProviderSetting(context.Config, "azureDevOps", "pat", step.Pat, context.Inputs);
+        var pat = WorkflowHelpers.ResolveProviderSetting(context.Providers, "azureDevOps", "pat", step.Pat, context.Inputs);
 
         if (string.IsNullOrWhiteSpace(organization) || string.IsNullOrWhiteSpace(project) ||
             string.IsNullOrWhiteSpace(artifactName) || string.IsNullOrWhiteSpace(targetPath))

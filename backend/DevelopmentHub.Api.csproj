@@ -14,4 +14,8 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="10.1.4" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\workflow\DevelopmentHub.Workflow.csproj" />
+  </ItemGroup>
+
 </Project>

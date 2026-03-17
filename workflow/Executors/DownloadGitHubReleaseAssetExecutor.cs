@@ -1,7 +1,8 @@
+using DevelopmentHub.Workflow.Steps;
 using System.Net.Http.Headers;
 using System.Text.Json.Nodes;
 
-namespace DevelopmentHub.Api.Workflows.Executors;
+namespace DevelopmentHub.Workflow.Executors;
 
 public sealed class DownloadGitHubReleaseAssetExecutor(IHttpClientFactory httpClientFactory)
     : WorkflowStepExecutor<DownloadGitHubReleaseAssetStep>
@@ -18,7 +19,7 @@ public sealed class DownloadGitHubReleaseAssetExecutor(IHttpClientFactory httpCl
         var releaseTag = WorkflowHelpers.Render(step.ReleaseTag, context.Inputs);
         var assetName = WorkflowHelpers.Render(step.AssetName, context.Inputs);
         var targetPath = WorkflowHelpers.Render(step.TargetPath, context.Inputs);
-        var pat = WorkflowHelpers.ResolveProviderSetting(context.Config, "github", "pat", step.Pat, context.Inputs);
+        var pat = WorkflowHelpers.ResolveProviderSetting(context.Providers, "github", "pat", step.Pat, context.Inputs);
 
         if (string.IsNullOrWhiteSpace(owner) || string.IsNullOrWhiteSpace(repository) ||
             string.IsNullOrWhiteSpace(releaseTag) || string.IsNullOrWhiteSpace(assetName) ||

@@ -1,4 +1,4 @@
-namespace DevelopmentHub.Api.Workflows;
+namespace DevelopmentHub.Workflow;
 
 /// <summary>
 /// Parsed and normalised representation of a workflow definition loaded from a JSON file.
@@ -10,7 +10,7 @@ public sealed class WorkflowDefinition
     public string Description { get; init; } = string.Empty;
     public bool RequiresConfirmation { get; init; }
     public IReadOnlyList<WorkflowInput> Inputs { get; init; } = [];
-    public IReadOnlyList<WorkflowStep> Steps { get; init; } = [];
+    public IReadOnlyList<Steps.WorkflowStep> Steps { get; init; } = [];
 }
 
 public sealed class WorkflowInput

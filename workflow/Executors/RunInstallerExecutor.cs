@@ -1,6 +1,7 @@
+using DevelopmentHub.Workflow.Steps;
 using System.Diagnostics;
 
-namespace DevelopmentHub.Api.Workflows.Executors;
+namespace DevelopmentHub.Workflow.Executors;
 
 public sealed class RunInstallerExecutor : WorkflowStepExecutor<RunInstallerStep>
 {

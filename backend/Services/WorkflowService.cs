@@ -1,7 +1,12 @@
 using DevelopmentHub.Api.Hubs;
 using DevelopmentHub.Api.Models.Dtos;
-using DevelopmentHub.Api.Workflows;
+using DevelopmentHub.Workflow;
+using DevelopmentHub.Workflow.Steps;
 using Microsoft.AspNetCore.SignalR;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace DevelopmentHub.Api.Services;
 
@@ -14,7 +19,7 @@ public interface IWorkflowService
 }
 
 public class WorkflowService(
-    WorkflowLoader loader,
+    IUserConfigService userConfigService,
     IEnumerable<IWorkflowStepExecutor> executors,
     IHubContext<LogHub> hubContext,
     ILogger<WorkflowService> logger) : IWorkflowService
@@ -29,7 +34,7 @@ public class WorkflowService(
 
     public async Task<IReadOnlyList<WorkflowDefinitionDto>> GetDefinitionsAsync()
     {
-        var definitions = await loader.LoadAsync();
+        var definitions = await LoadAsync();
         return definitions.Select(MapDefinitionDto).ToList();
     }
 
@@ -60,7 +65,7 @@ public class WorkflowService(
         RunWorkflowRequestDto request,
         CancellationToken cancellationToken)
     {
-        var definitions = await loader.LoadAsync();
+        var definitions = await LoadAsync();
         var definition = definitions.FirstOrDefault(d =>
             string.Equals(d.Id, workflowId, StringComparison.OrdinalIgnoreCase))
             ?? throw new InvalidOperationException($"Workflow '{workflowId}' was not found.");
@@ -68,11 +73,12 @@ public class WorkflowService(
         if (definition.RequiresConfirmation && !request.Confirmed)
             throw new InvalidOperationException($"Workflow '{definition.Name}' requires confirmation before execution.");
 
-        var config = await loader.GetConfigAsync();
+        var config = await userConfigService.GetAsync();
+        var providers = new ProviderSettings(config.PullRequestProviders);
         var inputs = ResolveInputs(definition, request.Inputs);
         var execution = CreateExecution(definition);
 
-        _ = Task.Run(() => ExecuteWorkflowAsync(execution, definition, inputs, config), CancellationToken.None);
+        _ = Task.Run(() => ExecuteWorkflowAsync(execution, definition, inputs, providers), CancellationToken.None);
 
         return MapExecutionDto(execution);
     }
@@ -83,7 +89,7 @@ public class WorkflowService(
         WorkflowExecutionState execution,
         WorkflowDefinition definition,
         IReadOnlyDictionary<string, string> inputs,
-        DevelopmentHub.Api.Models.UserConfigDao config)
+        ProviderSettings providers)
     {
         using var cts = new CancellationTokenSource();
 
@@ -94,7 +100,7 @@ public class WorkflowService(
             foreach (var step in definition.Steps)
             {
                 cts.Token.ThrowIfCancellationRequested();
-                await ExecuteStepAsync(execution, definition, step, inputs, config, cts.Token);
+                await ExecuteStepAsync(execution, definition, step, inputs, providers, cts.Token);
             }
 
             execution.Status = "succeeded";
@@ -133,7 +139,7 @@ public class WorkflowService(
         WorkflowDefinition definition,
         WorkflowStep step,
         IReadOnlyDictionary<string, string> inputs,
-        DevelopmentHub.Api.Models.UserConfigDao config,
+        ProviderSettings providers,
         CancellationToken cancellationToken)
     {
         var stepLabel = string.IsNullOrWhiteSpace(step.Name) ? step.Type : step.Name;
@@ -146,7 +152,7 @@ public class WorkflowService(
         var context = new StepContext
         {
             Inputs = inputs,
-            Config = config,
+            Providers = providers,
             LogAsync = (text, stream) => LogAsync(execution, text, stream)
         };
 
@@ -212,6 +218,162 @@ public class WorkflowService(
     }
 
     private static string GroupName(string executionId) => $"execution-{executionId}";
+
+    // ── Workflow loading ──────────────────────────────────────────────────────
+
+    private static readonly JsonSerializerOptions _jsonOptions = new() { PropertyNameCaseInsensitive = true };
+
+    private async Task<IReadOnlyList<WorkflowDefinition>> LoadAsync()
+    {
+        var config = await userConfigService.GetAsync();
+        var path = config.WorkflowDefinitionsPath;
+
+        if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
+            return [];
+
+        var definitions = new List<WorkflowDefinition>();
+
+        foreach (var filePath in Directory.GetFiles(path, "*.json", SearchOption.TopDirectoryOnly))
+        {
+            try
+            {
+                var json = await File.ReadAllTextAsync(filePath);
+                var node = JsonNode.Parse(json);
+
+                if (node is JsonArray array)
+                {
+                    var dtos = array.Deserialize<List<WorkflowDefinitionDto>>(_jsonOptions) ?? [];
+                    definitions.AddRange(dtos.Select((dto, index) =>
+                        NormalizeDefinition(MapDefinition(dto), BuildKey(filePath, index))));
+                }
+                else if (node is JsonObject)
+                {
+                    var dto = node.Deserialize<WorkflowDefinitionDto>(_jsonOptions);
+                    if (dto is not null)
+                        definitions.Add(NormalizeDefinition(MapDefinition(dto), BuildKey(filePath, 0)));
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Failed to load workflow definition file {FilePath}", filePath);
+            }
+        }
+
+        return definitions
+            .Where(d => !string.IsNullOrWhiteSpace(d.Id) && !string.IsNullOrWhiteSpace(d.Name) && d.Steps.Count > 0)
+            .GroupBy(d => d.Id, StringComparer.OrdinalIgnoreCase)
+            .Select(g => g.First())
+            .ToList();
+    }
+
+    private static WorkflowDefinition MapDefinition(WorkflowDefinitionDto dto) =>
+        new()
+        {
+            Id = dto.Id ?? string.Empty,
+            Name = dto.Name ?? string.Empty,
+            Description = dto.Description ?? string.Empty,
+            RequiresConfirmation = dto.RequiresConfirmation,
+            Inputs = (dto.Inputs ?? []).Select(i => new WorkflowInput
+            {
+                Name = i.Name ?? string.Empty,
+                Label = string.IsNullOrWhiteSpace(i.Label) ? i.Name ?? string.Empty : i.Label,
+                Type = "text",
+                DefaultValue = i.DefaultValue ?? string.Empty
+            }).ToList(),
+            Steps = (dto.Steps ?? []).Where(s => !string.IsNullOrWhiteSpace(s?.Type)).Select(MapStep).ToList()
+        };
+
+    private static WorkflowStep MapStep(WorkflowStepDto dto) =>
+        dto.Type.ToLowerInvariant() switch
+        {
+            "downloadfile" => new DownloadFileStep
+            {
+                Type = dto.Type, Name = dto.Name ?? string.Empty,
+                Url = dto.Url ?? string.Empty,
+                TargetPath = dto.TargetPath ?? string.Empty,
+                Overwrite = dto.Overwrite
+            },
+            "downloadgithubreleaseasset" => new DownloadGitHubReleaseAssetStep
+            {
+                Type = dto.Type, Name = dto.Name ?? string.Empty,
+                Owner = dto.Owner ?? string.Empty,
+                Repository = dto.Repository ?? string.Empty,
+                ReleaseTag = dto.ReleaseTag ?? string.Empty,
+                AssetName = dto.AssetName ?? string.Empty,
+                TargetPath = dto.TargetPath ?? string.Empty,
+                Pat = dto.Pat ?? string.Empty,
+                Overwrite = dto.Overwrite
+            },
+            "downloadazuredevopspipelineartifactasset" => new DownloadAzureDevOpsPipelineArtifactAssetStep
+            {
+                Type = dto.Type, Name = dto.Name ?? string.Empty,
+                Organization = dto.Organization ?? string.Empty,
+                Project = dto.Project ?? string.Empty,
+                PipelineId = dto.PipelineId ?? string.Empty,
+                RunId = dto.RunId ?? string.Empty,
+                BuildId = dto.BuildId ?? string.Empty,
+                AssetName = dto.AssetName ?? string.Empty,
+                TargetPath = dto.TargetPath ?? string.Empty,
+                Pat = dto.Pat ?? string.Empty,
+                Overwrite = dto.Overwrite
+            },
+            "extractarchive" => new ExtractArchiveStep
+            {
+                Type = dto.Type, Name = dto.Name ?? string.Empty,
+                ArchivePath = dto.ArchivePath ?? string.Empty,
+                DestinationPath = dto.DestinationPath ?? string.Empty,
+                CleanDestination = dto.CleanDestination
+            },
+            "runinstaller" => new RunInstallerStep
+            {
+                Type = dto.Type, Name = dto.Name ?? string.Empty,
+                FilePath = dto.FilePath ?? string.Empty,
+                Arguments = dto.Arguments ?? [],
+                WaitForExit = dto.WaitForExit,
+                SuccessExitCodes = dto.SuccessExitCodes?.Length > 0 ? dto.SuccessExitCodes : [0],
+                RunElevated = dto.RunElevated
+            },
+            "patchjson" => new PatchJsonStep
+            {
+                Type = dto.Type, Name = dto.Name ?? string.Empty,
+                FilePath = dto.FilePath ?? string.Empty,
+                Operations = (dto.Operations ?? []).Select(op => new JsonPatchOperation
+                {
+                    Op = op.Op ?? string.Empty,
+                    Path = op.Path ?? string.Empty,
+                    ValueJson = op.Value is null ? null : JsonSerializer.Serialize(op.Value)
+                }).ToList()
+            },
+            "restartwindowsservice" => new RestartWindowsServiceStep
+            {
+                Type = dto.Type, Name = dto.Name ?? string.Empty,
+                ServiceName = dto.ServiceName ?? string.Empty,
+                WaitForRunning = dto.WaitForRunning,
+                TimeoutSeconds = dto.TimeoutSeconds <= 0 ? 60 : dto.TimeoutSeconds,
+                RunElevated = dto.RunElevated
+            },
+            _ => new UnknownStep { Type = dto.Type, Name = dto.Name ?? string.Empty }
+        };
+
+    private static WorkflowDefinition NormalizeDefinition(WorkflowDefinition d, string key) =>
+        new()
+        {
+            Id = string.IsNullOrWhiteSpace(d.Id) ? CreateDeterministicId(key) : d.Id.Trim(),
+            Name = d.Name.Trim(),
+            Description = d.Description.Trim(),
+            RequiresConfirmation = d.RequiresConfirmation,
+            Inputs = d.Inputs,
+            Steps = d.Steps.Where(s => !string.IsNullOrWhiteSpace(s.Type)).ToList()
+        };
+
+    private static string BuildKey(string filePath, int index) =>
+        $"{Path.GetFullPath(filePath).ToLowerInvariant()}::{index}";
+
+    private static string CreateDeterministicId(string value)
+    {
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(value));
+        return Convert.ToHexString(bytes[..16]).ToLowerInvariant();
+    }
 
     // ── DTO mapping ───────────────────────────────────────────────────────────
 
