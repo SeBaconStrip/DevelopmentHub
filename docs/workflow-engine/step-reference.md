@@ -60,7 +60,7 @@ Example:
 }
 ```
 
-## `downloadAzureDevopsPipelineArtefactAsset`
+## `downloadAzureDevopsPipelineArtifactAsset`
 
 Downloads an Azure DevOps pipeline artifact or build artifact.
 
@@ -95,7 +95,7 @@ Example using pipeline run:
 
 ```json
 {
-  "type": "downloadAzureDevopsPipelineArtefactAsset",
+  "type": "downloadAzureDevopsPipelineArtifactAsset",
   "name": "Download pipeline artifact",
   "organization": "my-org",
   "project": "MyProject",
@@ -111,7 +111,7 @@ Example using build ID:
 
 ```json
 {
-  "type": "downloadAzureDevopsPipelineArtefactAsset",
+  "type": "downloadAzureDevopsPipelineArtifactAsset",
   "name": "Download build artifact",
   "buildId": "{{buildId}}",
   "assetName": "drop",

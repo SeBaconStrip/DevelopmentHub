@@ -25,7 +25,7 @@ The current workflow engine supports these step types:
 
 - `downloadFile`
 - `downloadGithubReleaseAsset`
-- `downloadAzureDevopsPipelineArtefactAsset`
+- `downloadAzureDevopsPipelineArtifactAsset`
 - `extractArchive`
 - `runInstaller`
 - `patchJson`

@@ -12,7 +12,14 @@ import githubIcon from "../assets/icons/github.svg";
 import azureDevOpsIcon from "../assets/icons/azure-devops.svg";
 import "./DashboardSettingsModal.css";
 
-type NavPage = "general" | "repositories" | "pullRequests" | "quickLinks" | "workflows" | "todos" | "appearance";
+type NavPage =
+  | "general"
+  | "repositories"
+  | "pullRequests"
+  | "quickLinks"
+  | "workflows"
+  | "todos"
+  | "appearance";
 
 const NAV_ITEMS: { id: NavPage; icon: string; label: string }[] = [
   { id: "general", icon: "⚙", label: "General" },
@@ -216,12 +223,7 @@ export function DashboardSettingsModal({ onClose }: Props) {
       case "quickLinks":
         return <QuickLinksPage form={form} setField={setField} />;
       case "workflows":
-        return (
-          <WorkflowsPage
-            form={form}
-            setField={setField}
-          />
-        );
+        return <WorkflowsPage form={form} setField={setField} />;
       case "todos":
         return <TodosPage />;
       case "appearance":
@@ -632,14 +634,21 @@ function QuickLinksPage({ form, setField }: QuickLinksPageProps) {
     const path = await configApi.pickFolder();
     if (!path) return;
 
-    updateLink(index, { ...form.customLinks[index], target: path, type: "explorer" });
+    updateLink(index, {
+      ...form.customLinks[index],
+      target: path,
+      type: "explorer",
+    });
   };
 
   return (
     <>
       <Section title="Panel">
         {widget && (
-          <WidgetRow widget={widget} onToggle={() => toggleWidget("quickLinks")} />
+          <WidgetRow
+            widget={widget}
+            onToggle={() => toggleWidget("quickLinks")}
+          />
         )}
       </Section>
 
@@ -704,7 +713,10 @@ function QuickLinksPage({ form, setField }: QuickLinksPageProps) {
                     📁
                   </button>
                 )}
-                <button className="btn-remove" onClick={() => removeLink(index)}>
+                <button
+                  className="btn-remove"
+                  onClick={() => removeLink(index)}
+                >
                   ✕
                 </button>
               </div>
@@ -725,17 +737,20 @@ function TodosPage() {
   return (
     <>
       <Section title="Panel">
-        {widget && <WidgetRow widget={widget} onToggle={() => toggleWidget("todos")} />}
+        {widget && (
+          <WidgetRow widget={widget} onToggle={() => toggleWidget("todos")} />
+        )}
       </Section>
 
       <Section title="Completed Todos">
         <p className="settings-page-hint">
-          Completed todos stay in a collapsed Done section instead of disappearing immediately.
-          That makes it easy to restore something you checked off too early.
+          Completed todos stay in a collapsed Done section instead of
+          disappearing immediately. That makes it easy to restore something you
+          checked off too early.
         </p>
         <p className="settings-page-hint">
-          You can restore individual done items, delete them one by one, or clear all completed
-          todos from the widget.
+          You can restore individual done items, delete them one by one, or
+          clear all completed todos from the widget.
         </p>
       </Section>
     </>
@@ -747,10 +762,7 @@ interface WorkflowsPageProps {
   setField: <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => void;
 }
 
-function WorkflowsPage({
-  form,
-  setField,
-}: WorkflowsPageProps) {
+function WorkflowsPage({ form, setField }: WorkflowsPageProps) {
   const { dashboardWidgets, toggleWidget } = useUiStore();
   const widget = dashboardWidgets.find((w) => w.id === "workflows");
 
@@ -762,18 +774,25 @@ function WorkflowsPage({
   return (
     <>
       <Section title="Panel">
-        {widget && <WidgetRow widget={widget} onToggle={() => toggleWidget("workflows")} />}
+        {widget && (
+          <WidgetRow
+            widget={widget}
+            onToggle={() => toggleWidget("workflows")}
+          />
+        )}
       </Section>
 
       <Section title="Workflow Definitions">
         <p className="settings-page-hint">
-          Point this to a folder containing workflow `*.json` files. Each file can contain
-          either a single workflow object or an array of workflows.
+          Point this to a folder containing workflow `*.json` files. Each file
+          can contain either a single workflow object or an array of workflows.
         </p>
         <p className="settings-page-hint">
-          Supported V1 step types are <code>downloadFile</code>, <code>extractArchive</code>,
-          <code>runInstaller</code>, <code>patchJson</code>, <code>restartWindowsService</code>,
-          <code>downloadGithubReleaseAsset</code> and <code>downloadAzureDevopsPipelineArtefactAsset</code>.
+          Supported V1 step types are <code>downloadFile</code>,{" "}
+          <code>extractArchive</code>,<code>runInstaller</code>,{" "}
+          <code>patchJson</code>, <code>restartWindowsService</code>,
+          <code>downloadGithubReleaseAsset</code> and{" "}
+          <code>downloadAzureDevopsPipelineArtifactAsset</code>.
         </p>
         <Field label="Workflow folder">
           <div className="settings-root-row">
@@ -796,10 +815,12 @@ function WorkflowsPage({
           </div>
         </Field>
         <p className="settings-page-hint">
-          Example placeholders inside files: <code>{'{{version}}'}</code>, <code>{'{{serviceName}}'}</code>.
+          Example placeholders inside files: <code>{"{{version}}"}</code>,{" "}
+          <code>{"{{serviceName}}"}</code>.
         </p>
         <p className="settings-page-hint">
-          The folder is loaded by the backend, so after saving you can just drop new JSON files there.
+          The folder is loaded by the backend, so after saving you can just drop
+          new JSON files there.
         </p>
       </Section>
     </>

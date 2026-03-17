@@ -77,7 +77,7 @@
   ],
   "steps": [
     {
-      "type": "downloadAzureDevopsPipelineArtefactAsset",
+      "type": "downloadAzureDevopsPipelineArtifactAsset",
       "name": "Download artifact",
       "organization": "my-org",
       "project": "MyProject",

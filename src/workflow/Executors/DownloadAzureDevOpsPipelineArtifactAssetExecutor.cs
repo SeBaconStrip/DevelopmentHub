@@ -30,17 +30,17 @@ public sealed class DownloadAzureDevOpsPipelineArtifactAssetExecutor(IHttpClient
             string.IsNullOrWhiteSpace(artifactName) || string.IsNullOrWhiteSpace(targetPath))
         {
             throw new InvalidOperationException(
-                "downloadAzureDevopsPipelineArtefactAsset requires organization, project, assetName and targetPath.");
+                "downloadAzureDevopsPipelineArtifactAsset requires organization, project, assetName and targetPath.");
         }
 
         if (string.IsNullOrWhiteSpace(pat))
-            throw new InvalidOperationException("Azure DevOps PAT is required for downloadAzureDevopsPipelineArtefactAsset.");
+            throw new InvalidOperationException("Azure DevOps PAT is required for downloadAzureDevopsPipelineArtifactAsset.");
 
         if ((string.IsNullOrWhiteSpace(pipelineId) || string.IsNullOrWhiteSpace(runId)) &&
             string.IsNullOrWhiteSpace(buildId))
         {
             throw new InvalidOperationException(
-                "downloadAzureDevopsPipelineArtefactAsset requires either pipelineId + runId or buildId.");
+                "downloadAzureDevopsPipelineArtifactAsset requires either pipelineId + runId or buildId.");
         }
 
         WorkflowHelpers.EnsureCanWriteTarget(targetPath, step.Overwrite);
