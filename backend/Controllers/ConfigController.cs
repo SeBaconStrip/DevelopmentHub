@@ -3,7 +3,6 @@ using DevelopmentHub.Api.Models;
 using DevelopmentHub.Api.Models.Dtos;
 using DevelopmentHub.Api.Services;
 using Microsoft.AspNetCore.Mvc;
-using System.Text.Json;
 
 namespace DevelopmentHub.Api.Controllers;
 
@@ -32,7 +31,6 @@ public class ConfigController(
                 Target = link.Target,
                 Type = link.Type
             }).ToList(),
-            Workflows = cfg.Workflows.Select(MapWorkflow).ToList(),
             WorkflowDefinitionsPath = cfg.WorkflowDefinitionsPath,
             PullRequestProviders = RedactProviderSecrets(cfg.PullRequestProviders),
             ScanIntervalMinutes = cfg.ScanIntervalMinutes,
@@ -66,10 +64,6 @@ public class ConfigController(
                     Target = link.Target.Trim(),
                     Type = string.Equals(link.Type, "explorer", StringComparison.OrdinalIgnoreCase) ? "explorer" : "web"
                 })
-                .ToList();
-            current.Workflows = (dto.Workflows ?? [])
-                .Where(workflow => workflow is not null)
-                .Select(MapWorkflow)
                 .ToList();
             current.WorkflowDefinitionsPath = dto.WorkflowDefinitionsPath?.Trim() ?? string.Empty;
             current.PullRequestProviders = MergeProviderSettings(current.PullRequestProviders, dto.PullRequestProviders);
@@ -150,121 +144,4 @@ public class ConfigController(
         key.EndsWith("token", StringComparison.OrdinalIgnoreCase) ||
         key.Contains("secret", StringComparison.OrdinalIgnoreCase);
 
-    private static WorkflowDefinitionDto MapWorkflow(WorkflowDefinitionDao workflow) =>
-        new()
-        {
-            Id = workflow.Id,
-            Name = workflow.Name,
-            Description = workflow.Description,
-            RequiresConfirmation = workflow.RequiresConfirmation,
-            Inputs = workflow.Inputs.Select(input => new WorkflowInputDto
-            {
-                Name = input.Name,
-                Label = input.Label,
-                Type = input.Type,
-                DefaultValue = input.DefaultValue
-            }).ToList(),
-            Steps = workflow.Steps.Select(step => new WorkflowStepDto
-            {
-                Type = step.Type,
-                Name = step.Name,
-                Url = step.Url,
-                Owner = step.Owner,
-                Repository = step.Repository,
-                ReleaseTag = step.ReleaseTag,
-                AssetName = step.AssetName,
-                Organization = step.Organization,
-                Project = step.Project,
-                PipelineId = step.PipelineId,
-                RunId = step.RunId,
-                BuildId = step.BuildId,
-                Pat = step.Pat,
-                TargetPath = step.TargetPath,
-                Overwrite = step.Overwrite,
-                RunElevated = step.RunElevated,
-                ArchivePath = step.ArchivePath,
-                DestinationPath = step.DestinationPath,
-                CleanDestination = step.CleanDestination,
-                FilePath = step.FilePath,
-                Arguments = step.Arguments,
-                WaitForExit = step.WaitForExit,
-                SuccessExitCodes = step.SuccessExitCodes,
-                Operations = step.Operations.Select(operation => new JsonPatchOperationDto
-                {
-                    Op = operation.Op,
-                    Path = operation.Path,
-                    Value = DeserializeValue(operation.ValueJson)
-                }).ToList(),
-                ServiceName = step.ServiceName,
-                WaitForRunning = step.WaitForRunning,
-                TimeoutSeconds = step.TimeoutSeconds
-            }).ToList()
-        };
-
-    private static WorkflowDefinitionDao MapWorkflow(WorkflowDefinitionDto workflow) =>
-        new()
-        {
-            Id = workflow.Id,
-            Name = workflow.Name,
-            Description = workflow.Description,
-            RequiresConfirmation = workflow.RequiresConfirmation,
-            Inputs = workflow.Inputs.Select(input => new WorkflowInputDao
-            {
-                Name = input.Name,
-                Label = input.Label,
-                Type = input.Type,
-                DefaultValue = input.DefaultValue
-            }).ToList(),
-            Steps = workflow.Steps.Select(step => new WorkflowStepDao
-            {
-                Type = step.Type,
-                Name = step.Name,
-                Url = step.Url,
-                Owner = step.Owner,
-                Repository = step.Repository,
-                ReleaseTag = step.ReleaseTag,
-                AssetName = step.AssetName,
-                Organization = step.Organization,
-                Project = step.Project,
-                PipelineId = step.PipelineId,
-                RunId = step.RunId,
-                BuildId = step.BuildId,
-                Pat = step.Pat,
-                TargetPath = step.TargetPath,
-                Overwrite = step.Overwrite,
-                RunElevated = step.RunElevated,
-                ArchivePath = step.ArchivePath,
-                DestinationPath = step.DestinationPath,
-                CleanDestination = step.CleanDestination,
-                FilePath = step.FilePath,
-                Arguments = step.Arguments,
-                WaitForExit = step.WaitForExit,
-                SuccessExitCodes = step.SuccessExitCodes,
-                Operations = step.Operations.Select(operation => new JsonPatchOperationDao
-                {
-                    Op = operation.Op,
-                    Path = operation.Path,
-                    ValueJson = operation.Value is null ? null : JsonSerializer.Serialize(operation.Value)
-                }).ToList(),
-                ServiceName = step.ServiceName,
-                WaitForRunning = step.WaitForRunning,
-                TimeoutSeconds = step.TimeoutSeconds
-            }).ToList()
-        };
-
-    private static object? DeserializeValue(string? valueJson)
-    {
-        if (string.IsNullOrWhiteSpace(valueJson))
-            return null;
-
-        try
-        {
-            using var document = JsonDocument.Parse(valueJson);
-            return JsonSerializer.Deserialize<object>(document.RootElement.GetRawText());
-        }
-        catch
-        {
-            return valueJson;
-        }
-    }
 }

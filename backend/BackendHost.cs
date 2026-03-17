@@ -4,6 +4,8 @@ using DevelopmentHub.Api.Data;
 using DevelopmentHub.Api.Hubs;
 using DevelopmentHub.Api.Logging;
 using DevelopmentHub.Api.Services;
+using DevelopmentHub.Api.Workflows;
+using DevelopmentHub.Api.Workflows.Executors;
 using Serilog;
 using Serilog.Events;
 using System.Net.WebSockets;
@@ -86,8 +88,16 @@ public static class BackendHost
         builder.Services.AddScoped<IPullRequestProvider, GitHubPullRequestProvider>();
         builder.Services.AddScoped<IRepositoryService, RepositoryService>();
         builder.Services.AddScoped<ITodoService, TodoService>();
-        builder.Services.AddSingleton<IWorkflowService, WorkflowService>();
         builder.Services.AddSingleton<IUserConfigService, UserConfigService>();
+        builder.Services.AddSingleton<WorkflowLoader>();
+        builder.Services.AddSingleton<IWorkflowStepExecutor, DownloadFileExecutor>();
+        builder.Services.AddSingleton<IWorkflowStepExecutor, DownloadGitHubReleaseAssetExecutor>();
+        builder.Services.AddSingleton<IWorkflowStepExecutor, DownloadAzureDevOpsPipelineArtifactAssetExecutor>();
+        builder.Services.AddSingleton<IWorkflowStepExecutor, ExtractArchiveExecutor>();
+        builder.Services.AddSingleton<IWorkflowStepExecutor, RunInstallerExecutor>();
+        builder.Services.AddSingleton<IWorkflowStepExecutor, PatchJsonExecutor>();
+        builder.Services.AddSingleton<IWorkflowStepExecutor, RestartWindowsServiceExecutor>();
+        builder.Services.AddSingleton<IWorkflowService, WorkflowService>();
 
         // ── Background Services ───────────────────────────────────────────────
         builder.Services.AddHostedService<RepositoryScannerService>();
