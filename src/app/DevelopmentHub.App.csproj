@@ -23,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\backend\DevelopmentHub.Api.csproj" />
+    <ProjectReference Include="..\api\DevelopmentHub.Api.csproj" />
   </ItemGroup>
 
   <!-- Copy backend appsettings so Kestrel can read them from the app's base dir -->
@@ -31,11 +31,11 @@
     <Content Include="DeveloperHubIcon.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="..\backend\appsettings.json">
+    <Content Include="..\api\appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>appsettings.json</Link>
     </Content>
-    <Content Include="..\backend\appsettings.Production.json">
+    <Content Include="..\api\appsettings.Production.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>appsettings.Production.json</Link>
     </Content>
@@ -43,12 +43,12 @@
 
   <!-- On publish: build the React app, then copy dist/ → wwwroot/ -->
   <Target Name="BuildFrontend" BeforeTargets="Publish">
-    <Exec Command="npm run build" WorkingDirectory="..\frontend" />
+    <Exec Command="npm run build" WorkingDirectory="..\web" />
   </Target>
 
   <Target Name="CopyFrontendDist" AfterTargets="Publish">
     <ItemGroup>
-      <FrontendFiles Include="..\frontend\dist\**\*" />
+      <FrontendFiles Include="..\web\dist\**\*" />
     </ItemGroup>
     <Copy SourceFiles="@(FrontendFiles)"
           DestinationFiles="@(FrontendFiles->'$(PublishDir)wwwroot\%(RecursiveDir)%(Filename)%(Extension)')" />
