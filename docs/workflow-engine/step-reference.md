@@ -142,9 +142,9 @@ Example:
 }
 ```
 
-## `runInstaller`
+## `runExecutable`
 
-Runs an executable or installer.
+Runs any executable or installer. The legacy discriminator `runInstaller` is also accepted.
 
 Fields:
 
@@ -152,12 +152,13 @@ Fields:
 - `arguments`
 - `waitForExit`
 - `successExitCodes`
+- `runElevated`
 
 Example:
 
 ```json
 {
-  "type": "runInstaller",
+  "type": "runExecutable",
   "name": "Run setup",
   "filePath": "C:\\Apps\\Package\\setup.exe",
   "arguments": ["/silent"],

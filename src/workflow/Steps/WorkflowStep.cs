@@ -12,7 +12,8 @@ namespace DevelopmentHub.Workflow.Steps;
 [JsonDerivedType(typeof(DownloadGitHubReleaseAssetStep), "downloadGithubReleaseAsset")]
 [JsonDerivedType(typeof(DownloadAzureDevOpsPipelineArtifactAssetStep), "downloadAzureDevopsPipelineArtifactAsset")]
 [JsonDerivedType(typeof(ExtractArchiveStep), "extractArchive")]
-[JsonDerivedType(typeof(RunInstallerStep), "runInstaller")]
+[JsonDerivedType(typeof(RunExecutableStep), "runExecutable")]
+[JsonDerivedType(typeof(RunExecutableStep), "runInstaller")]
 [JsonDerivedType(typeof(PatchJsonStep), "patchJson")]
 [JsonDerivedType(typeof(RestartWindowsServiceStep), "restartWindowsService")]
 public abstract class WorkflowStep

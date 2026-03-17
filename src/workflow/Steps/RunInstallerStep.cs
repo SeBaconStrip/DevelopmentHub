@@ -1,6 +1,6 @@
 namespace DevelopmentHub.Workflow.Steps;
 
-public sealed class RunInstallerStep : WorkflowStep
+public sealed class RunExecutableStep : WorkflowStep
 {
     public string FilePath { get; init; } = string.Empty;
     public string[] Arguments { get; init; } = [];

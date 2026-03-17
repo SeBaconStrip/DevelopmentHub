@@ -789,7 +789,7 @@ function WorkflowsPage({ form, setField }: WorkflowsPageProps) {
         </p>
         <p className="settings-page-hint">
           Supported V1 step types are <code>downloadFile</code>,{" "}
-          <code>extractArchive</code>,<code>runInstaller</code>,{" "}
+          <code>extractArchive</code>,<code>runExecutable</code>,{" "}
           <code>patchJson</code>, <code>restartWindowsService</code>,
           <code>downloadGithubReleaseAsset</code> and{" "}
           <code>downloadAzureDevopsPipelineArtifactAsset</code>.

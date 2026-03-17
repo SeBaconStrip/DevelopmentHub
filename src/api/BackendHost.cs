@@ -93,7 +93,7 @@ public static class BackendHost
         builder.Services.AddSingleton<IWorkflowStepExecutor, DownloadGitHubReleaseAssetExecutor>();
         builder.Services.AddSingleton<IWorkflowStepExecutor, DownloadAzureDevOpsPipelineArtifactAssetExecutor>();
         builder.Services.AddSingleton<IWorkflowStepExecutor, ExtractArchiveExecutor>();
-        builder.Services.AddSingleton<IWorkflowStepExecutor, RunInstallerExecutor>();
+        builder.Services.AddSingleton<IWorkflowStepExecutor, RunExecutableExecutor>();
         builder.Services.AddSingleton<IWorkflowStepExecutor, PatchJsonExecutor>();
         builder.Services.AddSingleton<IWorkflowStepExecutor, RestartWindowsServiceExecutor>();
         builder.Services.AddSingleton<IWorkflowService, WorkflowService>();

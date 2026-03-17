@@ -3,18 +3,18 @@ using System.Diagnostics;
 
 namespace DevelopmentHub.Workflow.Executors;
 
-public sealed class RunInstallerExecutor : WorkflowStepExecutor<RunInstallerStep>
+public sealed class RunExecutableExecutor : WorkflowStepExecutor<RunExecutableStep>
 {
-    public override string StepType => "runinstaller";
+    public override string StepType => "runExecutable";
 
     protected override async Task ExecuteAsync(
-        RunInstallerStep step,
+        RunExecutableStep step,
         StepContext context,
         CancellationToken cancellationToken)
     {
         var filePath = WorkflowHelpers.Render(step.FilePath, context.Inputs);
         if (string.IsNullOrWhiteSpace(filePath))
-            throw new InvalidOperationException("runInstaller requires filePath.");
+            throw new InvalidOperationException("runExecutable requires filePath.");
 
         if (!File.Exists(filePath))
             throw new FileNotFoundException("Installer not found.", filePath);

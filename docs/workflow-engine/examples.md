@@ -192,7 +192,7 @@
       "cleanDestination": true
     },
     {
-      "type": "runInstaller",
+      "type": "runExecutable",
       "name": "Run setup",
       "filePath": "C:\\Temp\\package-{{version}}\\setup.exe",
       "arguments": ["/silent"],
