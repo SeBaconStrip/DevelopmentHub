@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.8 - 2026-03-16
+## 0.8 - 2026-03-17
 
 - Added a file-based workflow engine that loads workflow definitions from a configured folder and runs them from a new dashboard widget
 - Added a custom workflow input modal, live execution log modal, and workflow execution status updates in the dashboard
