@@ -229,7 +229,6 @@ public class WorkflowService(
             case "downloadgithubreleaseasset":
                 await ExecuteDownloadGitHubReleaseAssetAsync(execution, step, inputs, config, cancellationToken);
                 break;
-            case "downloadazuredevopspipelineartefactasset":
             case "downloadazuredevopspipelineartifactasset":
                 await ExecuteDownloadAzureDevOpsPipelineArtifactAssetAsync(execution, step, inputs, config, cancellationToken);
                 break;

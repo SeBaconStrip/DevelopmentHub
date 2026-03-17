@@ -66,7 +66,7 @@ public class WorkflowStepDao
     public bool RunElevated { get; set; }
     public string ArchivePath { get; set; } = string.Empty;
     public string DestinationPath { get; set; } = string.Empty;
-    public bool CleanDestination { get; set; }
+    public bool CleanDestination { get; set; } = false;
     public string FilePath { get; set; } = string.Empty;
     public string[] Arguments { get; set; } = [];
     public bool WaitForExit { get; set; } = true;
