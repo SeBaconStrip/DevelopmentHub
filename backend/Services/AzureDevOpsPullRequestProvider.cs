@@ -12,19 +12,21 @@ public class AzureDevOpsPullRequestProvider(
     IMemoryCache cache,
     ILogger<AzureDevOpsPullRequestProvider> logger) : IPullRequestProvider
 {
-    private const string CacheKey = "pullrequests.azuredevops";
+    private const string CacheKeyPrefix = "pullrequests.azuredevops";
 
     public string ProviderId => "azureDevOps";
 
     public async Task<List<PullRequestDto>> GetOpenPullRequestsAsync(UserConfigDao userConfig, CancellationToken cancellationToken = default)
     {
-        if (cache.TryGetValue<List<PullRequestDto>>(CacheKey, out var cached) && cached is not null)
+        var cfg = GetSettings(userConfig);
+        var cacheKey = BuildCacheKey(cfg);
+
+        if (cache.TryGetValue<List<PullRequestDto>>(cacheKey, out var cached) && cached is not null)
         {
             logger.LogDebug("Returning Azure DevOps pull requests from cache. PullRequestCount={PullRequestCount}", cached.Count);
             return cached;
         }
 
-        var cfg = GetSettings(userConfig);
         var cacheDuration = TimeSpan.FromSeconds(Math.Max(30, userConfig.PrRefreshIntervalSeconds / 2));
 
         if (!IsConfigured(cfg))
@@ -40,7 +42,7 @@ public class AzureDevOpsPullRequestProvider(
             cfg.Project,
             cacheDuration.TotalSeconds);
         var result = await FetchPullRequestsAsync(client, cfg, cancellationToken);
-        cache.Set(CacheKey, result, cacheDuration);
+        cache.Set(cacheKey, result, cacheDuration);
         return result;
     }
 
@@ -57,6 +59,14 @@ public class AzureDevOpsPullRequestProvider(
             UserEmail = userConfig.GetProviderSetting("azureDevOps", "userEmail"),
             Pat = userConfig.GetProviderSetting("azureDevOps", "pat"),
         };
+
+    private static string BuildCacheKey(AzureDevOpsProviderSettings cfg) =>
+        string.Join(
+            ':',
+            CacheKeyPrefix,
+            cfg.Organization.Trim().ToLowerInvariant(),
+            cfg.Project.Trim().ToLowerInvariant(),
+            cfg.UserEmail.Trim().ToLowerInvariant());
 
     private HttpClient CreateAuthorizedClient(string pat)
     {
@@ -82,6 +92,7 @@ public class AzureDevOpsPullRequestProvider(
             var pullRequests = values
                 .Where(v => v is not null)
                 .Select(v => MapPullRequest(v!, cfg, cfg.UserEmail))
+                .Where(pr => string.IsNullOrWhiteSpace(cfg.UserEmail) || pr.CreatedByMe || pr.IsReviewer)
                 .OrderByDescending(p => p.CreatedAt)
                 .ToList();
 
