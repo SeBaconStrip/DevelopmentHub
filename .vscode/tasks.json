@@ -6,7 +6,7 @@
       "type": "shell",
       "command": "npm run build; npm run dev",
       "options": {
-        "cwd": "${workspaceFolder}/frontend"
+        "cwd": "${workspaceFolder}/src/web"
       },
       "presentation": {
         "reveal": "always",
@@ -20,7 +20,7 @@
       "type": "shell",
       "command": "dotnet build; dotnet run --launch-profile http",
       "options": {
-        "cwd": "${workspaceFolder}/backend"
+        "cwd": "${workspaceFolder}/src/api"
       },
       "presentation": {
         "reveal": "always",
@@ -34,7 +34,7 @@
       "type": "shell",
       "command": "dotnet build; dotnet run",
       "options": {
-        "cwd": "${workspaceFolder}/app",
+        "cwd": "${workspaceFolder}/src/app",
         "env": {
           "ASPNETCORE_ENVIRONMENT": "Development"
         }

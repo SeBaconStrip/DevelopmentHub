@@ -23,8 +23,8 @@
         "name": "Debug App (Dev)",
         "type": "coreclr",
         "request": "launch",
-        "program": "${workspaceFolder}/app/bin/Debug/net9.0-windows/DevelopmentHub.App.exe",
-        "cwd": "${workspaceFolder}/app",
+        "program": "${workspaceFolder}/src/app/bin/Debug/net9.0-windows/DevelopmentHub.App.exe",
+        "cwd": "${workspaceFolder}/src/app",
         "env": {
           "ASPNETCORE_ENVIRONMENT": "Development",
         },

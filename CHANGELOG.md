@@ -1,20 +1,21 @@
 # Changelog
 
-## 0.8 - 2026-03-16
+## 0.8 - 2026-03-17
 
 - Added a file-based workflow engine that loads workflow definitions from a configured folder and runs them from a new dashboard widget
-- Added a custom workflow input modal, immediate execution modal opening, live execution logs, and workflow status updates in the dashboard
-- Added workflow steps for direct downloads, GitHub release assets, Azure DevOps pipeline artifacts, ZIP extraction, installer execution, JSON patching, and Windows service restarts
-- Added optional per-step elevation for Windows service restarts so only the selected action requests UAC permissions instead of the whole app running as administrator
-- Hardened workflow loading with case-insensitive JSON parsing, stable fallback IDs, invalid-workflow filtering, and clearer elevated-step error reporting
-- Added structured workflow engine documentation under `docs/workflow-engine/`
+- Added a custom workflow input modal, live execution log modal, and workflow execution status updates in the dashboard
+- Added workflow step support for direct downloads, ZIP extraction, installer execution, JSON patching, and Windows service restarts
+- Added authenticated download steps for GitHub release assets and Azure DevOps pipeline artifacts using configured provider credentials
+- Added optional per-step elevation for Windows service restarts so only the selected action prompts for UAC instead of the whole app running as admin
+- Hardened workflow loading with case-insensitive JSON parsing, stable fallback IDs, invalid-workflow filtering, and improved elevated-step error reporting
+- Added structured documentation under `docs/workflow-engine/`
+
+## 0.7 - 2026-03-16
+
 - Improved dashboard panel editing by allowing dragging from the full widget area, simplifying resize affordances, and reducing the minimum width of the quick links panel
 - Updated focus and panel control styling to better follow the active theme across grips, close buttons, quick links, and resize borders
 - Fixed the global hotkey toggle so DevelopmentHub reliably comes to the foreground, hides when already focused, and restores maximized windows correctly
 - Improved Explorer launching to reuse an already open Explorer window for the same folder when possible instead of always opening a new window
-
-## 0.7 - 2026-03-16
-
 - Added a new Todo widget with create, edit, complete, restore, delete, and clear-completed actions
 - Todos can now include inline links by writing text and a URL in a single field, and the widget extracts and opens those links directly
 - Refined Todo widget actions with consistent button styling and Font Awesome Free icons

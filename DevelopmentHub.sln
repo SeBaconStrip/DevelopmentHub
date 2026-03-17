@@ -3,13 +3,17 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "backend", "backend", "{1AE8ACA6-933B-BF2A-3671-3E2EAC007D16}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "api", "api", "{1AE8ACA6-933B-BF2A-3671-3E2EAC007D16}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DevelopmentHub.Api", "backend\DevelopmentHub.Api.csproj", "{F5224B14-D782-4D24-98F9-238EDABADE11}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DevelopmentHub.Api", "src\api\DevelopmentHub.Api.csproj", "{F5224B14-D782-4D24-98F9-238EDABADE11}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "app", "app", "{F95F473B-E98A-ACD6-1986-755F447BE36F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DevelopmentHub.App", "app\DevelopmentHub.App.csproj", "{B627BA5E-B21E-4C12-8413-7D7FC2096484}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DevelopmentHub.App", "src\app\DevelopmentHub.App.csproj", "{B627BA5E-B21E-4C12-8413-7D7FC2096484}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflow", "workflow", "{E82C3CE9-5C08-2220-110F-95EADBAB7019}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DevelopmentHub.Workflow", "src\workflow\DevelopmentHub.Workflow.csproj", "{A3955917-486D-4A1A-ABDA-3AD808071CE6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -45,6 +49,18 @@ Global
 		{B627BA5E-B21E-4C12-8413-7D7FC2096484}.Release|x64.Build.0 = Release|Any CPU
 		{B627BA5E-B21E-4C12-8413-7D7FC2096484}.Release|x86.ActiveCfg = Release|Any CPU
 		{B627BA5E-B21E-4C12-8413-7D7FC2096484}.Release|x86.Build.0 = Release|Any CPU
+		{A3955917-486D-4A1A-ABDA-3AD808071CE6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A3955917-486D-4A1A-ABDA-3AD808071CE6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A3955917-486D-4A1A-ABDA-3AD808071CE6}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{A3955917-486D-4A1A-ABDA-3AD808071CE6}.Debug|x64.Build.0 = Debug|Any CPU
+		{A3955917-486D-4A1A-ABDA-3AD808071CE6}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{A3955917-486D-4A1A-ABDA-3AD808071CE6}.Debug|x86.Build.0 = Debug|Any CPU
+		{A3955917-486D-4A1A-ABDA-3AD808071CE6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A3955917-486D-4A1A-ABDA-3AD808071CE6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A3955917-486D-4A1A-ABDA-3AD808071CE6}.Release|x64.ActiveCfg = Release|Any CPU
+		{A3955917-486D-4A1A-ABDA-3AD808071CE6}.Release|x64.Build.0 = Release|Any CPU
+		{A3955917-486D-4A1A-ABDA-3AD808071CE6}.Release|x86.ActiveCfg = Release|Any CPU
+		{A3955917-486D-4A1A-ABDA-3AD808071CE6}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -52,5 +68,6 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{F5224B14-D782-4D24-98F9-238EDABADE11} = {1AE8ACA6-933B-BF2A-3671-3E2EAC007D16}
 		{B627BA5E-B21E-4C12-8413-7D7FC2096484} = {F95F473B-E98A-ACD6-1986-755F447BE36F}
+		{A3955917-486D-4A1A-ABDA-3AD808071CE6} = {E82C3CE9-5C08-2220-110F-95EADBAB7019}
 	EndGlobalSection
 EndGlobal
