@@ -46,10 +46,40 @@ public class RepositoryService(
             cfg.RepoScanDepth,
             cfg.EntryPointScanDepth);
 
-        // Fetch all repos in parallel so we don't pay N × network-RTT
-        await Task.WhenAll(discovered.Select(r => gitService.FetchAsync(r.Path, cancellationToken)));
+        // Fetch repositories independently so one failure cannot abort the whole scan.
+        var fetchTasks = discovered.Select(async repo =>
+        {
+            if (repo.ScanIssueCode == RepositoryScanIssueCodes.DubiousOwnership)
+            {
+                repo.ScanIssueMessage ??= $"Run: git config --global --add safe.directory \"{repo.Path}\"";
+                return;
+            }
 
-        // Re-read branch status in parallel now that remote tracking refs are up to date
+            try
+            {
+                var fetch = await gitService.FetchAsync(repo.Path, cancellationToken);
+                if (!fetch.Success)
+                {
+                    repo.ScanIssueCode = fetch.IssueCode;
+                    repo.ScanIssueMessage = fetch.Message;
+                }
+                else
+                {
+                    repo.ScanIssueCode = null;
+                    repo.ScanIssueMessage = null;
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Repository fetch failed unexpectedly for {Path}", repo.Path);
+                repo.ScanIssueCode = RepositoryScanIssueCodes.GitCommandFailed;
+                repo.ScanIssueMessage = ex.Message;
+            }
+        }).ToList();
+
+        await Task.WhenAll(fetchTasks);
+
+        // Re-read branch status in parallel now that fetch has updated remote tracking refs.
         var statusTasks = discovered.Select(r => gitService.GetBranchStatusAsync(r.Path)).ToList();
         var statuses = await Task.WhenAll(statusTasks);
 
@@ -65,12 +95,6 @@ public class RepositoryService(
 
         foreach (var found in discovered)
         {
-            // Re-read branch status now that fetch has updated remote tracking refs
-            var (branch, ahead, behind) = await gitService.GetBranchStatusAsync(found.Path);
-            found.CurrentBranch = branch ?? found.CurrentBranch;
-            found.AheadBy = ahead;
-            found.BehindBy = behind;
-
             var existing = db.Repositories.FindOne(r => r.Path == found.Path);
 
             if (existing is null)
@@ -86,6 +110,8 @@ public class RepositoryService(
                 existing.AheadBy = found.AheadBy;
                 existing.BehindBy = found.BehindBy;
                 existing.EntryPoints = found.EntryPoints;
+                existing.ScanIssueCode = found.ScanIssueCode;
+                existing.ScanIssueMessage = found.ScanIssueMessage;
                 existing.LastSeenAt = now;
                 db.Repositories.Update(existing);
             }
@@ -272,7 +298,10 @@ public class RepositoryService(
             OpenCount = entity.OpenCount,
             LastOpenedAt = entity.LastOpenedAt,
             LastSyncedAt = entity.LastSyncedAt,
-            UsageScore = usageScore
+            UsageScore = usageScore,
+            ScanIssueCode = entity.ScanIssueCode,
+            ScanIssueMessage = entity.ScanIssueMessage
         };
     }
 }
+
