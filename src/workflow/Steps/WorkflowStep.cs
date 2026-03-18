@@ -13,9 +13,9 @@ namespace DevelopmentHub.Workflow.Steps;
 [JsonDerivedType(typeof(DownloadAzureDevOpsPipelineArtifactAssetStep), "downloadAzureDevopsPipelineArtifactAsset")]
 [JsonDerivedType(typeof(ExtractArchiveStep), "extractArchive")]
 [JsonDerivedType(typeof(RunExecutableStep), "runExecutable")]
-[JsonDerivedType(typeof(RunExecutableStep), "runInstaller")]
 [JsonDerivedType(typeof(PatchJsonStep), "patchJson")]
 [JsonDerivedType(typeof(RestartWindowsServiceStep), "restartWindowsService")]
+[JsonDerivedType(typeof(CopyStep), "copy")]
 public abstract class WorkflowStep
 {
     private static readonly IReadOnlyDictionary<Type, string> _discriminators =
