@@ -1,7 +1,10 @@
 # Changelog
 
-## 1.0 - 2026-03-18
+## 0.8 - 2026-03-17
 
+- Removed a duplicate `JsonDerivedType` registration in workflow step deserialization to avoid type mapping conflicts
+- Added a new workflow `copy` step to copy files and folders as part of workflow execution
+- Wired backend and frontend workflow contracts for the new `copy` step (`CopyStep`, `CopyExecutor`, and shared API step typing)
 - Hardened repository scanning so one failing repository no longer aborts the full scan request with HTTP 500
 - Added per-repository fetch isolation with bounded timeout handling and safe git process cancellation
 - Added repository validation before fetch (`path exists`, `.git` present) to avoid invalid fetch attempts
@@ -9,9 +12,6 @@
 - Added scan issue fields to repository API responses and persisted scan issue state in repository records
 - Surfaced repository scan warnings in the dashboard repository list with concise per-repository labels and detailed tooltips
 - Wired request cancellation through `POST /api/repositories/scan` so client cancellation is handled cleanly
-
-## 0.8 - 2026-03-17
-
 - Added a file-based workflow engine that loads workflow definitions from a configured folder and runs them from a new dashboard widget
 - Added a custom workflow input modal, live execution log modal, and workflow execution status updates in the dashboard
 - Added workflow step support for direct downloads, ZIP extraction, installer execution, JSON patching, and Windows service restarts
