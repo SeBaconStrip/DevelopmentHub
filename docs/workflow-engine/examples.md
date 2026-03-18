@@ -83,7 +83,7 @@
       "project": "MyProject",
       "pipelineId": "123",
       "runId": "{{runId}}",
-      "assetName": "drop",
+      "artifactName": "drop",
       "targetPath": "C:\\Temp\\drop-{{runId}}.zip",
       "overwrite": true
     }

@@ -48,7 +48,7 @@ Check:
 
 - `organization` and `project` are correct
 - either `pipelineId` + `runId` or `buildId` is provided
-- `assetName` matches the artifact name exactly
+- `artifactName` (or legacy `assetName`) matches the artifact name exactly
 - the PAT has permission to read builds or pipeline artifacts
 
 ## `patchJson` Fails

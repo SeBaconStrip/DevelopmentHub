@@ -9,8 +9,14 @@ public sealed class DownloadAzureDevOpsPipelineArtifactAssetStep : WorkflowStep
     public string RunId { get; init; } = string.Empty;
     /// <summary>Alternative to PipelineId + RunId.</summary>
     public string BuildId { get; init; } = string.Empty;
+    /// <summary>Name of the Azure DevOps artifact to download.</summary>
+    public string ArtifactName { get; init; } = string.Empty;
+    /// <summary>Legacy alias for <see cref="ArtifactName"/>.</summary>
     public string AssetName { get; init; } = string.Empty;
     public string TargetPath { get; init; } = string.Empty;
     public string Pat { get; init; } = string.Empty;
     public bool Overwrite { get; init; }
+
+    public string ResolvedArtifactName =>
+        string.IsNullOrWhiteSpace(ArtifactName) ? AssetName : ArtifactName;
 }

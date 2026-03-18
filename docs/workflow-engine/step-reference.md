@@ -76,7 +76,7 @@ Fields:
 - `pipelineId` optional when `buildId` is used
 - `runId` optional when `buildId` is used
 - `buildId` optional when `pipelineId` + `runId` are used
-- `assetName`
+- `artifactName`
 - `targetPath`
 - `overwrite`
 - `pat` optional override
@@ -90,6 +90,7 @@ Config fallback:
 Note:
 
 - the backend also accepts `downloadAzureDevopsPipelineArtifactAsset`
+- this step downloads the artifact payload as a whole (for example a ZIP/package), not a single file inside the artifact
 
 Example using pipeline run:
 
@@ -101,7 +102,7 @@ Example using pipeline run:
   "project": "MyProject",
   "pipelineId": "123",
   "runId": "{{runId}}",
-  "assetName": "drop",
+  "artifactName": "drop",
   "targetPath": "C:\\Temp\\drop-{{runId}}.zip",
   "overwrite": true
 }
@@ -114,7 +115,7 @@ Example using build ID:
   "type": "downloadAzureDevopsPipelineArtifactAsset",
   "name": "Download build artifact",
   "buildId": "{{buildId}}",
-  "assetName": "drop",
+  "artifactName": "drop",
   "targetPath": "C:\\Temp\\drop-{{buildId}}.zip",
   "overwrite": true
 }
