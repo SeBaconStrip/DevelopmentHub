@@ -483,6 +483,18 @@
 
 .repo-col-branch {
   white-space: nowrap;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 3px;
+}
+
+.repo-scan-issue {
+  font-size: 11px;
+  color: var(--color-error, #dc2626);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .repo-col-icon {
