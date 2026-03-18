@@ -14,6 +14,8 @@ public class RepositoryDto
     public DateTime? LastOpenedAt { get; set; }
     public DateTime? LastSyncedAt { get; set; }
     public double UsageScore { get; set; }
+    public string? ScanIssueCode { get; set; }
+    public string? ScanIssueMessage { get; set; }
 }
 
 public class EntryPointDto

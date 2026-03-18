@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0 - 2026-03-18
+
+- Hardened repository scanning so one failing repository no longer aborts the full scan request with HTTP 500
+- Added per-repository fetch isolation with bounded timeout handling and safe git process cancellation
+- Added repository validation before fetch (`path exists`, `.git` present) to avoid invalid fetch attempts
+- Added scan issue classification for Git ownership/safe-directory errors, invalid repositories, missing paths, fetch timeouts, and remote access/not-found failures (including Azure DevOps TF401019)
+- Added scan issue fields to repository API responses and persisted scan issue state in repository records
+- Surfaced repository scan warnings in the dashboard repository list with concise per-repository labels and detailed tooltips
+- Wired request cancellation through `POST /api/repositories/scan` so client cancellation is handled cleanly
+
 ## 0.8 - 2026-03-17
 
 - Added a file-based workflow engine that loads workflow definitions from a configured folder and runs them from a new dashboard widget

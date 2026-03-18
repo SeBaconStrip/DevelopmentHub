@@ -19,4 +19,7 @@ public class RepositoryDao
     public DateTime? LastSyncedAt { get; set; }
     public DateTime? LastSeenAt { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    public string? ScanIssueCode { get; set; }
+    public string? ScanIssueMessage { get; set; }
 }

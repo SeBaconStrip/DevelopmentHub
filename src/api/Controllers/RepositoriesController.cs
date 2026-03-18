@@ -15,9 +15,9 @@ public class RepositoriesController(IRepositoryService repositoryService) : Cont
     }
 
     [HttpPost("scan")]
-    public async Task<ActionResult<List<RepositoryDto>>> Scan()
+    public async Task<ActionResult<List<RepositoryDto>>> Scan(CancellationToken cancellationToken)
     {
-        var result = await repositoryService.ScanAsync();
+        var result = await repositoryService.ScanAsync(cancellationToken);
         return Ok(result);
     }
 

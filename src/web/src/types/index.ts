@@ -17,6 +17,8 @@ export interface Repository {
   lastOpenedAt: string | null;
   lastSyncedAt: string | null;
   usageScore: number;
+  scanIssueCode?: string | null;
+  scanIssueMessage?: string | null;
 }
 
 export interface OpenRepositoryRequest {

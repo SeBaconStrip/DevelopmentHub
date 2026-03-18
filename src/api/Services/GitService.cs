@@ -7,9 +7,26 @@ namespace DevelopmentHub.Api.Services;
 public interface IGitService
 {
     Task<List<RepositoryDao>> ScanDirectoriesAsync(string[] rootPaths, int repoScanDepth, int entryPointScanDepth);
-    Task FetchAsync(string repoPath, CancellationToken cancellationToken);
+    Task<RepositoryFetchResult> FetchAsync(string repoPath, CancellationToken cancellationToken);
     Task<(string? Branch, int AheadBy, int BehindBy)> GetBranchStatusAsync(string repoPath);
     Task<(bool Success, string Output)> SyncRepositoryAsync(string repoPath, CancellationToken cancellationToken);
+}
+
+public static class RepositoryScanIssueCodes
+{
+    public const string DubiousOwnership = "DubiousOwnership";
+    public const string NotAGitRepository = "NotAGitRepository";
+    public const string PathNotFound = "PathNotFound";
+    public const string RemoteNotFoundOrPermissionDenied = "RemoteNotFoundOrPermissionDenied";
+    public const string FetchTimeout = "FetchTimeout";
+    public const string GitCommandFailed = "GitCommandFailed";
+}
+
+public sealed class RepositoryFetchResult
+{
+    public bool Success { get; init; }
+    public string? IssueCode { get; init; }
+    public string? Message { get; init; }
 }
 
 public class GitService(ILogger<GitService> logger) : IGitService
@@ -88,6 +105,11 @@ public class GitService(ILogger<GitService> logger) : IGitService
         catch (Exception ex)
         {
             logger.LogDebug("Could not read git info for {Path}: {Message}", repoPath, ex.Message);
+            if (TryClassifyGitFailure(ex.Message, out var issueCode, out var issueMessage))
+            {
+                entity.ScanIssueCode = issueCode;
+                entity.ScanIssueMessage = issueMessage;
+            }
         }
 
         // Discover entry points
@@ -130,13 +152,69 @@ public class GitService(ILogger<GitService> logger) : IGitService
         catch { /* ignore inaccessible dirs */ }
     }
 
-    public async Task FetchAsync(string repoPath, CancellationToken cancellationToken)
+    public async Task<RepositoryFetchResult> FetchAsync(string repoPath, CancellationToken cancellationToken)
     {
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        if (!Directory.Exists(repoPath))
+        {
+            return new RepositoryFetchResult
+            {
+                Success = false,
+                IssueCode = RepositoryScanIssueCodes.PathNotFound,
+                Message = $"Repository path does not exist: {repoPath}"
+            };
+        }
+
+        var gitPath = System.IO.Path.Combine(repoPath, ".git");
+        if (!Directory.Exists(gitPath) && !File.Exists(gitPath))
+        {
+            return new RepositoryFetchResult
+            {
+                Success = false,
+                IssueCode = RepositoryScanIssueCodes.NotAGitRepository,
+                Message = "Path is not a Git repository (missing .git)."
+            };
+        }
+
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
-        var (success, output) = await RunGitCommandAsync(repoPath, ["fetch", "--prune"], linked.Token);
-        if (!success)
+        var (success, output, wasCanceled) = await RunGitCommandAsync(repoPath, ["fetch", "--prune"], linked.Token);
+        if (success)
+        {
+            return new RepositoryFetchResult { Success = true };
+        }
+
+        if (wasCanceled && timeout.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+        {
+            logger.LogWarning("git fetch --prune timed out for {Path}", repoPath);
+            return new RepositoryFetchResult
+            {
+                Success = false,
+                IssueCode = RepositoryScanIssueCodes.FetchTimeout,
+                Message = "git fetch timed out after 15 seconds."
+            };
+        }
+
+        if (TryClassifyGitFailure(output, out var issueCode, out var issueMessage))
+        {
+            if (issueCode == RepositoryScanIssueCodes.DubiousOwnership)
+                issueMessage = $"Git blocked this repository due to ownership mismatch. Run: git config --global --add safe.directory \"{repoPath}\"";
+
             logger.LogWarning("git fetch --prune failed for {Path}: {Output}", repoPath, output);
+            return new RepositoryFetchResult
+            {
+                Success = false,
+                IssueCode = issueCode,
+                Message = issueMessage
+            };
+        }
+
+        logger.LogWarning("git fetch --prune failed for {Path}: {Output}", repoPath, output);
+        return new RepositoryFetchResult
+        {
+            Success = false,
+            IssueCode = RepositoryScanIssueCodes.GitCommandFailed,
+            Message = string.IsNullOrWhiteSpace(output) ? "git fetch failed." : output
+        };
     }
 
     public Task<(string? Branch, int AheadBy, int BehindBy)> GetBranchStatusAsync(string repoPath)
@@ -161,7 +239,7 @@ public class GitService(ILogger<GitService> logger) : IGitService
         var output = new System.Text.StringBuilder();
 
         // git fetch --prune
-        var (fetchSuccess, fetchOut) = await RunGitCommandAsync(repoPath, ["fetch", "--prune"], cancellationToken);
+        var (fetchSuccess, fetchOut, _) = await RunGitCommandAsync(repoPath, ["fetch", "--prune"], cancellationToken);
         output.AppendLine("$ git fetch --prune");
         output.AppendLine(fetchOut);
 
@@ -169,14 +247,14 @@ public class GitService(ILogger<GitService> logger) : IGitService
             return (false, output.ToString());
 
         // git pull
-        var (pullSuccess, pullOut) = await RunGitCommandAsync(repoPath, ["pull"], cancellationToken);
+        var (pullSuccess, pullOut, _) = await RunGitCommandAsync(repoPath, ["pull"], cancellationToken);
         output.AppendLine("$ git pull");
         output.AppendLine(pullOut);
 
         return (pullSuccess, output.ToString());
     }
 
-    private static async Task<(bool Success, string Output)> RunGitCommandAsync(
+    private static async Task<(bool Success, string Output, bool WasCanceled)> RunGitCommandAsync(
         string workingDir, string[] args, CancellationToken cancellationToken)
     {
         var psi = new System.Diagnostics.ProcessStartInfo
@@ -202,8 +280,67 @@ public class GitService(ILogger<GitService> logger) : IGitService
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
 
-        await process.WaitForExitAsync(cancellationToken);
+        try
+        {
+            await process.WaitForExitAsync(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            TryKillProcess(process);
+            return (false, outputBuilder.ToString().Trim(), true);
+        }
 
-        return (process.ExitCode == 0, outputBuilder.ToString().Trim());
+        return (process.ExitCode == 0, outputBuilder.ToString().Trim(), false);
+    }
+
+    private static void TryKillProcess(System.Diagnostics.Process process)
+    {
+        try
+        {
+            if (!process.HasExited)
+                process.Kill(entireProcessTree: true);
+        }
+        catch
+        {
+            // ignore cleanup failures
+        }
+    }
+
+    private static bool TryClassifyGitFailure(string output, out string issueCode, out string issueMessage)
+    {
+        issueCode = RepositoryScanIssueCodes.GitCommandFailed;
+        issueMessage = string.IsNullOrWhiteSpace(output) ? "git command failed." : output;
+
+        if (output.Contains("dubious ownership", StringComparison.OrdinalIgnoreCase) ||
+            output.Contains("not owned by current user", StringComparison.OrdinalIgnoreCase))
+        {
+            issueCode = RepositoryScanIssueCodes.DubiousOwnership;
+            issueMessage = "Git blocked this repository due to ownership mismatch. Run: git config --global --add safe.directory <path>";
+            return true;
+        }
+
+        if (output.Contains("not a git repository", StringComparison.OrdinalIgnoreCase))
+        {
+            issueCode = RepositoryScanIssueCodes.NotAGitRepository;
+            issueMessage = "Path is not a Git repository (missing or invalid .git metadata).";
+            return true;
+        }
+
+        if (output.Contains("TF401019", StringComparison.OrdinalIgnoreCase) ||
+            output.Contains("does not exist or you do not have permissions", StringComparison.OrdinalIgnoreCase))
+        {
+            issueCode = RepositoryScanIssueCodes.RemoteNotFoundOrPermissionDenied;
+            issueMessage = "Remote repository not found or access denied.";
+            return true;
+        }
+
+        if (output.Contains("could not read from remote repository", StringComparison.OrdinalIgnoreCase))
+        {
+            issueCode = RepositoryScanIssueCodes.RemoteNotFoundOrPermissionDenied;
+            issueMessage = "Unable to read remote repository (check repository existence and permissions).";
+            return true;
+        }
+
+        return false;
     }
 }
