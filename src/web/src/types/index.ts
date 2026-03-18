@@ -120,6 +120,7 @@ export interface WorkflowStep {
   archivePath: string;
   destinationPath: string;
   cleanDestination: boolean;
+  sourcePath?: string;
   filePath: string;
   arguments: string[];
   waitForExit: boolean;

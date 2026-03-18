@@ -96,6 +96,7 @@ public static class BackendHost
         builder.Services.AddSingleton<IWorkflowStepExecutor, RunExecutableExecutor>();
         builder.Services.AddSingleton<IWorkflowStepExecutor, PatchJsonExecutor>();
         builder.Services.AddSingleton<IWorkflowStepExecutor, RestartWindowsServiceExecutor>();
+        builder.Services.AddSingleton<IWorkflowStepExecutor, CopyExecutor>();
         builder.Services.AddSingleton<IWorkflowService, WorkflowService>();
 
         // ── Background Services ───────────────────────────────────────────────
