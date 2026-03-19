@@ -1,3 +1,5 @@
+using System.Text.Json.Nodes;
+
 namespace DevelopmentHub.Workflow.Steps;
 
 public sealed class PatchJsonStep : WorkflowStep
@@ -10,6 +12,5 @@ public sealed class JsonPatchOperation
 {
     public string Op { get; init; } = string.Empty;
     public string Path { get; init; } = string.Empty;
-    /// <summary>Raw JSON string representing the value; may contain {{input}} template markers.</summary>
-    public string? ValueJson { get; init; }
+    public JsonNode? Value { get; init; }
 }

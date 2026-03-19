@@ -53,7 +53,7 @@ public sealed class PatchJsonExecutor : WorkflowStepExecutor<PatchJsonStep>
             case "set":
                 if (parent is not JsonObject setObject)
                     throw new InvalidOperationException($"Path '{operation.Path}' must point to an object property.");
-                setObject[propertyName] = CreateNode(operation.ValueJson, inputs);
+                setObject[propertyName] = CreateNode(operation.Value, inputs);
                 break;
 
             case "remove":
@@ -66,7 +66,7 @@ public sealed class PatchJsonExecutor : WorkflowStepExecutor<PatchJsonStep>
                 var target = ResolveNode(root, pathSegments);
                 if (target is not JsonArray array)
                     throw new InvalidOperationException($"Path '{operation.Path}' must point to an array.");
-                array.Add(CreateNode(operation.ValueJson, inputs));
+                array.Add(CreateNode(operation.Value, inputs));
                 break;
 
             default:
@@ -74,11 +74,15 @@ public sealed class PatchJsonExecutor : WorkflowStepExecutor<PatchJsonStep>
         }
     }
 
-    private static JsonNode? CreateNode(string? valueJson, IReadOnlyDictionary<string, string> inputs)
+    private static JsonNode? CreateNode(JsonNode? value, IReadOnlyDictionary<string, string> inputs)
     {
-        if (valueJson is null)
+        if (value is null)
             return null;
-        return JsonNode.Parse(WorkflowHelpers.Render(valueJson, inputs));
+        // If it's a string, apply template rendering
+        if (value is JsonValue jsonValue && jsonValue.TryGetValue<string>(out var str))
+            return JsonValue.Create(WorkflowHelpers.Render(str, inputs));
+        // For booleans, numbers, objects, arrays — clone as-is
+        return JsonNode.Parse(value.ToJsonString());
     }
 
     private static List<string> ParsePath(string path)
