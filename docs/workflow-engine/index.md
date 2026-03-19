@@ -27,6 +27,7 @@ The current workflow engine supports these step types:
 - `downloadGithubReleaseAsset`
 - `downloadAzureDevopsPipelineArtifactAsset`
 - `extractArchive`
+- `copy`
 - `runExecutable`
 - `patchJson`
 - `restartWindowsService`

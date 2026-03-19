@@ -2,6 +2,7 @@ using DevelopmentHub.Workflow.Steps;
 
 namespace DevelopmentHub.Workflow.Executors;
 
+/// <summary>Executes <see cref="CopyStep"/>: copies a single file or an entire directory tree to a destination path.</summary>
 public sealed class CopyExecutor : WorkflowStepExecutor<CopyStep>
 {
     public override string StepType => "copy";
@@ -33,6 +34,7 @@ public sealed class CopyExecutor : WorkflowStepExecutor<CopyStep>
         return Task.CompletedTask;
     }
 
+    /// <summary>Copies a single file to <paramref name="destinationPath"/>, creating parent directories as needed.</summary>
     private static void CopyFile(string sourcePath, string destinationPath, bool overwrite)
     {
         if (File.Exists(destinationPath) && !overwrite)
@@ -45,6 +47,7 @@ public sealed class CopyExecutor : WorkflowStepExecutor<CopyStep>
         File.Copy(sourcePath, destinationPath, overwrite);
     }
 
+    /// <summary>Recursively copies a directory and all its contents to <paramref name="destinationPath"/>.</summary>
     private static void CopyDirectory(string sourcePath, string destinationPath, bool overwrite)
     {
         Directory.CreateDirectory(destinationPath);

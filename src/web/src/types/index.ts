@@ -109,7 +109,8 @@ export interface WorkflowStep {
   owner: string;
   repository: string;
   releaseTag: string;
-  assetName: string;
+  artifactName?: string;
+  assetName?: string;
   organization: string;
   project: string;
   pipelineId: string;

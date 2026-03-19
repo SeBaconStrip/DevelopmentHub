@@ -3,6 +3,7 @@ using System.Diagnostics;
 
 namespace DevelopmentHub.Workflow.Executors;
 
+/// <summary>Executes <see cref="RunExecutableStep"/>: starts an executable process and optionally waits for it to exit.</summary>
 public sealed class RunExecutableExecutor : WorkflowStepExecutor<RunExecutableStep>
 {
     public override string StepType => "runExecutable";

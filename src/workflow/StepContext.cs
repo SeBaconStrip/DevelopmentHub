@@ -17,7 +17,12 @@ public sealed class StepContext
     /// <summary>Writes a log line to the execution log and broadcasts it via SignalR.</summary>
     public required Func<string, string, Task> LogAsync { get; init; }
 
+    /// <summary>Logs an info-level message to the execution log.</summary>
     public Task LogInfoAsync(string text) => LogAsync(text, "info");
+
+    /// <summary>Logs a success-level message to the execution log.</summary>
     public Task LogSuccessAsync(string text) => LogAsync(text, "success");
+
+    /// <summary>Logs a warning-level message to the execution log.</summary>
     public Task LogWarningAsync(string text) => LogAsync(text, "warning");
 }

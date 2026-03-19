@@ -7,6 +7,7 @@ using System.Text.Json.Nodes;
 
 namespace DevelopmentHub.Workflow.Executors;
 
+/// <summary>Executes <see cref="RestartWindowsServiceStep"/>: restarts a Windows service via PowerShell, with optional UAC elevation.</summary>
 public sealed class RestartWindowsServiceExecutor : WorkflowStepExecutor<RestartWindowsServiceStep>
 {
     public override string StepType => "restartwindowsservice";
@@ -60,6 +61,10 @@ public sealed class RestartWindowsServiceExecutor : WorkflowStepExecutor<Restart
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Writes a temporary PowerShell script, runs it in an elevated process via UAC, then reads the
+    /// JSON result file to surface any error message back to the caller.
+    /// </summary>
     private static void ExecuteElevated(string command, string serviceName)
     {
         var tempScriptPath = Path.Combine(Path.GetTempPath(), $"developmenthub-elevated-{Guid.NewGuid():N}.ps1");
@@ -129,6 +134,7 @@ catch {
         }
     }
 
+    /// <summary>Reads the <c>message</c> field from the JSON result file written by the elevated script, or returns <see langword="null"/> if the file is missing or unreadable.</summary>
     private static string? ReadElevatedResultMessage(string resultPath)
     {
         if (!File.Exists(resultPath))
@@ -145,6 +151,7 @@ catch {
         }
     }
 
+    /// <summary>Deletes <paramref name="path"/> if it exists; silently ignores any errors (best-effort cleanup).</summary>
     private static void TryDelete(string path)
     {
         try { if (File.Exists(path)) File.Delete(path); }

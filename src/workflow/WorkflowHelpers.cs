@@ -8,8 +8,6 @@ namespace DevelopmentHub.Workflow;
 /// </summary>
 internal static class WorkflowHelpers
 {
-    // ── Template rendering ────────────────────────────────────────────────────
-
     /// <summary>Replaces all <c>{{key}}</c> markers in <paramref name="template"/> with the resolved input values.</summary>
     public static string Render(string template, IReadOnlyDictionary<string, string> inputs)
     {
@@ -19,7 +17,17 @@ internal static class WorkflowHelpers
         return result;
     }
 
-    // ── File helpers ──────────────────────────────────────────────────────────
+    /// <summary>
+    /// If <paramref name="targetPath"/> ends with a directory separator, appends
+    /// <paramref name="fallbackFileName"/> to produce a full file path.
+    /// Otherwise returns <paramref name="targetPath"/> unchanged.
+    /// </summary>
+    public static string ResolveTargetFilePath(string targetPath, string fallbackFileName)
+    {
+        if (targetPath.EndsWith(Path.DirectorySeparatorChar) || targetPath.EndsWith(Path.AltDirectorySeparatorChar))
+            return Path.Combine(targetPath, fallbackFileName);
+        return targetPath;
+    }
 
     /// <summary>Ensures the target path can be written; creates the parent directory if missing.</summary>
     public static void EnsureCanWriteTarget(string targetPath, bool overwrite)
@@ -32,28 +40,25 @@ internal static class WorkflowHelpers
             Directory.CreateDirectory(targetDirectory);
     }
 
-    // ── Process argument helpers ──────────────────────────────────────────────
-
+    /// <summary>Wraps <paramref name="arg"/> in double quotes if it contains spaces or quotes.</summary>
     public static string QuoteArgument(string arg) =>
         arg.Contains(' ') || arg.Contains('"')
             ? $"\"{arg.Replace("\"", "\\\"")}\""
             : arg;
 
-    // ── HTTP auth helpers ─────────────────────────────────────────────────────
-
+    /// <summary>Adds a Bearer authorization header to <paramref name="request"/> when <paramref name="token"/> is non-empty.</summary>
     public static void AddBearerAuth(HttpRequestMessage request, string? token)
     {
         if (!string.IsNullOrWhiteSpace(token))
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
     }
 
+    /// <summary>Adds a Basic authorization header using the PAT (empty username, PAT as password) to <paramref name="request"/>.</summary>
     public static void AddBasicPatAuth(HttpRequestMessage request, string pat)
     {
         var raw = Convert.ToBase64String(Encoding.ASCII.GetBytes($":{pat}"));
         request.Headers.Authorization = new AuthenticationHeaderValue("Basic", raw);
     }
-
-    // ── Provider settings ─────────────────────────────────────────────────────
 
     /// <summary>
     /// Returns <paramref name="overrideValue"/> (after template rendering) when non-empty;
@@ -73,11 +78,13 @@ internal static class WorkflowHelpers
         return !string.IsNullOrWhiteSpace(rendered) ? rendered : providers.Get(providerId, key);
     }
 
+    /// <summary>Returns the first non-empty string from <paramref name="values"/>, or empty string if all are empty.</summary>
     public static string FirstNonEmpty(params string[] values) =>
         values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v)) ?? string.Empty;
 
-    // ── PowerShell helpers ────────────────────────────────────────────────────
-
+    /// <summary>Escapes single quotes in a PowerShell string literal by doubling them.</summary>
     public static string EscapePowerShell(string value) => value.Replace("'", "''");
+
+    /// <summary>Escapes single quotes in a PowerShell path literal by doubling them.</summary>
     public static string EscapePowerShellPath(string value) => value.Replace("'", "''");
 }
