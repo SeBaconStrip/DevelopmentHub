@@ -5,6 +5,7 @@ using System.Text.Json.Nodes;
 
 namespace DevelopmentHub.Workflow.Executors;
 
+/// <summary>Executes <see cref="PatchJsonStep"/>: applies an ordered list of patch operations to a JSON file.</summary>
 public sealed class PatchJsonExecutor : WorkflowStepExecutor<PatchJsonStep>
 {
     public override string StepType => "patchjson";
@@ -21,7 +22,6 @@ public sealed class PatchJsonExecutor : WorkflowStepExecutor<PatchJsonStep>
         if (!File.Exists(filePath))
             throw new FileNotFoundException("JSON file not found.", filePath);
 
-        // Write a backup before modifying
         File.Copy(filePath, $"{filePath}.bak", overwrite: true);
 
         var root = JsonNode.Parse(File.ReadAllText(filePath))
@@ -36,6 +36,7 @@ public sealed class PatchJsonExecutor : WorkflowStepExecutor<PatchJsonStep>
         return Task.CompletedTask;
     }
 
+    /// <summary>Applies a single patch operation to the JSON tree rooted at <paramref name="root"/>.</summary>
     private static void ApplyOperation(
         JsonNode root,
         JsonPatchOperation operation,
@@ -74,17 +75,20 @@ public sealed class PatchJsonExecutor : WorkflowStepExecutor<PatchJsonStep>
         }
     }
 
+    /// <summary>
+    /// Converts a <see cref="JsonNode"/> value for use in the patched document.
+    /// String values have <c>{{input}}</c> template placeholders rendered; all other types are cloned as-is.
+    /// </summary>
     private static JsonNode? CreateNode(JsonNode? value, IReadOnlyDictionary<string, string> inputs)
     {
         if (value is null)
             return null;
-        // If it's a string, apply template rendering
         if (value is JsonValue jsonValue && jsonValue.TryGetValue<string>(out var str))
             return JsonValue.Create(WorkflowHelpers.Render(str, inputs));
-        // For booleans, numbers, objects, arrays — clone as-is
         return JsonNode.Parse(value.ToJsonString());
     }
 
+    /// <summary>Splits a <c>$.Segment.Property</c> path into its individual segments, or returns an empty list if the path is invalid.</summary>
     private static List<string> ParsePath(string path)
     {
         if (string.IsNullOrWhiteSpace(path) || !path.StartsWith("$.", StringComparison.Ordinal))
@@ -95,6 +99,7 @@ public sealed class PatchJsonExecutor : WorkflowStepExecutor<PatchJsonStep>
             .ToList();
     }
 
+    /// <summary>Navigates to the parent node of the last path segment, throwing if any intermediate segment is missing.</summary>
     private static JsonNode NavigateToParent(JsonNode root, IReadOnlyList<string> segments)
     {
         var current = root;
@@ -106,6 +111,7 @@ public sealed class PatchJsonExecutor : WorkflowStepExecutor<PatchJsonStep>
         return current;
     }
 
+    /// <summary>Resolves the node at the full path, returning <see langword="null"/> if any segment is missing.</summary>
     private static JsonNode? ResolveNode(JsonNode root, IReadOnlyList<string> segments)
     {
         JsonNode? current = root;

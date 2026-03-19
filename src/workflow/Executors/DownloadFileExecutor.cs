@@ -2,6 +2,7 @@ using DevelopmentHub.Workflow.Steps;
 
 namespace DevelopmentHub.Workflow.Executors;
 
+/// <summary>Executes <see cref="DownloadFileStep"/>: downloads a file from a direct URL to a local path.</summary>
 public sealed class DownloadFileExecutor(IHttpClientFactory httpClientFactory)
     : WorkflowStepExecutor<DownloadFileStep>
 {

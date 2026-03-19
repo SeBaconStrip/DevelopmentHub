@@ -3,6 +3,7 @@ using System.IO.Compression;
 
 namespace DevelopmentHub.Workflow.Executors;
 
+/// <summary>Executes <see cref="ExtractArchiveStep"/>: extracts a ZIP archive to a local directory.</summary>
 public sealed class ExtractArchiveExecutor : WorkflowStepExecutor<ExtractArchiveStep>
 {
     public override string StepType => "extractarchive";

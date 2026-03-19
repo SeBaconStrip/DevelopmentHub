@@ -4,6 +4,7 @@ using System.Text.Json.Nodes;
 
 namespace DevelopmentHub.Workflow.Executors;
 
+/// <summary>Executes <see cref="DownloadGitHubReleaseAssetStep"/>: resolves and downloads a GitHub release asset via the GitHub API.</summary>
 public sealed class DownloadGitHubReleaseAssetExecutor(IHttpClientFactory httpClientFactory)
     : WorkflowStepExecutor<DownloadGitHubReleaseAssetStep>
 {
