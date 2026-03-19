@@ -13,7 +13,7 @@ export const DEFAULT_LAYOUTS: BreakpointLayouts = {
     { i: 'repositories', x: 0, y: 0,  w: 8, h: 10, minW: 3, minH: 4 },
     { i: 'pullRequests',  x: 8, y: 0,  w: 4, h: 10, minW: 3, minH: 4 },
     { i: 'quickLinks', x: 8, y: 10, w: 4, h: 6, minW: 2, minH: 4 },  
-    { i: 'todos', x: 0, y: 10, w: 4, h: 6, minW: 3, minH: 4 },
+    { i: 'todos', x: 0, y: 10, w: 4, h: 6, minW: 2, minH: 4 },
     { i: 'workflows', x: 4, y: 10, w: 4, h: 6, minW: 2, minH: 4 },
   ],
   md: [

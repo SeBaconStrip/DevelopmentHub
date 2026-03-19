@@ -1,0 +1,153 @@
+.workflow-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.workflow-card {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  border: 1px solid var(--border-accent);
+  border-radius: 12px;
+  background: var(--surface-muted);
+  padding: 14px;
+}
+
+.workflow-copy {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.workflow-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.workflow-status {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 2px 9px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.workflow-status--idle {
+  background: var(--border-light);
+  color: var(--text-secondary);
+}
+
+.workflow-status--running {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.workflow-status--succeeded {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.workflow-status--failed,
+.workflow-status--error {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.workflow-status--cancelled {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.workflow-link-btn {
+  width: fit-content;
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  padding: 0;
+  font-size: 12px;
+}
+
+.workflow-run-btn {
+  min-width: 96px;
+}
+
+.workflow-modal {
+  width: 860px;
+  max-width: 95vw;
+  height: 70vh;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+}
+
+.workflow-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 24px 28px 0;
+}
+
+.workflow-input-modal {
+  width: 560px;
+  max-width: 95vw;
+  padding: 0;
+  overflow: hidden;
+}
+
+.workflow-input-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px 24px 0;
+}
+
+.workflow-log {
+  flex: 1;
+  margin: 20px 24px 24px;
+  border-radius: 14px;
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 16px;
+  overflow: auto;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.workflow-log-line {
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  gap: 12px;
+  padding: 2px 0;
+}
+
+.workflow-log-line--stderr,
+.workflow-log-line--error {
+  color: #fda4af;
+}
+
+.workflow-log-line--success {
+  color: #86efac;
+}
+
+.workflow-log-line--warning {
+  color: #fde68a;
+}
+
+.workflow-log-time {
+  color: #94a3b8;
+}
+
+/* ── Responsive: stack card on very narrow panels ── */
+@container (max-width: 320px) {
+  .workflow-card { flex-direction: column; align-items: stretch; }
+  .workflow-run-btn { width: 100%; }
+}

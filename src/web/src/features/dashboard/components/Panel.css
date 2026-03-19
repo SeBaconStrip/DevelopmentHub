@@ -1,0 +1,106 @@
+/* ── Panel card ── */
+.panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--surface-alpha);
+  border-radius: 20px;
+  padding: 24px;
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+  transition: box-shadow 0.2s;
+}
+
+.panel--editing {
+  box-shadow: 0 0 0 2px var(--color-primary), 0 8px 32px rgba(0, 0, 0, 0.14);
+  cursor: move;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  padding-bottom: 10px;
+  user-select: none;
+  cursor: default;
+}
+
+.panel-icon {
+  font-size: 17px;
+}
+
+.panel-title {
+  flex: 1;
+  font-weight: 700;
+  font-size: 20px;
+  color: var(--text-primary);
+}
+
+.panel-badge {
+  background: var(--color-primary);
+  color: var(--text-on-primary);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 12px;
+  line-height: 18px;
+  flex-shrink: 0;
+}
+
+.panel-close-btn {
+  background: var(--panel-control-bg);
+  border: none;
+  border-radius: 6px;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  color: var(--panel-control-fg);
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.panel-close-btn:hover {
+  background: var(--panel-control-bg-hover);
+}
+
+.panel--editing .panel-close-btn {
+  cursor: pointer;
+}
+
+.panel-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+  container-type: inline-size;
+}
+
+/* ── panel header actions (refresh etc.) ── */
+.panel-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.panel-action-btn {
+  background: var(--color-primary);
+  border: 1px solid var(--surface-subtle-border);
+  border-radius: 6px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-on-primary);
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.panel-action-btn:hover {
+  background: var(--color-primary-hover);
+}
