@@ -51,6 +51,15 @@ Check:
 - `artifactName` (or legacy `assetName`) matches the artifact name exactly
 - the PAT has permission to read builds or pipeline artifacts
 
+## `patchJson` Writes `null` Instead Of The Expected Value
+
+This happens when the `value` field is missing from the operation.
+
+Check:
+
+- each `set` and `append` operation has a `value` field
+- the field is named `value`, not `valueJson` or any other name
+
 ## `patchJson` Fails
 
 Check:
@@ -59,6 +68,14 @@ Check:
 - the file contains valid JSON
 - the operation path starts with `$.`
 - the target property or array exists for the selected operation
+- `append` is only used on arrays, not objects or scalar values
+
+Value type notes:
+
+- booleans: `"value": true`
+- numbers: `"value": 42`
+- strings: `"value": "hello"` or `"value": "{{inputName}}"`
+- template placeholders are only resolved in string values
 
 ## `restartWindowsService` Fails
 

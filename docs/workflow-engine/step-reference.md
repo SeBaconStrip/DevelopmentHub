@@ -168,27 +168,92 @@ Example:
 }
 ```
 
+## `copy`
+
+Copies a file or directory to a destination path. Creates destination directories automatically.
+
+Fields:
+
+- `sourcePath`
+- `destinationPath`
+- `overwrite` — defaults to `true`
+
+Behavior:
+
+- if `sourcePath` is a file, copies the single file
+- if `sourcePath` is a directory, copies the directory recursively including all subdirectories
+- if `overwrite` is `false` and the destination already exists, the step fails
+
+Example:
+
+```json
+{
+  "type": "copy",
+  "name": "Deploy config",
+  "sourcePath": "C:\\Temp\\appsettings.json",
+  "destinationPath": "C:\\Apps\\MyService\\appsettings.json",
+  "overwrite": true
+}
+```
+
 ## `patchJson`
 
-Creates a backup file and applies JSON operations to a target JSON file.
+Creates a backup of the target file (`<file>.bak`) and applies one or more JSON patch operations in sequence.
 
 Fields:
 
 - `filePath`
 - `operations`
 
-Supported operations:
+### Operations
 
-- `set`
-- `remove`
-- `append`
+#### `set`
 
-Path syntax:
+Sets a property to a value. Overwrites an existing value or creates the key if it does not exist.
+
+```json
+{ "op": "set", "path": "$.Flag", "value": true }
+```
+
+#### `remove`
+
+Removes a property from its parent object.
+
+```json
+{ "op": "remove", "path": "$.Property.ToRemove" }
+```
+
+#### `append`
+
+Appends a value to an existing array.
+
+```json
+{ "op": "append", "path": "$.FeatureSets", "value": "GHI" }
+```
+
+### Path Syntax
 
 - `$.Property`
 - `$.Nested.Property`
 
-Example:
+Paths must start with `$.`.
+
+### Value Types
+
+The `value` field accepts any JSON-compatible value:
+
+| Type | Example |
+|---|---|
+| boolean | `true` / `false` |
+| number | `42` |
+| string | `"hello"` |
+| string with template | `"{{inputName}}"` |
+| object | `{"key": "val"}` |
+| array | `["a", "b"]` |
+
+Template placeholders (`{{inputName}}`) are only resolved inside string values.
+
+### Example
 
 ```json
 {
@@ -205,6 +270,15 @@ Example:
       "op": "set",
       "path": "$.ConnectionStrings.Main",
       "value": "Server=.;Database=App;Trusted_Connection=True;"
+    },
+    {
+      "op": "append",
+      "path": "$.FeatureSets",
+      "value": "NewFeature"
+    },
+    {
+      "op": "remove",
+      "path": "$.LegacySettings.OldKey"
     }
   ]
 }

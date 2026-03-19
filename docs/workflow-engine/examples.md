@@ -119,6 +119,26 @@
 }
 ```
 
+## Copy A Config File
+
+```json
+{
+  "id": "copy-config",
+  "name": "Copy Config File",
+  "description": "Copies a config file to the application folder.",
+  "requiresConfirmation": false,
+  "steps": [
+    {
+      "type": "copy",
+      "name": "Copy appsettings",
+      "sourcePath": "C:\\Configs\\appsettings.json",
+      "destinationPath": "C:\\Apps\\MyService\\appsettings.json",
+      "overwrite": true
+    }
+  ]
+}
+```
+
 ## Patch JSON And Restart A Service
 
 ```json
@@ -145,6 +165,20 @@
           "op": "set",
           "path": "$.ConnectionStrings.Main",
           "value": "{{connectionString}}"
+        },
+        {
+          "op": "set",
+          "path": "$.FeatureFlags.Enabled",
+          "value": true
+        },
+        {
+          "op": "append",
+          "path": "$.AllowedHosts",
+          "value": "localhost"
+        },
+        {
+          "op": "remove",
+          "path": "$.LegacySettings"
         }
       ]
     },
