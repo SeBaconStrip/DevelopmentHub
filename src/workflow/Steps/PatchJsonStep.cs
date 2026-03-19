@@ -8,6 +8,9 @@ public sealed class PatchJsonStep : WorkflowStep
     /// <summary>Path to the JSON file to patch. Supports <c>{{input}}</c> placeholders.</summary>
     public string FilePath { get; init; } = string.Empty;
 
+    /// <summary>When <see langword="true"/>, the file write and backup are performed in an elevated (UAC) process, allowing patches to protected paths.</summary>
+    public bool RunElevated { get; init; }
+
     /// <summary>Ordered list of patch operations to apply sequentially.</summary>
     public IReadOnlyList<JsonPatchOperation> Operations { get; init; } = [];
 }
