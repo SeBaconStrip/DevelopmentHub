@@ -373,6 +373,7 @@ export default function DashboardPage() {
         </div>
       </header>
 
+      <div className="dash-scroll">
       <div className="dash-page">
         {/* edit mode: re-add hidden panels */}
         {isEditMode && disabled.length > 0 && (
@@ -463,6 +464,7 @@ export default function DashboardPage() {
             onClose={() => setWorkflowModal(null)}
           />
         )}
+      </div>
       </div>
     </div>
   );
