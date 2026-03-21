@@ -33,12 +33,16 @@ jobs:
       - name: Determine version
         id: version
         shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $base = (Get-Content version.txt).Trim()
+          $releases = gh api repos/${{ github.repository }}/releases --paginate | ConvertFrom-Json
+          $patch = @($releases | Where-Object { $_.tag_name -like "v$base.*" }).Count
           if ("${{ github.event_name }}" -eq "pull_request") {
-            $ver = "$base.${{ github.run_number }}-pr${{ github.event.number }}"
+            $ver = "$base.$patch-pr${{ github.event.number }}"
           } else {
-            $ver = "$base.${{ github.run_number }}"
+            $ver = "$base.$patch"
           }
           echo "VERSION=$ver" >> $env:GITHUB_OUTPUT
 
