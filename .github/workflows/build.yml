@@ -17,6 +17,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -33,12 +35,9 @@ jobs:
       - name: Determine version
         id: version
         shell: pwsh
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $base = (Get-Content version.txt).Trim()
-          $releases = gh release list --limit 200 --json tagName | ConvertFrom-Json
-          $patch = @($releases | Where-Object { $_.tagName -like "v$base.*" }).Count
+          $patch = @(git tag -l "v$base.*").Count
           if ("${{ github.event_name }}" -eq "pull_request") {
             $ver = "$base.$patch-pr${{ github.event.number }}"
           } else {
