@@ -37,8 +37,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $base = (Get-Content version.txt).Trim()
-          $releases = gh api repos/${{ github.repository }}/releases --paginate | ConvertFrom-Json
-          $patch = @($releases | Where-Object { $_.tag_name -like "v$base.*" }).Count
+          $releases = gh release list --limit 200 --json tagName | ConvertFrom-Json
+          $patch = @($releases | Where-Object { $_.tagName -like "v$base.*" }).Count
           if ("${{ github.event_name }}" -eq "pull_request") {
             $ver = "$base.$patch-pr${{ github.event.number }}"
           } else {
