@@ -19,12 +19,18 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 20px 48px;
+  padding: 12px 16px 12px 48px;
   background-color: var(--surface-alpha);
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
   position: sticky;
   top: 0;
   z-index: 10;
+  user-select: none;
+  cursor: default;
+}
+
+.dash-title-area {
+  cursor: default;
 }
 
 .dash-title {
@@ -44,6 +50,37 @@
   display: flex;
   gap: 10px;
   align-items: center;
+}
+
+/* ── window control buttons ── */
+.wc-buttons {
+  display: flex;
+  align-items: stretch;
+  margin-left: 6px;
+}
+
+.wc-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 40px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  border-radius: 0;
+}
+
+.wc-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+}
+
+.wc-close:hover {
+  background: #c42b1c;
+  color: #fff;
 }
 
 /* ── header buttons ── */

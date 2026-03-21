@@ -40,11 +40,19 @@
 }
 
 .repo-col-branch {
-  white-space: nowrap;
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
   gap: 3px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.repo-col-branch .item-meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
 }
 
 .repo-scan-issue {
