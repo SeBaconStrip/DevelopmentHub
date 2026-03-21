@@ -382,3 +382,13 @@ textarea:focus-visible {
 ::-webkit-scrollbar-corner {
   background: transparent;
 }
+
+/* ── suppress react-grid-layout default arrow icon ── */
+.react-resizable-handle {
+  background-image: none !important;
+  padding: 0 !important;
+}
+
+.react-grid-item > .react-resizable-handle::after {
+  content: none !important;
+}
