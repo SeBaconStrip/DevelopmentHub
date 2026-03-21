@@ -63,6 +63,12 @@
   color: var(--text-primary);
 }
 
+.app-nav-link:focus,
+.app-nav-link:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
 .app-nav-link--active {
   color: var(--color-accent);
   border-bottom-color: var(--color-accent);
@@ -108,6 +114,12 @@
 .wc-btn:hover {
   background: rgba(255, 255, 255, 0.08);
   color: var(--text-primary);
+}
+
+.wc-btn:focus,
+.wc-btn:focus-visible {
+  outline: none;
+  box-shadow: none;
 }
 
 .wc-close:hover {

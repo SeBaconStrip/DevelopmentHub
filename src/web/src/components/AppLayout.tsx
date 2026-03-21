@@ -127,7 +127,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
           <div className="wc-buttons">
             <button className="wc-btn wc-minimize" onClick={() => sendWindowMsg("minimize")} title="Minimize">
-              <svg width="10" height="1" viewBox="0 0 10 1"><rect width="10" height="1" fill="currentColor" /></svg>
+              <svg width="10" height="10" viewBox="0 0 10 10"><rect y="4.5" width="10" height="1" fill="currentColor" /></svg>
             </button>
             <button className="wc-btn wc-maximize" onClick={() => sendWindowMsg("maximize")} title={isMaximized ? "Restore" : "Maximize"}>
               {isMaximized
