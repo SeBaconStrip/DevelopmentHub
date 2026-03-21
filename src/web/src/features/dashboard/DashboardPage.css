@@ -1,97 +1,29 @@
-/* ── root wrapper ── */
-.dash-root {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  overflow: hidden;
-}
-
-/* ── scroll container (everything below the header) ── */
-.dash-scroll {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-
 /* ── page ── */
 .dash-page {
-  margin: 0 48px 48px;
-  border-radius: 0 0 20px 20px;
-  padding: 24px;
+  padding: 20px 48px 48px;
 }
 
-/* ── header ── */
-.dash-header {
+/* ── page toolbar ── */
+.dash-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px 16px 12px 48px;
-  background-color: var(--surface-alpha);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
-  flex-shrink: 0;
-  z-index: 100;
-  user-select: none;
-  cursor: default;
+  margin-bottom: 20px;
 }
 
-.dash-title-area {
-  cursor: default;
-}
-
-.dash-title {
-  font-size: 26px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
-}
-
-.dash-subtitle {
-  font-size: 13px;
-  color: var(--text-secondary);
-  margin: 3px 0 0;
-}
-
-.dash-header-actions {
+.dash-toolbar-actions {
   display: flex;
   gap: 10px;
   align-items: center;
 }
 
-/* ── window control buttons ── */
-.wc-buttons {
-  display: flex;
-  align-items: stretch;
-  margin-left: 6px;
-}
-
-.wc-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 46px;
-  height: 40px;
-  background: none;
-  border: none;
+.dash-subtitle {
+  font-size: 13px;
   color: var(--text-secondary);
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-  border-radius: 0;
 }
 
-.wc-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--text-primary);
-}
-
-.wc-close:hover {
-  background: #c42b1c;
-  color: #fff;
-}
-
-/* ── header buttons ── */
+/* ── toolbar buttons ── */
 .btn-ghost {
   display: flex;
   align-items: center;

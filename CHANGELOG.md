@@ -12,6 +12,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Frameless window with custom title bar — minimize, maximize/restore, and close buttons integrated into the dashboard header
 - Double-click header to toggle maximize/restore; dragging from maximized automatically restores and begins moving the window
 - Closing via the header button hides the app to the tray with a balloon notification showing the hotkey to bring it back
+- Dedicated full pages for all five features: Repositories, Pull Requests, Todos, Workflows, and Quick Links — each accessible via the navigation bar
+- Pull Requests page: search by title, repository, or author; filter tabs for All / Mine / Reviewer / Draft
+- Todos page: search by title; filter tabs for All / Active / Completed
+- Workflows page: search by name or description; filter tabs for All / Idle / Running / Succeeded / Failed
+- Quick Links page: search by name or URL; filter tabs for All / Web / Explorer
+- Clicking a dashboard panel title navigates to the corresponding full page
+- Navigation links for all pages added to the app header; active link highlighted with accent underline
 
 ### 🔧 Changed
 
@@ -19,6 +26,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - All widgets are now responsive via CSS container queries — columns collapse based on the panel width, not the viewport
 - Removed minimum size constraints from all dashboard panels so any size is allowed
 - Header is now fixed and stays visible while scrolling; only the content area below it scrolls
+- Settings button is now always visible in the header regardless of which page is open
+- Dashboard Edit Layout button only appears on the dashboard
 - Scrollbars are now themed to match the active color theme
 
 ### 🐛 Fixed

@@ -37,6 +37,15 @@
   color: var(--text-primary);
 }
 
+.panel-title--link {
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.panel-title--link:hover {
+  color: var(--color-accent);
+}
+
 .panel-badge {
   background: var(--color-primary);
   color: var(--text-on-primary);
