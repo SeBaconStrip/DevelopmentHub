@@ -19,6 +19,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Quick Links page: search by name or URL; filter tabs for All / Web / Explorer
 - Clicking a dashboard panel title navigates to the corresponding full page
 - Navigation links for all pages added to the app header; active link highlighted with accent underline
+- VS Code dark theme (`#1e1e1e` / `#252526`) with VS Code blue accent and teal success colors
+- Integrations settings page — GitHub and Azure DevOps credentials moved out of Pull Requests into their own dedicated page
+- Tooltip info icons on all Integrations fields showing field descriptions, required PAT scopes, and which features use each credential
 
 ### 🔧 Changed
 
@@ -29,6 +32,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Settings button is now always visible in the header regardless of which page is open
 - Dashboard Edit Layout button only appears on the dashboard
 - Scrollbars are now themed to match the active color theme
+- GitHub and Azure DevOps provider logos inverted to white in the VS Code theme
+- Resize handles in edit mode replaced with visible accent-colored pills and corner square; default arrow icon suppressed
+- Focus ring removed from nav links and window control buttons
+- Minimize button SVG aligned to match the height of the maximize and close buttons
+- Patch version in CI now counted via `git tag -l` with full tag fetch (`fetch-depth: 0`) instead of the GitHub releases API, fixing always-zero patch numbers
 
 ### 🐛 Fixed
 

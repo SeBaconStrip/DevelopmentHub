@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import type { LayoutItem } from '../types';
 
 export type WidgetId = 'repositories' | 'pullRequests' | 'quickLinks' | 'todos' | 'workflows';
-export type ThemeId = 'violet' | 'dark' | 'ocean' | 'orange' | 'nature';
+export type ThemeId = 'violet' | 'dark' | 'vscode' | 'ocean' | 'orange' | 'nature';
 
 export type { LayoutItem };
 
@@ -64,7 +64,7 @@ const defaultWidgets: DashboardWidget[] = [
   { id: 'workflows', label: 'Workflows', icon: '\u2699', enabled: true },
 ];
 
-const THEME_IDS: ThemeId[] = ['violet', 'dark', 'ocean', 'orange', 'nature'];
+const THEME_IDS: ThemeId[] = ['violet', 'dark', 'vscode', 'ocean', 'orange', 'nature'];
 const LAYOUTS_KEY = 'dh-layouts';
 const WIDGETS_KEY = 'dh-widgets';
 

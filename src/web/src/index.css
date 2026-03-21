@@ -105,6 +105,57 @@
   --resize-border-hover:   #c4b5fd;
 }
 
+[data-theme="vscode"] {
+  --bg-gradient:           linear-gradient(135deg, #1e1e1e 0%, #252526 100%);
+  --color-primary:         #0e639c;
+  --color-primary-hover:   #1177bb;
+  --color-accent:          #007acc;
+  --surface:               #252526;
+  --surface-muted:         #1e1e1e;
+  --surface-alpha:         rgba(37, 37, 38, 0.97);
+  --surface-subtle:        rgba(255, 255, 255, 0.05);
+  --surface-subtle-border: rgba(255, 255, 255, 0.10);
+  --border:                #3c3c3c;
+  --border-light:          #333333;
+  --border-accent:         #094771;
+  --text-primary:          #d4d4d4;
+  --text-body:             #cccccc;
+  --text-soft:             #b0b0b0;
+  --text-secondary:        #9d9d9d;
+  --text-muted:            #6b6b6b;
+  --text-title:            #d4d4d4;
+  --text-on-primary:       #ffffff;
+  --text-on-overlay:       rgba(212, 212, 212, 0.90);
+  --text-on-overlay-dim:   rgba(212, 212, 212, 0.45);
+  --input-bg:              #3c3c3c;
+  --input-border:          #555555;
+  --branch-bg:             #094771;
+  --branch-fg:             #9cdcfe;
+  --ahead-bg:              #1e3a2f;
+  --ahead-fg:              #4ec9b0;
+  --behind-bg:             #3a2e1e;
+  --behind-fg:             #ce9178;
+  --fav-default:           #555555;
+  --fav-active:            #dcdcaa;
+  --color-error:           #f44747;
+  --color-success:         #4ec9b0;
+  --toggle-off:            #3c3c3c;
+  --toggle-on:             #007acc;
+  --widget-border:         #3c3c3c;
+  --widget-bg:             #1e1e1e;
+  --widget-enabled-bg:     #0d3a5c;
+  --focus-ring:            color-mix(in srgb, var(--color-accent) 50%, white);
+  --panel-grip:            #6b6b6b;
+  --panel-control-bg:      #2d2d2d;
+  --panel-control-bg-hover:#3c3c3c;
+  --panel-control-fg:      #d4d4d4;
+  --resize-handle:         #007acc;
+  --resize-handle-soft:    rgba(0, 122, 204, 0.22);
+  --resize-handle-strong:  #1177bb;
+  --resize-zone-bg:        rgba(0, 122, 204, 0.10);
+  --resize-border-hover:   #1177bb;
+}
+
 [data-theme="ocean"] {
   --bg-gradient:           linear-gradient(135deg, #0f2862 0%, #0e4a8a 50%, #0a6b9e 100%);
   --color-primary:         #3b82f6;
@@ -381,6 +432,12 @@ textarea:focus-visible {
 
 ::-webkit-scrollbar-corner {
   background: transparent;
+}
+
+/* ── VS Code theme: invert provider logos to white ── */
+[data-theme="vscode"] .provider-radio-icon,
+[data-theme="vscode"] .pr-provider-icon {
+  filter: brightness(0) invert(1);
 }
 
 /* ── suppress react-grid-layout default arrow icon ── */
