@@ -1,7 +1,8 @@
 import { useState, Fragment, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchRepositories, repositoriesApi } from "../../api/repositories";
-import type { Repository } from "../../types";
+import { configApi } from "../../api/config";
+import type { Repository, RepositoryOpener } from "../../types";
 import vscodeIconUrl from "../../assets/icons/vscode.svg";
 import visualStudioIconUrl from "../../assets/icons/visualstudio.svg";
 import explorerIconUrl from "../../assets/icons/windows-explorer.svg";
@@ -27,14 +28,12 @@ export default function RepositoriesPage() {
     onSuccess: (data) => queryClient.setQueryData(["repositories"], data),
   });
 
+  const { data: config } = useQuery({ queryKey: ["config"], queryFn: configApi.get });
+  const openers = config?.repositoryOpeners ?? [];
+
   const openMutation = useMutation({
-    mutationFn: ({
-      id,
-      openWith,
-    }: {
-      id: string;
-      openWith: "VsCode" | "VisualStudio" | "Explorer";
-    }) => repositoriesApi.open(id, { openWith }),
+    mutationFn: ({ id, openerId }: { id: string; openerId?: string }) =>
+      repositoriesApi.open(id, { openerId }),
     onError: (err: Error) => setOpenError(err.message),
   });
 
@@ -248,28 +247,23 @@ export default function RepositoriesPage() {
               </div>
 
               <div className="repos-td repos-col-actions">
+                {openers.map((opener) => (
+                  <button
+                    key={opener.id}
+                    className="item-open-icon"
+                    style={{ visibility: r.entryPoints.some((ep) => ep.extension === opener.fileExtension) ? "visible" : "hidden" }}
+                    onClick={() => openMutation.mutate({ id: r.id, openerId: opener.id })}
+                    title={`In ${opener.label} öffnen`}
+                  >
+                    <OpenerIcon opener={opener} size={20} />
+                  </button>
+                ))}
                 <button
                   className="item-open-icon"
-                  style={{ visibility: r.entryPoints.some((ep) => ep.type === "CodeWorkspace" || ep.type === "Folder") ? "visible" : "hidden" }}
-                  onClick={() => openMutation.mutate({ id: r.id, openWith: "VsCode" })}
-                  title="In VS Code öffnen"
-                >
-                  <img src={vscodeIconUrl} width="22" height="22" alt="VS Code" draggable={false} />
-                </button>
-                <button
-                  className="item-open-icon"
-                  style={{ visibility: r.entryPoints.some((ep) => ep.type === "Solution") ? "visible" : "hidden" }}
-                  onClick={() => openMutation.mutate({ id: r.id, openWith: "VisualStudio" })}
-                  title="In Visual Studio öffnen"
-                >
-                  <img src={visualStudioIconUrl} width="22" height="22" alt="Visual Studio" draggable={false} />
-                </button>
-                <button
-                  className="item-open-icon"
-                  onClick={() => openMutation.mutate({ id: r.id, openWith: "Explorer" })}
+                  onClick={() => openMutation.mutate({ id: r.id })}
                   title="In Explorer öffnen"
                 >
-                  <img src={explorerIconUrl} width="22" height="22" alt="Explorer" draggable={false} />
+                  <img src={explorerIconUrl} width="20" height="20" alt="Explorer" draggable={false} />
                 </button>
               </div>
 
@@ -352,6 +346,20 @@ function TagEditor({ tags, onSave }: { tags: string[]; onSave: (tags: string[]) 
         <button className="tag-add-btn" onClick={() => setAdding(true)} title="Tag hinzufügen">+</button>
       )}
     </div>
+  );
+}
+
+function OpenerIcon({ opener, size }: { opener: RepositoryOpener; size: number }) {
+  if (opener.iconType === "vscode")
+    return <img src={vscodeIconUrl} width={size} height={size} alt={opener.label} draggable={false} />;
+  if (opener.iconType === "visualstudio")
+    return <img src={visualStudioIconUrl} width={size} height={size} alt={opener.label} draggable={false} />;
+  if (opener.iconPath)
+    return <img src={`/api/icon-extractor?path=${encodeURIComponent(opener.iconPath)}`} width={size} height={size} alt={opener.label} draggable={false} />;
+  return (
+    <span className="opener-icon-initial" style={{ width: size, height: size, fontSize: size * 0.6 }}>
+      {opener.label ? opener.label[0].toUpperCase() : "?"}
+    </span>
   );
 }
 

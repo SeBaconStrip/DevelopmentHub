@@ -1,7 +1,7 @@
 /* ── repositories data grid ── */
 .repo-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr 0.5fr auto auto auto auto;
+  grid-template-columns: 1fr 1fr 0.5fr auto auto;
   align-items: center;
   border-radius: 12px;
   border: 1px solid var(--border-accent);
@@ -63,13 +63,6 @@
   text-overflow: ellipsis;
 }
 
-.repo-col-icon {
-  justify-content: center;
-  width: 38px;
-  padding-left: 4px;
-  padding-right: 4px;
-}
-
 .repo-col-fav {
   justify-content: center;
   width: 36px;
@@ -122,12 +115,33 @@
 }
 
 /* ── Responsive: tags disappear first, then branch ── */
+/* openers column: flex row so all configured opener buttons sit inline */
+.repo-col-openers {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
+.opener-icon-initial {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  background: var(--surface-muted);
+  color: var(--text-secondary);
+  font-weight: 700;
+  font-family: inherit;
+  line-height: 1;
+}
+
 @container (max-width: 660px) {
-  .repo-grid { grid-template-columns: 1fr 0.5fr auto auto auto auto; }
+  .repo-grid { grid-template-columns: 1fr 0.5fr auto auto; }
   .repo-col-tags { display: none; }
 }
 
 @container (max-width: 480px) {
-  .repo-grid { grid-template-columns: 1fr auto auto auto auto; }
+  .repo-grid { grid-template-columns: 1fr auto auto; }
   .repo-col-branch { display: none; }
 }
