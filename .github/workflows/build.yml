@@ -34,7 +34,7 @@ jobs:
         id: calc
         run: |
           # Read major.minor from VERSION file
-          MAJOR_MINOR=$(cat VERSION | tr -d '[:space:]')
+          MAJOR_MINOR=$(cat version.txt | tr -d '[:space:]')
           echo "Major.Minor: $MAJOR_MINOR"
 
           # Find all tags matching major.minor.* and get the highest patch
