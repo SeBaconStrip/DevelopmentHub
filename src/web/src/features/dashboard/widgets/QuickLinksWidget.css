@@ -1,0 +1,59 @@
+.quick-links-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 2px;
+  padding-inline: 2px;
+}
+
+.quick-link-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  border: 1px solid var(--border-accent);
+  border-radius: 12px;
+  background: var(--surface-muted);
+  padding: 12px 14px;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  transition: transform 0.12s, border-color 0.12s, background 0.12s;
+}
+
+.quick-link-item:hover {
+  transform: translateY(-1px);
+  border-color: var(--color-primary);
+  background: var(--widget-enabled-bg);
+}
+
+.quick-link-item:focus,
+.quick-link-item:focus-visible {
+  outline: none;
+  border-color: var(--focus-ring);
+  box-shadow: inset 0 0 0 2px var(--focus-ring);
+}
+
+.quick-link-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: var(--surface-alpha);
+  flex-shrink: 0;
+}
+
+.quick-link-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+}
+
+.quick-link-copy .item-meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

@@ -1,0 +1,104 @@
+/* ── repositories data grid ── */
+.repo-grid {
+  display: grid;
+  grid-template-columns: 1fr 0.5fr auto auto auto auto;
+  align-items: center;
+  border-radius: 12px;
+  border: 1px solid var(--border-accent);
+  background: var(--surface-muted);
+}
+
+.repo-grid-header {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 10px 14px 10px 6px;
+  height: 50px;
+  background: transparent;
+}
+
+.repo-cell {
+  display: flex;
+  align-items: center;
+  padding: 7px 14px 7px 6px;
+  border-top: 2px solid var(--border-accent);
+  height: 50px;
+  min-width: 0;
+  background: transparent;
+}
+
+.repo-col-name {
+  min-width: 0;
+}
+
+.repo-col-name .item-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.repo-col-branch {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 3px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.repo-col-branch .item-meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.repo-scan-issue {
+  font-size: 11px;
+  color: var(--color-error, #dc2626);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.repo-col-icon {
+  justify-content: center;
+  width: 38px;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+.repo-col-fav {
+  justify-content: center;
+  width: 36px;
+  padding-left: 4px;
+  padding-right: 8px;
+}
+
+.repo-fav-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: var(--fav-default);
+  padding: 0;
+  line-height: 1;
+  transition: color 0.15s, transform 0.1s;
+}
+
+.repo-fav-btn:hover {
+  color: var(--fav-active);
+  transform: scale(1.2);
+}
+
+.repo-fav-btn--active {
+  color: var(--fav-active);
+}
+
+/* ── Responsive: branch verschwindet, Icon-Buttons + Fav bleiben bis zum Ende ── */
+@container (max-width: 600px) {
+  .repo-grid { grid-template-columns: 1fr auto auto auto auto; }
+  .repo-col-branch { display: none; }
+}

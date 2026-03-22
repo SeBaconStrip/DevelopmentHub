@@ -17,6 +17,47 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Fetch all tags
+        shell: bash
+        run: |
+          git fetch --tags --force
+          echo "Available tags:"
+          git tag --list | sort -V
+
+      - name: Calculate version
+        id: calc
+        shell: bash
+        run: |
+          # Read major.minor from VERSION file
+          MAJOR_MINOR=$(cat version.txt | tr -d '[:space:]')
+          echo "Major.Minor: $MAJOR_MINOR"
+
+          # Find all tags matching major.minor.* and get the highest patch
+          # Strip optional -ci suffix so both release and ci tags are considered
+          LAST_PATCH=$(git tag --list "${MAJOR_MINOR}.*" \
+            | sed "s/^${MAJOR_MINOR}\.//" \
+            | sed 's/-ci$//' \
+            | { grep -E '^[0-9]+$' || true; } \
+            | sort -n \
+            | tail -1)
+
+          if [ -z "$LAST_PATCH" ]; then
+            # No existing tag for this major.minor → start at 0
+            PATCH=0
+          else
+            PATCH=$((LAST_PATCH + 1))
+          fi
+
+          VERSION="${MAJOR_MINOR}.${PATCH}"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            VERSION="${VERSION}-ci"
+          fi
+          echo "Calculated version: $VERSION"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -30,17 +71,14 @@ jobs:
         with:
           dotnet-version: "9.0.x"
 
-      - name: Determine version
-        id: version
-        shell: pwsh
+      - name: Create Git tag
+        shell: bash
         run: |
-          $base = (Get-Content version.txt).Trim()
-          if ("${{ github.event_name }}" -eq "pull_request") {
-            $ver = "$base.${{ github.run_number }}-pr${{ github.event.number }}"
-          } else {
-            $ver = "$base.${{ github.run_number }}"
-          }
-          echo "VERSION=$ver" >> $env:GITHUB_OUTPUT
+          VERSION="${{ steps.calc.outputs.version }}"
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "$VERSION"
+          git push origin "$VERSION"
 
       - name: Install frontend dependencies
         working-directory: src/web
@@ -53,7 +91,7 @@ jobs:
       - name: Update Edge extension version
         shell: pwsh
         run: |
-          $version = "${{ steps.version.outputs.VERSION }}"
+          $version = "${{ steps.calc.outputs.version }}"
           $manifestPath = "ext/manifest.json"
           $manifest = Get-Content $manifestPath -Raw | ConvertFrom-Json
           $manifest.version = $version
@@ -62,7 +100,7 @@ jobs:
       - name: Package Edge extension
         shell: pwsh
         run: |
-          $version = "${{ steps.version.outputs.VERSION }}"
+          $version = "${{ steps.calc.outputs.version }}"
           $staging = "edge-extension-dist"
           $zipPath = "artifacts/DevelopmentHub-Edge-Extension-$version.zip"
 
@@ -81,7 +119,7 @@ jobs:
       - name: Update installer version
         shell: pwsh
         run: |
-          $ver = "${{ steps.version.outputs.VERSION }}"
+          $ver = "${{ steps.calc.outputs.version }}"
           (Get-Content installer\DevelopmentHub.iss) `
             -replace '#define MyAppVersion ".*"', "#define MyAppVersion `"$ver`"" |
             Set-Content installer\DevelopmentHub.iss
@@ -95,23 +133,23 @@ jobs:
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
         with:
-          name: DevelopmentHub-Setup-${{ steps.version.outputs.VERSION }}
+          name: DevelopmentHub-Setup-${{ steps.calc.outputs.version }}
           path: installer/output/DevelopmentHub-Setup-*.exe
-          retention-days: 14
+          retention-days: 7
 
       - name: Upload Edge extension artifact
         uses: actions/upload-artifact@v4
         with:
-          name: DevelopmentHub-Edge-Extension-${{ steps.version.outputs.VERSION }}
+          name: DevelopmentHub-Edge-Extension-${{ steps.calc.outputs.version }}
           path: artifacts/DevelopmentHub-Edge-Extension-*.zip
-          retention-days: 14
+          retention-days: 7
 
       - name: Create GitHub Release
         if: github.event_name == 'push'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.version.outputs.VERSION }}
-          name: DevelopmentHub v${{ steps.version.outputs.VERSION }}
+          tag_name: v${{ steps.calc.outputs.version }}
+          name: DevelopmentHub v${{ steps.calc.outputs.version }}
           prerelease: false
           generate_release_notes: true
           files: |
