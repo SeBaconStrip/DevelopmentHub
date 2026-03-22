@@ -42,6 +42,13 @@ public class RepositoriesController(IRepositoryService repositoryService) : Cont
         }
     }
 
+    [HttpPost("open-workspace")]
+    public async Task<IActionResult> OpenWorkspace([FromBody] OpenMultiWorkspaceRequest request)
+    {
+        var launched = await repositoryService.OpenWorkspaceAsync(request);
+        return launched ? Ok() : BadRequest(new { error = "Could not open workspace." });
+    }
+
     [HttpPost("{id}/sync")]
     public async Task<IActionResult> Sync(string id, CancellationToken cancellationToken)
     {

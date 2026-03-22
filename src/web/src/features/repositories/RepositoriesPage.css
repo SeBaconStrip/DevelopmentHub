@@ -105,7 +105,7 @@
 /* ── table ── */
 .repos-table {
   display: grid;
-  grid-template-columns: 1.4fr 2fr 1.1fr 0.7fr auto auto;
+  grid-template-columns: 36px 1.4fr 2fr 1.1fr 0.7fr auto auto;
   border: 1px solid var(--border-accent);
   border-radius: 12px;
   overflow: hidden;
@@ -192,6 +192,19 @@
 /* ── actions cell ── */
 .repos-col-actions.repos-td {
   gap: 4px;
+}
+
+/* ── checkbox cell ── */
+.repos-col-check {
+  justify-content: center;
+  padding: 10px 0 10px 10px;
+}
+
+.repo-select-checkbox {
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+  accent-color: var(--color-accent);
 }
 
 /* ── fav cell ── */

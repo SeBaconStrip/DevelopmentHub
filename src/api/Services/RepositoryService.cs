@@ -12,6 +12,7 @@ public interface IRepositoryService
     Task<RepositoryDto?> OpenAsync(string id, OpenRepositoryRequest request);
     Task<(bool Success, string Output)> SyncAsync(string id, CancellationToken cancellationToken);
     Task<int> RemoveOrphanedAsync(string[] activeRoots);
+    Task<bool> OpenWorkspaceAsync(OpenMultiWorkspaceRequest request);
 }
 
 public class RepositoryService(
@@ -241,6 +242,31 @@ public class RepositoryService(
         }
 
         return (success, output);
+    }
+
+    public async Task<bool> OpenWorkspaceAsync(OpenMultiWorkspaceRequest request)
+    {
+        var repos = request.RepositoryIds
+            .Select(id => db.Repositories.FindOne(r => r.Id == id))
+            .Where(r => r is not null)
+            .ToList();
+
+        if (repos.Count == 0) return false;
+
+        var cfg = await userConfigService.GetAsync();
+        var folders = repos
+            .Where(r => IsUnderKnownRoot(r!.Path, cfg.RepositoryRoots))
+            .Select(r => $"{{\"path\":\"{r!.Path.Replace("\\", "/")}\"}}");
+
+        var workspaceJson = $"{{\"folders\":[{string.Join(",", folders)}]}}";
+
+        var tempDir = Path.Combine(Path.GetTempPath(), "DevelopmentHub");
+        Directory.CreateDirectory(tempDir);
+        var workspacePath = Path.Combine(tempDir, $"workspace-{Guid.NewGuid():N}.code-workspace");
+        await File.WriteAllTextAsync(workspacePath, workspaceJson);
+
+        logger.LogInformation("Opening multi-repo workspace. Repos={Count} File={Path}", repos.Count, workspacePath);
+        return await launcher.OpenWithVsCodeAsync(workspacePath);
     }
 
     public Task<int> RemoveOrphanedAsync(string[] activeRoots)

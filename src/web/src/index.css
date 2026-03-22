@@ -389,6 +389,20 @@ textarea:focus-visible {
 .btn-primary:hover   { opacity: 0.9; }
 .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
 
+.btn-secondary {
+  background: var(--surface-muted);
+  color: var(--color-accent);
+  border: 1px solid var(--color-accent);
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, opacity 0.2s;
+}
+
+.btn-secondary:hover   { background: var(--widget-enabled-bg); }
+.btn-secondary:disabled { opacity: 0.6; cursor: not-allowed; }
+
 .modal-overlay {
   position: fixed;
   inset: 0;

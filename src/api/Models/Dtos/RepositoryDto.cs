@@ -38,6 +38,11 @@ public class OpenRepositoryRequest
     public OpenWith OpenWith { get; set; } = OpenWith.VsCode;
 }
 
+public class OpenMultiWorkspaceRequest
+{
+    public List<string> RepositoryIds { get; set; } = [];
+}
+
 public enum OpenWith
 {
     VisualStudio,
