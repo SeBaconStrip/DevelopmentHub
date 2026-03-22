@@ -54,6 +54,25 @@ public partial class App : Application
                 return tcs.Task;
             };
 
+            // Wire native file picker so the frontend can call /api/file-picker
+            DevelopmentHub.Api.Services.FilePickerBridge.Picker = (filter) =>
+            {
+                var tcs = new TaskCompletionSource<string?>();
+                Dispatcher.Invoke(() =>
+                {
+                    using var dlg = new System.Windows.Forms.OpenFileDialog
+                    {
+                        Filter = filter,
+                        CheckFileExists = true,
+                    };
+                    tcs.SetResult(
+                        dlg.ShowDialog() == System.Windows.Forms.DialogResult.OK
+                            ? dlg.FileName
+                            : null);
+                });
+                return tcs.Task;
+            };
+
             var window = new MainWindow();
 
             // Start Kestrel on a background thread so it never blocks the UI thread

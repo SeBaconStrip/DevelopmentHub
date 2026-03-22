@@ -99,13 +99,8 @@ export default function DashboardPage() {
   const [openError, setOpenError] = useState<string | null>(null);
 
   const openRepo = useMutation({
-    mutationFn: ({
-      id,
-      openWith,
-    }: {
-      id: string;
-      openWith: "VsCode" | "VisualStudio" | "Explorer";
-    }) => repositoriesApi.open(id, { openWith }),
+    mutationFn: ({ id, openerId }: { id: string; openerId?: string }) =>
+      repositoriesApi.open(id, { openerId }),
     onError: (err) => setOpenError(err.message),
   });
 
@@ -191,11 +186,12 @@ export default function DashboardPage() {
       body: (
         <RepositoriesWidget
           repos={repos}
+          openers={config?.repositoryOpeners ?? []}
           openError={openError}
           onClearOpenError={() => setOpenError(null)}
-          onOpen={(id, openWith) => {
+          onOpen={(id, openerId) => {
             setOpenError(null);
-            openRepo.mutate({ id, openWith });
+            openRepo.mutate({ id, openerId });
           }}
           onToggleFav={(id) => toggleFav.mutate(id)}
         />

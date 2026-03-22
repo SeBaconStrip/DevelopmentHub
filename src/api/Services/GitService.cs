@@ -6,7 +6,7 @@ namespace DevelopmentHub.Api.Services;
 
 public interface IGitService
 {
-    Task<List<RepositoryDao>> ScanDirectoriesAsync(string[] rootPaths, int repoScanDepth, int entryPointScanDepth);
+    Task<List<RepositoryDao>> ScanDirectoriesAsync(string[] rootPaths, int repoScanDepth, int entryPointScanDepth, string[] entryPointExtensions);
     Task<RepositoryFetchResult> FetchAsync(string repoPath, CancellationToken cancellationToken);
     Task<(string? Branch, int AheadBy, int BehindBy)> GetBranchStatusAsync(string repoPath);
     Task<(bool Success, string Output)> SyncRepositoryAsync(string repoPath, CancellationToken cancellationToken);
@@ -31,7 +31,7 @@ public sealed class RepositoryFetchResult
 
 public class GitService(ILogger<GitService> logger) : IGitService
 {
-    public Task<List<RepositoryDao>> ScanDirectoriesAsync(string[] rootPaths, int repoScanDepth, int entryPointScanDepth)
+    public Task<List<RepositoryDao>> ScanDirectoriesAsync(string[] rootPaths, int repoScanDepth, int entryPointScanDepth, string[] entryPointExtensions)
     {
         var repos = new List<RepositoryDao>();
 
@@ -43,13 +43,13 @@ public class GitService(ILogger<GitService> logger) : IGitService
                 continue;
             }
 
-            ScanDirectory(root, repos, 0, repoScanDepth, entryPointScanDepth);
+            ScanDirectory(root, repos, 0, repoScanDepth, entryPointScanDepth, entryPointExtensions);
         }
 
         return Task.FromResult(repos);
     }
 
-    private void ScanDirectory(string directory, List<RepositoryDao> results, int depth, int repoScanDepth, int entryPointScanDepth)
+    private void ScanDirectory(string directory, List<RepositoryDao> results, int depth, int repoScanDepth, int entryPointScanDepth, string[] entryPointExtensions)
     {
         if (depth > repoScanDepth) return;
 
@@ -59,7 +59,7 @@ public class GitService(ILogger<GitService> logger) : IGitService
             if (Directory.Exists(gitDir) || File.Exists(gitDir))
             {
                 // This is a repo — don't recurse further into it
-                var entity = BuildRepositoryEntity(directory, entryPointScanDepth);
+                var entity = BuildRepositoryEntity(directory, entryPointScanDepth, entryPointExtensions);
                 results.Add(entity);
                 return;
             }
@@ -71,7 +71,7 @@ public class GitService(ILogger<GitService> logger) : IGitService
                 if (dirName.StartsWith('.') || dirName.Equals("node_modules", StringComparison.OrdinalIgnoreCase))
                     continue;
 
-                ScanDirectory(subDir, results, depth + 1, repoScanDepth, entryPointScanDepth);
+                ScanDirectory(subDir, results, depth + 1, repoScanDepth, entryPointScanDepth, entryPointExtensions);
             }
         }
         catch (UnauthorizedAccessException ex)
@@ -84,7 +84,7 @@ public class GitService(ILogger<GitService> logger) : IGitService
         }
     }
 
-    private RepositoryDao BuildRepositoryEntity(string repoPath, int maxEntryPointDepth)
+    private RepositoryDao BuildRepositoryEntity(string repoPath, int maxEntryPointDepth, string[] entryPointExtensions)
     {
         var name = System.IO.Path.GetFileName(repoPath);
         var entity = new RepositoryDao
@@ -113,20 +113,20 @@ public class GitService(ILogger<GitService> logger) : IGitService
         }
 
         // Discover entry points
-        var entryPoints = DiscoverEntryPoints(repoPath, maxEntryPointDepth);
+        var entryPoints = DiscoverEntryPoints(repoPath, maxEntryPointDepth, entryPointExtensions);
         entity.EntryPoints = entryPoints;
 
         return entity;
     }
 
-    private static List<string> DiscoverEntryPoints(string repoPath, int maxDepth)
+    private static List<string> DiscoverEntryPoints(string repoPath, int maxDepth, string[] extensions)
     {
         var results = new List<string>();
-        SearchEntryPoints(repoPath, repoPath, 0, maxDepth, results);
+        SearchEntryPoints(repoPath, repoPath, 0, maxDepth, results, extensions);
         return results;
     }
 
-    private static void SearchEntryPoints(string root, string current, int depth, int maxDepth, List<string> results)
+    private static void SearchEntryPoints(string root, string current, int depth, int maxDepth, List<string> results, string[] extensions)
     {
         if (depth > maxDepth) return;
 
@@ -135,7 +135,7 @@ public class GitService(ILogger<GitService> logger) : IGitService
             foreach (var file in Directory.EnumerateFiles(current))
             {
                 var ext = System.IO.Path.GetExtension(file).ToLowerInvariant();
-                if (ext is ".sln" or ".code-workspace")
+                if (extensions.Length > 0 && extensions.Contains(ext))
                     results.Add(file);
             }
 
@@ -145,7 +145,7 @@ public class GitService(ILogger<GitService> logger) : IGitService
                 {
                     var dirName = System.IO.Path.GetFileName(dir);
                     if (dirName.StartsWith('.')) continue;
-                    SearchEntryPoints(root, dir, depth + 1, maxDepth, results);
+                    SearchEntryPoints(root, dir, depth + 1, maxDepth, results, extensions);
                 }
             }
         }

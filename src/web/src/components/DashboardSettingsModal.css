@@ -1,7 +1,7 @@
 /* ── modal sizing override ── */
 .settings-modal {
-  width: 860px;
-  max-width: 95vw;
+  width: 1020px;
+  max-width: 96vw;
   padding: 0;
   display: flex;
   flex-direction: column;
@@ -276,6 +276,20 @@
   gap: 8px;
   margin-bottom: 8px;
 }
+
+/* ── Repository openers ── */
+.opener-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.opener-input-icontype { width: 120px; flex-shrink: 0; }
+.opener-input-label    { width: 100px; flex-shrink: 0; }
+.opener-input-ext      { width: 80px;  flex-shrink: 0; }
+.opener-input-program  { flex: 1; min-width: 120px; }
+.opener-input-iconpath { flex: 1; min-width: 120px; }
 
 .provider-section-heading {
   display: flex;
