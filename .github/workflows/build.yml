@@ -41,7 +41,7 @@ jobs:
           LAST_PATCH=$(git tag --list "${MAJOR_MINOR}.*" \
             | sed "s/^${MAJOR_MINOR}\.//" \
             | sed 's/-ci$//' \
-            | grep -E '^[0-9]+$' \
+            | { grep -E '^[0-9]+$' || true; } \
             | sort -n \
             | tail -1)
 
