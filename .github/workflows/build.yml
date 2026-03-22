@@ -22,9 +22,7 @@ jobs:
           fetch-tags: true
 
       - name: Fetch all tags
-        run: git fetch --tags --force
-
-      - name: Fetch all tags
+        shell: bash
         run: |
           git fetch --tags --force
           echo "Available tags:"
@@ -32,6 +30,7 @@ jobs:
 
       - name: Calculate version
         id: calc
+        shell: bash
         run: |
           # Read major.minor from VERSION file
           MAJOR_MINOR=$(cat version.txt | tr -d '[:space:]')
@@ -73,6 +72,7 @@ jobs:
           dotnet-version: "9.0.x"
 
       - name: Create Git tag
+        shell: bash
         run: |
           VERSION="${{ steps.calc.outputs.version }}"
           git config user.name  "github-actions[bot]"
