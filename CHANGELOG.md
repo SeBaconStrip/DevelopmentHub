@@ -14,11 +14,25 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Tag filter chips in the Repositories page toolbar — click one or more tags to filter the list (AND logic); a Clear button appears when any tag filter is active
 - Tag column in the Repositories dashboard widget — read-only chips; column disappears before the Branch column on narrow panel widths via container queries
 - Multi-repository workspace — checkbox column in the Repositories page lets you select two or more repositories; an `⧉ Workspace (N)` button appears in the toolbar and opens all selected repositories together in a single temporary VS Code `.code-workspace` file generated in `%TEMP%\DevelopmentHub\`
+- Configurable repository openers — define any number of file-extension → program mappings in Settings → Repositories → Openers; VS Code and Visual Studio are pre-configured as defaults
+- Icon type dropdown (VS Code / Visual Studio / Custom) in the opener settings row
+- Icon path field for custom openers — point to any `.exe`, `.ico`, or `.dll` and the app extracts and displays the embedded icon automatically via `GET /api/icon-extractor`
+- Native file-open dialog for browsing executable and icon files (`GET /api/file-picker`), separate from the existing folder picker
+- Visual Studio instance reuse — when opening a `.sln` file, the app scans the Windows Running Object Table for a running VS instance that already has the solution loaded and activates it instead of opening a new window; falls back to a fresh launch when none is found
 
 ### 🔧 Changed
 
-- Open With icons in the Repositories page are now always rendered in fixed positions (hidden via `visibility: hidden` when not applicable) so all three icons stay vertically aligned across every row
+- Open With icons in the Repositories page are now always rendered in fixed positions (hidden via `visibility: hidden` when not applicable) so all icons stay vertically aligned across every row
 - Text selection disabled globally via `user-select: none` on `body`; re-enabled for `input`, `textarea`, and `contenteditable` elements
+- Settings modal widened to 1020 px so opener rows fit without wrapping
+- Opener icon buttons and the Explorer icon rendered in a single unified grid cell in the Repositories dashboard widget, giving all icons identical spacing and size (20 px) across every row
+- `item-open-icon` buttons given a fixed 28 × 28 px footprint so icon buttons are consistently sized regardless of icon type
+- Activating a maximised Visual Studio window no longer restores it to normal size — `ShowWindowAsync` is only called when the window is actually minimised
+
+### 🐛 Fixed
+
+- `RepositoryOpeners` was missing from `ConfigDto`, so opener settings were silently discarded on every save and never returned to the frontend — openers are now fully round-tripped through the API
+- `IconPath` field was absent from `RepositoryOpenerDto`, preventing it from being persisted or served
 
 ---
 
