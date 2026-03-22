@@ -31,6 +31,7 @@ export function RepositoriesWidget({
     <div className="repo-grid">
       {/* header */}
       <div className="repo-grid-header repo-col-name">Repository</div>
+      <div className="repo-grid-header repo-col-tags">Tags</div>
       <div className="repo-grid-header repo-col-branch">Branch</div>
       <div className="repo-grid-header repo-col-icon" />
       <div className="repo-grid-header repo-col-icon" />
@@ -43,6 +44,15 @@ export function RepositoriesWidget({
           {/* name */}
           <div className="repo-cell repo-col-name">
             <span className="item-name">{r.name}</span>
+          </div>
+
+          {/* tags */}
+          <div className="repo-cell repo-col-tags">
+            <div className="repo-tag-list">
+              {r.tags.map((tag) => (
+                <span key={tag} className="repo-tag-chip">{tag}</span>
+              ))}
+            </div>
           </div>
 
           {/* branch + ahead/behind */}

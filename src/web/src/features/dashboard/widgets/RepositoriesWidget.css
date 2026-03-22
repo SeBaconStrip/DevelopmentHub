@@ -1,7 +1,7 @@
 /* ── repositories data grid ── */
 .repo-grid {
   display: grid;
-  grid-template-columns: 1fr 0.5fr auto auto auto auto;
+  grid-template-columns: 1fr 1fr 0.5fr auto auto auto auto;
   align-items: center;
   border-radius: 12px;
   border: 1px solid var(--border-accent);
@@ -97,8 +97,37 @@
   color: var(--fav-active);
 }
 
-/* ── Responsive: branch verschwindet, Icon-Buttons + Fav bleiben bis zum Ende ── */
-@container (max-width: 600px) {
+/* ── Tags column ── */
+.repo-col-tags {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.repo-tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
+}
+
+.repo-tag-chip {
+  background: var(--widget-enabled-bg);
+  color: var(--color-accent);
+  border: 1px solid var(--color-accent);
+  border-radius: 20px;
+  padding: 1px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* ── Responsive: tags disappear first, then branch ── */
+@container (max-width: 660px) {
+  .repo-grid { grid-template-columns: 1fr 0.5fr auto auto auto auto; }
+  .repo-col-tags { display: none; }
+}
+
+@container (max-width: 480px) {
   .repo-grid { grid-template-columns: 1fr auto auto auto auto; }
   .repo-col-branch { display: none; }
 }

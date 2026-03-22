@@ -13,6 +13,7 @@ public interface IRepositoryService
     Task<(bool Success, string Output)> SyncAsync(string id, CancellationToken cancellationToken);
     Task<int> RemoveOrphanedAsync(string[] activeRoots);
     Task<bool> OpenWorkspaceAsync(OpenMultiWorkspaceRequest request);
+    Task<RepositoryDto?> UpdateTagsAsync(string id, UpdateTagsRequest request);
 }
 
 public class RepositoryService(
@@ -244,6 +245,21 @@ public class RepositoryService(
         return (success, output);
     }
 
+    public Task<RepositoryDto?> UpdateTagsAsync(string id, UpdateTagsRequest request)
+    {
+        var entity = db.Repositories.FindOne(r => r.Id == id);
+        if (entity is null) return Task.FromResult<RepositoryDto?>(null);
+
+        entity.Tags = request.Tags
+            .Select(t => t.Trim())
+            .Where(t => t.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        db.Repositories.Update(entity);
+        return Task.FromResult<RepositoryDto?>(MapToDto(entity));
+    }
+
     public async Task<bool> OpenWorkspaceAsync(OpenMultiWorkspaceRequest request)
     {
         var repos = request.RepositoryIds
@@ -326,7 +342,8 @@ public class RepositoryService(
             LastSyncedAt = entity.LastSyncedAt,
             UsageScore = usageScore,
             ScanIssueCode = entity.ScanIssueCode,
-            ScanIssueMessage = entity.ScanIssueMessage
+            ScanIssueMessage = entity.ScanIssueMessage,
+            Tags = entity.Tags
         };
     }
 }

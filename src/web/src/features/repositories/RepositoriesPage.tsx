@@ -1,4 +1,4 @@
-import { useState, Fragment } from "react";
+import { useState, Fragment, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchRepositories, repositoriesApi } from "../../api/repositories";
 import type { Repository } from "../../types";
@@ -15,6 +15,7 @@ export default function RepositoriesPage() {
   const [filter, setFilter] = useState<Filter>("all");
   const [openError, setOpenError] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
 
   const { data: repos = [], isLoading } = useQuery<Repository[]>({
     queryKey: ["repositories"],
@@ -50,6 +51,13 @@ export default function RepositoriesPage() {
       return next;
     });
 
+  const updateTagsMutation = useMutation({
+    mutationFn: ({ id, tags }: { id: string; tags: string[] }) =>
+      repositoriesApi.updateTags(id, tags),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["repositories"] }),
+    onError: (err: Error) => setOpenError(err.message),
+  });
+
   const toggleFavMutation = useMutation({
     mutationFn: (id: string) => repositoriesApi.toggleFavorite(id),
     onSuccess: () =>
@@ -57,6 +65,15 @@ export default function RepositoriesPage() {
   });
 
   const issueCount = repos.filter((r) => !!r.scanIssueCode).length;
+
+  const allTags = [...new Set(repos.flatMap((r) => r.tags))].sort();
+
+  const toggleTagFilter = (tag: string) =>
+    setSelectedTags((prev) => {
+      const next = new Set(prev);
+      if (next.has(tag)) next.delete(tag); else next.add(tag);
+      return next;
+    });
 
   const filtered = repos
     .filter((r) => {
@@ -70,6 +87,7 @@ export default function RepositoriesPage() {
         r.name.toLowerCase().includes(search.toLowerCase()) ||
         r.path.toLowerCase().includes(search.toLowerCase()),
     )
+    .filter((r) => selectedTags.size === 0 || [...selectedTags].every((t) => r.tags.includes(t)))
     .sort((a, b) => {
       if (a.isFavorite !== b.isFavorite) return a.isFavorite ? -1 : 1;
       return a.name.localeCompare(b.name);
@@ -128,6 +146,26 @@ export default function RepositoriesPage() {
           </div>
         </div>
 
+        {allTags.length > 0 && (
+          <div className="repos-tag-filter-row">
+            <span className="repos-tag-filter-label">Tags:</span>
+            {allTags.map((tag) => (
+              <button
+                key={tag}
+                className={`repos-tag-filter-chip${selectedTags.has(tag) ? " repos-tag-filter-chip--active" : ""}`}
+                onClick={() => toggleTagFilter(tag)}
+              >
+                {tag}
+              </button>
+            ))}
+            {selectedTags.size > 0 && (
+              <button className="repos-tag-filter-clear" onClick={() => setSelectedTags(new Set())}>
+                ✕ Clear
+              </button>
+            )}
+          </div>
+        )}
+
         {openError && (
           <div className="repos-error-bar">
             <span>⚠ {openError}</span>
@@ -148,6 +186,7 @@ export default function RepositoriesPage() {
           <div className="repos-th repos-col-path">Path</div>
           <div className="repos-th repos-col-branch">Branch</div>
           <div className="repos-th repos-col-used">Last Used</div>
+          <div className="repos-th repos-col-tags">Tags</div>
           <div className="repos-th repos-col-actions">Open With</div>
           <div className="repos-th repos-col-fav" />
 
@@ -201,60 +240,36 @@ export default function RepositoriesPage() {
                 </span>
               </div>
 
+              <div className="repos-td repos-col-tags">
+                <TagEditor
+                  tags={r.tags}
+                  onSave={(tags) => updateTagsMutation.mutate({ id: r.id, tags })}
+                />
+              </div>
+
               <div className="repos-td repos-col-actions">
-                {r.entryPoints.some(
-                  (ep) => ep.type === "CodeWorkspace" || ep.type === "Folder",
-                ) && (
-                  <button
-                    className="item-open-icon"
-                    onClick={() =>
-                      openMutation.mutate({ id: r.id, openWith: "VsCode" })
-                    }
-                    title="In VS Code öffnen"
-                  >
-                    <img
-                      src={vscodeIconUrl}
-                      width="22"
-                      height="22"
-                      alt="VS Code"
-                      draggable={false}
-                    />
-                  </button>
-                )}
-                {r.entryPoints.some((ep) => ep.type === "Solution") && (
-                  <button
-                    className="item-open-icon"
-                    onClick={() =>
-                      openMutation.mutate({
-                        id: r.id,
-                        openWith: "VisualStudio",
-                      })
-                    }
-                    title="In Visual Studio öffnen"
-                  >
-                    <img
-                      src={visualStudioIconUrl}
-                      width="22"
-                      height="22"
-                      alt="Visual Studio"
-                      draggable={false}
-                    />
-                  </button>
-                )}
                 <button
                   className="item-open-icon"
-                  onClick={() =>
-                    openMutation.mutate({ id: r.id, openWith: "Explorer" })
-                  }
+                  style={{ visibility: r.entryPoints.some((ep) => ep.type === "CodeWorkspace" || ep.type === "Folder") ? "visible" : "hidden" }}
+                  onClick={() => openMutation.mutate({ id: r.id, openWith: "VsCode" })}
+                  title="In VS Code öffnen"
+                >
+                  <img src={vscodeIconUrl} width="22" height="22" alt="VS Code" draggable={false} />
+                </button>
+                <button
+                  className="item-open-icon"
+                  style={{ visibility: r.entryPoints.some((ep) => ep.type === "Solution") ? "visible" : "hidden" }}
+                  onClick={() => openMutation.mutate({ id: r.id, openWith: "VisualStudio" })}
+                  title="In Visual Studio öffnen"
+                >
+                  <img src={visualStudioIconUrl} width="22" height="22" alt="Visual Studio" draggable={false} />
+                </button>
+                <button
+                  className="item-open-icon"
+                  onClick={() => openMutation.mutate({ id: r.id, openWith: "Explorer" })}
                   title="In Explorer öffnen"
                 >
-                  <img
-                    src={explorerIconUrl}
-                    width="22"
-                    height="22"
-                    alt="Explorer"
-                    draggable={false}
-                  />
+                  <img src={explorerIconUrl} width="22" height="22" alt="Explorer" draggable={false} />
                 </button>
               </div>
 
@@ -292,6 +307,52 @@ function getScanIssueLabel(code: string): string {
     default:
       return "Scan warning";
   }
+}
+
+function TagEditor({ tags, onSave }: { tags: string[]; onSave: (tags: string[]) => void }) {
+  const [adding, setAdding] = useState(false);
+  const [input, setInput] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const commit = () => {
+    const trimmed = input.trim();
+    if (trimmed && !tags.includes(trimmed)) {
+      onSave([...tags, trimmed]);
+    }
+    setInput("");
+    setAdding(false);
+  };
+
+  const remove = (tag: string) => onSave(tags.filter((t) => t !== tag));
+
+  return (
+    <div className="tag-editor">
+      {tags.map((tag) => (
+        <span key={tag} className="tag-chip">
+          {tag}
+          <button className="tag-chip-remove" onClick={() => remove(tag)} title="Tag entfernen">×</button>
+        </span>
+      ))}
+      {adding ? (
+        <input
+          ref={inputRef}
+          className="tag-input"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") commit();
+            if (e.key === "Escape") { setAdding(false); setInput(""); }
+          }}
+          onBlur={commit}
+          autoFocus
+          placeholder="Tag…"
+          maxLength={32}
+        />
+      ) : (
+        <button className="tag-add-btn" onClick={() => setAdding(true)} title="Tag hinzufügen">+</button>
+      )}
+    </div>
+  );
 }
 
 function formatLastUsed(lastOpenedAt: string | null): string {

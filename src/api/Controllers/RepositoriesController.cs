@@ -42,6 +42,13 @@ public class RepositoriesController(IRepositoryService repositoryService) : Cont
         }
     }
 
+    [HttpPatch("{id}/tags")]
+    public async Task<ActionResult<RepositoryDto>> UpdateTags(string id, [FromBody] UpdateTagsRequest request)
+    {
+        var result = await repositoryService.UpdateTagsAsync(id, request);
+        return result is null ? NotFound() : Ok(result);
+    }
+
     [HttpPost("open-workspace")]
     public async Task<IActionResult> OpenWorkspace([FromBody] OpenMultiWorkspaceRequest request)
     {

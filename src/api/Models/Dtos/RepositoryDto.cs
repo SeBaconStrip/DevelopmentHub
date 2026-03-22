@@ -16,6 +16,7 @@ public class RepositoryDto
     public double UsageScore { get; set; }
     public string? ScanIssueCode { get; set; }
     public string? ScanIssueMessage { get; set; }
+    public List<string> Tags { get; set; } = [];
 }
 
 public class EntryPointDto
@@ -36,6 +37,11 @@ public class OpenRepositoryRequest
 {
     public string? EntryPointPath { get; set; }
     public OpenWith OpenWith { get; set; } = OpenWith.VsCode;
+}
+
+public class UpdateTagsRequest
+{
+    public List<string> Tags { get; set; } = [];
 }
 
 public class OpenMultiWorkspaceRequest

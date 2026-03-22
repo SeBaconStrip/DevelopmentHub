@@ -19,6 +19,7 @@ export interface Repository {
   usageScore: number;
   scanIssueCode?: string | null;
   scanIssueMessage?: string | null;
+  tags: string[];
 }
 
 export interface OpenRepositoryRequest {

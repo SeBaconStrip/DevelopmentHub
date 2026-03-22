@@ -33,6 +33,13 @@ export const repositoriesApi = {
   sync: (id: string): Promise<{ success: boolean; output: string }> =>
     fetch(`${BASE}/repositories/${id}/sync`, { method: 'POST' }).then(r => handleResponse(r)),
 
+  updateTags: (id: string, tags: string[]): Promise<void> =>
+    fetch(`${BASE}/repositories/${id}/tags`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tags }),
+    }).then(r => handleResponse(r)),
+
   openWorkspace: (repositoryIds: string[]): Promise<void> =>
     fetch(`${BASE}/repositories/open-workspace`, {
       method: 'POST',
