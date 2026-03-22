@@ -19,6 +19,7 @@ type NavPage =
   | "quickLinks"
   | "workflows"
   | "todos"
+  | "integrations"
   | "appearance";
 
 const NAV_ITEMS: { id: NavPage; icon: string; label: string }[] = [
@@ -28,6 +29,7 @@ const NAV_ITEMS: { id: NavPage; icon: string; label: string }[] = [
   { id: "quickLinks", icon: "🔗", label: "Quick Links" },
   { id: "workflows", icon: "⚙", label: "Workflows" },
   { id: "todos", icon: "✅", label: "Todos" },
+  { id: "integrations", icon: "🔌", label: "Integrations" },
   { id: "appearance", icon: "🎨", label: "Appearance" },
 ];
 
@@ -41,6 +43,7 @@ type ProviderField = {
   placeholder: string;
   type?: "text" | "password";
   hint?: string;
+  tooltip?: React.ReactNode;
 };
 
 type ProviderOption = {
@@ -213,19 +216,20 @@ export function DashboardSettingsModal({ onClose }: Props) {
           />
         );
       case "pullRequests":
-        return (
-          <PullRequestsPage
-            form={form}
-            setField={setField}
-            setProviderField={setProviderField}
-          />
-        );
+        return <PullRequestsPage form={form} setField={setField} />;
       case "quickLinks":
         return <QuickLinksPage form={form} setField={setField} />;
       case "workflows":
         return <WorkflowsPage form={form} setField={setField} />;
       case "todos":
         return <TodosPage />;
+      case "integrations":
+        return (
+          <IntegrationsPage
+            form={form}
+            setProviderField={setProviderField}
+          />
+        );
       case "appearance":
         return <AppearancePage />;
     }
@@ -466,23 +470,53 @@ const PULL_REQUEST_PROVIDER_OPTIONS: {
         key: "organization",
         label: "Organization",
         placeholder: "myorg",
+        tooltip: (
+          <>
+            <p>Your Azure DevOps organization name as it appears in the URL:</p>
+            <code>dev.azure.com/<strong>organization</strong></code>
+            <p className="tooltip-used-by">Used by: Pull Requests · Workflows</p>
+          </>
+        ),
       },
       {
         key: "project",
         label: "Project",
         placeholder: "MyProject",
+        tooltip: (
+          <>
+            <p>The Azure DevOps project to fetch pull requests from.</p>
+            <p className="tooltip-used-by">Used by: Pull Requests · Workflows</p>
+          </>
+        ),
       },
       {
         key: "userEmail",
         label: "User Email",
         placeholder: "you@example.com",
+        tooltip: (
+          <>
+            <p>Your Azure DevOps account email. Used to identify pull requests you authored or are reviewing.</p>
+            <p className="tooltip-used-by">Used by: Pull Requests</p>
+          </>
+        ),
       },
       {
         key: "pat",
         label: "Personal Access Token",
         placeholder: "Leave blank to keep existing",
         type: "password",
-        hint: "Required scopes: Code (Read) · Profile (Read)",
+        tooltip: (
+          <>
+            <p>Personal Access Token for Azure DevOps authentication.</p>
+            <p><strong>Required scopes:</strong></p>
+            <ul>
+              <li><strong>Code – Read</strong> · pull requests, repository list</li>
+              <li><strong>Build – Read</strong> · workflow pipeline artifact downloads</li>
+              <li><strong>Profile – Read</strong> · user identity</li>
+            </ul>
+            <p className="tooltip-used-by">Used by: Pull Requests · Workflows</p>
+          </>
+        ),
       },
     ],
   },
@@ -499,20 +533,52 @@ const PULL_REQUEST_PROVIDER_OPTIONS: {
         key: "userLogin",
         label: "User Login",
         placeholder: "your-login",
-        hint: "Your GitHub username. The search uses this to find open pull requests that involve you.",
+        tooltip: (
+          <>
+            <p>Your GitHub username. Used to search for open PRs where you are author, reviewer, or mentioned.</p>
+            <p className="tooltip-used-by">Used by: Pull Requests</p>
+          </>
+        ),
       },
       {
         key: "searchQuery",
         label: "Extra Search Query",
         placeholder: "org:my-org -label:wip",
-        hint: "Optional GitHub search qualifiers appended to the base query. Example: org:my-org, repo:owner/name, team-review-requested:my-org/team-slug.",
+        tooltip: (
+          <>
+            <p>Optional GitHub search qualifiers appended to the base PR query.</p>
+            <p><strong>Examples:</strong></p>
+            <ul>
+              <li><code>org:my-org</code> · limit to an org</li>
+              <li><code>repo:owner/name</code> · specific repo</li>
+              <li><code>team-review-requested:org/team</code> · team reviews</li>
+              <li><code>-label:wip</code> · exclude WIP PRs</li>
+            </ul>
+            <p className="tooltip-used-by">Used by: Pull Requests</p>
+          </>
+        ),
       },
       {
         key: "pat",
         label: "Personal Access Token",
         placeholder: "Leave blank to keep existing",
         type: "password",
-        hint: "Use a token that can read pull requests and repository metadata for the repositories returned by your search.",
+        tooltip: (
+          <>
+            <p>Classic or fine-grained Personal Access Token for GitHub authentication.</p>
+            <p><strong>Classic token scopes:</strong></p>
+            <ul>
+              <li><strong>repo</strong> · private repo access, PRs, releases</li>
+            </ul>
+            <p><strong>Fine-grained permissions:</strong></p>
+            <ul>
+              <li><strong>Pull requests – Read</strong> · PR list and details</li>
+              <li><strong>Contents – Read</strong> · release asset downloads</li>
+              <li><strong>Metadata – Read</strong> · required for all repos</li>
+            </ul>
+            <p className="tooltip-used-by">Used by: Pull Requests · Workflows</p>
+          </>
+        ),
       },
     ],
   },
@@ -527,11 +593,7 @@ const PULL_REQUEST_PROVIDER_LIST = [
   },
 ] satisfies ProviderOption[];
 
-function PullRequestsPage({
-  form,
-  setField,
-  setProviderField,
-}: PullRequestsPageProps) {
+function PullRequestsPage({ form, setField }: Omit<PullRequestsPageProps, "setProviderField">) {
   const { dashboardWidgets, toggleWidget } = useUiStore();
   const widget = dashboardWidgets.find((w) => w.id === "pullRequests");
 
@@ -563,7 +625,24 @@ function PullRequestsPage({
           </span>
         </Field>
       </Section>
+    </>
+  );
+}
 
+/* ──────────────────────────────────────────────────── Integrations page ── */
+
+interface IntegrationsPageProps {
+  form: AppConfig;
+  setProviderField: (
+    providerId: PullRequestProvider,
+    key: string,
+    value: string,
+  ) => void;
+}
+
+function IntegrationsPage({ form, setProviderField }: IntegrationsPageProps) {
+  return (
+    <>
       {PULL_REQUEST_PROVIDER_LIST.map((provider) => {
         const providerConfig = form.pullRequestProviders[provider.id] ?? {};
 
@@ -572,9 +651,16 @@ function PullRequestsPage({
             <div className="provider-section-heading">
               <img src={provider.icon} alt="" className="provider-radio-icon" />
               <span className="settings-page-hint">{provider.description}</span>
+              {provider.sectionHint && (
+                <InfoTooltip content={<p>{provider.sectionHint}</p>} />
+              )}
             </div>
             {provider.fields.map((field) => (
-              <Field key={field.key} label={field.label}>
+              <Field
+                key={field.key}
+                label={field.label}
+                tooltip={field.tooltip}
+              >
                 <input
                   type={field.type ?? "text"}
                   className="settings-input"
@@ -589,9 +675,6 @@ function PullRequestsPage({
                 )}
               </Field>
             ))}
-            {provider.sectionHint && (
-              <p className="settings-page-hint">{provider.sectionHint}</p>
-            )}
           </Section>
         );
       })}
@@ -839,6 +922,7 @@ function AppearancePage() {
             [
               ["violet", "Violet"],
               ["dark", "Dark"],
+              ["vscode", "VS Code"],
               ["ocean", "Ocean"],
               ["orange", "Orange"],
               ["nature", "Nature"],
@@ -863,6 +947,22 @@ function AppearancePage() {
   );
 }
 
+/* ──────────────────────────────────────────────────── InfoTooltip ── */
+
+function InfoTooltip({ content }: { content: React.ReactNode }) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <span
+      className="info-tooltip-wrapper"
+      onMouseEnter={() => setVisible(true)}
+      onMouseLeave={() => setVisible(false)}
+    >
+      <span className="info-tooltip-icon">ℹ</span>
+      {visible && <div className="info-tooltip-box">{content}</div>}
+    </span>
+  );
+}
+
 /* ──────────────────────────────────────────────────────────── helpers ── */
 
 function Section({
@@ -882,14 +982,19 @@ function Section({
 
 function Field({
   label,
+  tooltip,
   children,
 }: {
   label: string;
+  tooltip?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <label className="settings-field">
-      <span className="settings-field-label">{label}</span>
+      <span className="settings-field-label">
+        {label}
+        {tooltip && <InfoTooltip content={tooltip} />}
+      </span>
       {children}
     </label>
   );

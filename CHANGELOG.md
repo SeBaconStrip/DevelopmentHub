@@ -1,78 +1,180 @@
 # Changelog
 
-## 0.8 - 2026-03-17
+All notable changes are documented here.
+Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-- Removed a duplicate `JsonDerivedType` registration in workflow step deserialization to avoid type mapping conflicts
-- Added a new workflow `copy` step to copy files and folders as part of workflow execution
-- Wired backend and frontend workflow contracts for the new `copy` step (`CopyStep`, `CopyExecutor`, and shared API step typing)
-- Hardened repository scanning so one failing repository no longer aborts the full scan request with HTTP 500
-- Added per-repository fetch isolation with bounded timeout handling and safe git process cancellation
-- Added repository validation before fetch (`path exists`, `.git` present) to avoid invalid fetch attempts
-- Added scan issue classification for Git ownership/safe-directory errors, invalid repositories, missing paths, fetch timeouts, and remote access/not-found failures (including Azure DevOps TF401019)
-- Added scan issue fields to repository API responses and persisted scan issue state in repository records
-- Surfaced repository scan warnings in the dashboard repository list with concise per-repository labels and detailed tooltips
-- Wired request cancellation through `POST /api/repositories/scan` so client cancellation is handled cleanly
-- Added a file-based workflow engine that loads workflow definitions from a configured folder and runs them from a new dashboard widget
-- Added a custom workflow input modal, live execution log modal, and workflow execution status updates in the dashboard
-- Added workflow step support for direct downloads, ZIP extraction, installer execution, JSON patching, and Windows service restarts
-- Added authenticated download steps for GitHub release assets and Azure DevOps pipeline artifacts using configured provider credentials
-- Added optional per-step elevation for Windows service restarts so only the selected action prompts for UAC instead of the whole app running as admin
-- Hardened workflow loading with case-insensitive JSON parsing, stable fallback IDs, invalid-workflow filtering, and improved elevated-step error reporting
-- Added structured documentation under `docs/workflow-engine/`
+---
 
-## 0.7 - 2026-03-16
+## 0.9 – 2026-03-21
 
-- Improved dashboard panel editing by allowing dragging from the full widget area, simplifying resize affordances, and reducing the minimum width of the quick links panel
-- Updated focus and panel control styling to better follow the active theme across grips, close buttons, quick links, and resize borders
-- Fixed the global hotkey toggle so DevelopmentHub reliably comes to the foreground, hides when already focused, and restores maximized windows correctly
-- Improved Explorer launching to reuse an already open Explorer window for the same folder when possible instead of always opening a new window
-- Added a new Todo widget with create, edit, complete, restore, delete, and clear-completed actions
-- Todos can now include inline links by writing text and a URL in a single field, and the widget extracts and opens those links directly
-- Refined Todo widget actions with consistent button styling and Font Awesome Free icons
-- Improved Todo widget usability with a collapsed Done section and cleaner action layout
+### ✨ Added
 
-## 0.6 - 2026-03-16
+- Frameless window with custom title bar — minimize, maximize/restore, and close buttons integrated into the dashboard header
+- Double-click header to toggle maximize/restore; dragging from maximized automatically restores and begins moving the window
+- Closing via the header button hides the app to the tray with a balloon notification showing the hotkey to bring it back
+- Dedicated full pages for all five features: Repositories, Pull Requests, Todos, Workflows, and Quick Links — each accessible via the navigation bar
+- Pull Requests page: search by title, repository, or author; filter tabs for All / Mine / Reviewer / Draft
+- Todos page: search by title; filter tabs for All / Active / Completed
+- Workflows page: search by name or description; filter tabs for All / Idle / Running / Succeeded / Failed
+- Quick Links page: search by name or URL; filter tabs for All / Web / Explorer
+- Clicking a dashboard panel title navigates to the corresponding full page
+- Navigation links for all pages added to the app header; active link highlighted with accent underline
+- VS Code dark theme (`#1e1e1e` / `#252526`) with VS Code blue accent and teal success colors
+- Integrations settings page — GitHub and Azure DevOps credentials moved out of Pull Requests into their own dedicated page
+- Tooltip info icons on all Integrations fields showing field descriptions, required PAT scopes, and which features use each credential
 
-- Added a Microsoft Edge tab-reuse extension prototype and a WebSocket bridge so PR links can reuse existing browser tabs
-- Improved extension resilience with reconnect handling, heartbeats, wake-up alarms, and stale-client filtering on the backend
-- Updated the pull request and repository widgets so their data grids share the same surface styling as quick links
-- Restored dark theme provider icon contrast in the pull request widget
-- Packaged the Edge extension in CI and synchronized its manifest version with the application release version
-- Simplified VS Code workspace tasks and aligned `run all` with the desktop app-based development flow
+### 🔧 Changed
 
-## 0.5 - 2026-03-15
+- Dashboard frontend split into individual widget components (`PullRequestsWidget`, `RepositoriesWidget`, `QuickLinksWidget`, `TodosWidget`, `WorkflowsWidget`)
+- All widgets are now responsive via CSS container queries — columns collapse based on the panel width, not the viewport
+- Removed minimum size constraints from all dashboard panels so any size is allowed
+- Header is now fixed and stays visible while scrolling; only the content area below it scrolls
+- Settings button is now always visible in the header regardless of which page is open
+- Dashboard Edit Layout button only appears on the dashboard
+- Scrollbars are now themed to match the active color theme
+- GitHub and Azure DevOps provider logos inverted to white in the VS Code theme
+- Resize handles in edit mode replaced with visible accent-colored pills and corner square; default arrow icon suppressed
+- Focus ring removed from nav links and window control buttons
+- Minimize button SVG aligned to match the height of the maximize and close buttons
+- Patch version in CI now counted via `git tag -l` with full tag fetch (`fetch-depth: 0`) instead of the GitHub releases API, fixing always-zero patch numbers
 
-- Refactored pull request integrations to use adapter-based providers instead of Azure DevOps-only logic
-- Pull requests can now be loaded from Azure DevOps and GitHub at the same time and appear in one merged list
-- Added provider icons to the pull request list so GitHub and Azure DevOps entries are visually distinguishable
-- Reworked pull request settings to a provider-based configuration model and removed the old single-provider selection flow
-- Changed GitHub pull request loading from single-repository polling to user-based search with optional extra search qualifiers
-- Added a simple Microsoft Edge extension prototype that reuses existing tabs for matching URLs instead of always opening a new tab
-- Added a lightweight backend-to-extension bridge so DevelopmentHub can hand PR URLs to the Edge extension locally
-- Extended GitHub Actions build/release workflow to package the Edge extension as a versioned ZIP artifact and attach it to releases
+### 🐛 Fixed
 
-## 0.4 - 2026-03-12
+- PR widget branch/author/repository columns now truncate with ellipsis instead of overflowing
+- Repository widget branch column now truncates with ellipsis
+- Settings sidebar active item border no longer gets clipped
 
-- Refactored settings modal to sidebar-style navigation with per-panel config pages
-- Fixed repository scan not removing deleted repos from the list; background scan interval now re-read on each cycle
-- Fixed VS Code opening folder instead of .code-workspace; Visual Studio now uses shell association instead of devenv.exe
-- Frontend repository list now updates instantly via SignalR push when a background scan completes
-- Added configurable PR refresh interval (stored in LiteDB, replaces hardcoded 120 s)
+---
 
-## 0.3 - 2026-03-10
+## 0.8 – 2026-03-17
 
-- Fixed Repo refresh button
-- Changed from MongoDB to LiteDB, moved uiConfig to Browser cache
+### ✨ Added
+
+- Workflow `copy` step to copy files and folders as part of workflow execution
+- Workflow contracts wired on both backend and frontend (`CopyStep`, `CopyExecutor`, shared API step typing)
+- Per-repository fetch isolation with bounded timeout handling and safe git process cancellation
+- Repository validation before fetch (`path exists`, `.git` present)
+- Scan issue classification for ownership/safe-directory errors, invalid repositories, missing paths, fetch timeouts, and remote access failures (including Azure DevOps TF401019)
+- Scan issue fields in repository API responses with persisted state
+- Repository scan warnings surfaced in the dashboard with per-repository labels and detailed tooltips
+- Request cancellation through `POST /api/repositories/scan` so client cancellation is handled cleanly
+- File-based workflow engine that loads workflow definitions from a configured folder
+- Workflow input modal, live execution log modal, and real-time execution status updates
+- Workflow step support for direct downloads, ZIP extraction, installer execution, JSON patching, and Windows service restarts
+- Authenticated download steps for GitHub release assets and Azure DevOps pipeline artifacts
+- Optional per-step elevation for Windows service restarts (UAC prompt only for the specific action)
+- Structured documentation under `docs/workflow-engine/`
+
+### 🐛 Fixed
+
+- Duplicate `JsonDerivedType` registration in workflow step deserialization removed
+- One failing repository no longer aborts the full scan with HTTP 500
+- Workflow loading hardened with case-insensitive JSON parsing, stable fallback IDs, invalid-workflow filtering, and improved elevated-step error reporting
+
+---
+
+## 0.7 – 2026-03-16
+
+### ✨ Added
+
+- Todo widget with create, edit, complete, restore, delete, and clear-completed actions
+- Inline links in todos — write text and a URL in a single field, the widget extracts and opens the link directly
+
+### 🔧 Changed
+
+- Dashboard panel editing allows dragging from the full widget area; resize affordances simplified; minimum width of the quick links panel reduced
+- Focus and panel control styling updated to follow the active theme across grips, close buttons, quick links, and resize borders
+- Todo widget collapsed Done section and cleaner action layout with Font Awesome Free icons
+- Explorer launching reuses an already open Explorer window for the same folder when possible
+
+### 🐛 Fixed
+
+- Global hotkey toggle reliably brings the window to the foreground, hides when already focused, and restores maximized windows correctly
+
+---
+
+## 0.6 – 2026-03-16
+
+### ✨ Added
+
+- Microsoft Edge tab-reuse extension prototype and WebSocket bridge so PR links reuse existing browser tabs
+- Edge extension packaged in CI with manifest version synchronized to the application release version
+
+### 🔧 Changed
+
+- Extension resilience improved with reconnect handling, heartbeats, wake-up alarms, and stale-client filtering
+- Pull request and repository widgets share the same surface styling as quick links
+- VS Code workspace tasks simplified and aligned with the desktop app-based development flow
+
+### 🐛 Fixed
+
+- Dark theme provider icon contrast restored in the pull request widget
+
+---
+
+## 0.5 – 2026-03-15
+
+### ✨ Added
+
+- Pull requests can now be loaded from Azure DevOps and GitHub simultaneously in one merged list
+- Provider icons in the pull request list so GitHub and Azure DevOps entries are visually distinguishable
+- Microsoft Edge extension prototype that reuses existing tabs for matching URLs
+- Lightweight backend-to-extension bridge so DevelopmentHub can hand PR URLs to the Edge extension locally
+- GitHub Actions workflow packages the Edge extension as a versioned ZIP artifact attached to releases
+
+### 🔧 Changed
+
+- Pull request integrations refactored to adapter-based providers instead of Azure DevOps-only logic
+- Pull request settings reworked to a provider-based configuration model
+- GitHub pull request loading changed from single-repository polling to user-based search with optional extra qualifiers
+
+---
+
+## 0.4 – 2026-03-12
+
+### ✨ Added
+
+- Configurable PR refresh interval stored in LiteDB (replaces hardcoded 120 s)
+
+### 🔧 Changed
+
+- Settings modal refactored to sidebar-style navigation with per-panel config pages
+- Frontend repository list updates instantly via SignalR push when a background scan completes
+
+### 🐛 Fixed
+
+- Repository scan now removes deleted repos from the list; background scan interval re-read on each cycle
+- VS Code now opens `.code-workspace` instead of the folder; Visual Studio uses shell association instead of `devenv.exe`
+
+---
+
+## 0.3 – 2026-03-10
+
+### 🔧 Changed
+
+- Migrated from MongoDB to LiteDB; UI config moved to browser cache
+
+### 🐛 Fixed
+
+- Repository refresh button
+
+---
 
 ## 0.2 – 2026-03-09
 
-- Added theming support with five built-in themes (Violet, Dark, Ocean, Orange, Nature)
+### ✨ Added
+
+- Theming support with five built-in themes: Violet, Dark, Ocean, Orange, Nature
+
+---
 
 ## 0.1 – initial release
 
-- Repository list with VS Code, Visual Studio and Explorer buttons
-- Current branch, ahead/behind display, favorites, usage-based sorting
+### ✨ Added
+
+- Repository list with VS Code, Visual Studio, and Explorer buttons
+- Current branch, ahead/behind display, favorites, and usage-based sorting
 - Pull Requests widget (Azure DevOps)
 - Drag-and-drop resizable dashboard panels
 - Hide to tray, global hotkey, configurable keybinding
-- Inno Setup installer, GitHub Actions CI/CD
+- Inno Setup installer and GitHub Actions CI/CD

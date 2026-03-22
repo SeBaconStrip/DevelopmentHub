@@ -22,6 +22,15 @@ public partial class MainWindow : Window
     [DllImport("user32.dll")] static extern IntPtr GetForegroundWindow();
     [DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr hWnd);
     [DllImport("user32.dll")] static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+    [DllImport("user32.dll")] static extern bool ReleaseCapture();
+    [DllImport("user32.dll")] static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
+    [DllImport("user32.dll")] static extern bool GetCursorPos(out POINT pt);
+
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct POINT { public int X, Y; }
+
+    private const int WM_NCLBUTTONDOWN = 0xA1;
+    private const int HTCAPTION = 2;
 
     public Action? RequestExit { get; set; }
 
@@ -44,7 +53,49 @@ public partial class MainWindow : Window
         {
             if (WindowState != WindowState.Minimized)
                 _lastNonMinimizedWindowState = WindowState;
+            PushWindowState();
         };
+    }
+
+    private void OnWebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
+    {
+        var msg = e.TryGetWebMessageAsString();
+        Dispatcher.Invoke(() =>
+        {
+            switch (msg)
+            {
+                case "minimize": WindowState = WindowState.Minimized; break;
+                case "maximize": WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized; break;
+                case "close":
+                    Close(); // Closing event in App.xaml.cs handles hide + balloon tip
+                    break;
+                case "drag":
+                    var hwnd = new WindowInteropHelper(this).Handle;
+                    if (WindowState == WindowState.Maximized)
+                    {
+                        // Restore and position so cursor stays at proportional X offset
+                        GetCursorPos(out var pt);
+                        var restored = RestoreBounds;
+                        double ratio = SystemParameters.PrimaryScreenWidth > 0
+                            ? (double)pt.X / SystemParameters.PrimaryScreenWidth
+                            : 0.5;
+                        WindowState = WindowState.Normal;
+                        Left = Math.Max(0, pt.X - restored.Width * ratio);
+                        Top = Math.Max(0, pt.Y - 20);
+                    }
+                    ReleaseCapture();
+                    SendMessage(hwnd, WM_NCLBUTTONDOWN, (IntPtr)HTCAPTION, IntPtr.Zero);
+                    break;
+            }
+        });
+    }
+
+    private void PushWindowState()
+    {
+        if (WebView.CoreWebView2 is null) return;
+        var maximized = WindowState == WindowState.Maximized;
+        var js = $"window.__windowState={{maximized:{(maximized ? "true" : "false")}}};window.dispatchEvent(new CustomEvent('windowstate',{{detail:{{maximized:{(maximized ? "true" : "false")}}}}}));";
+        WebView.CoreWebView2.ExecuteScriptAsync(js);
     }
 
     public void UpdateHotkey(string binding)
@@ -172,6 +223,8 @@ public partial class MainWindow : Window
 
         WebView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = _isDev;
         WebView.CoreWebView2.Settings.AreDevToolsEnabled = _isDev;
+
+        WebView.CoreWebView2.WebMessageReceived += OnWebMessageReceived;
 
         // Open all external links (e.g. PR URLs) in the default system browser
         WebView.CoreWebView2.NewWindowRequested += (_, e) =>
