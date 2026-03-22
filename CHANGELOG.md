@@ -5,6 +5,23 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## 0.10 – 2026-03-22
+
+### ✨ Added
+
+- Repository tags — custom labels can be added and removed per repository; stored in LiteDB via `PATCH /api/repositories/{id}/tags`
+- Tag column in the Repositories page with an inline editor: click `+` to type a tag, Enter/Blur to save, `×` to remove
+- Tag filter chips in the Repositories page toolbar — click one or more tags to filter the list (AND logic); a Clear button appears when any tag filter is active
+- Tag column in the Repositories dashboard widget — read-only chips; column disappears before the Branch column on narrow panel widths via container queries
+- Multi-repository workspace — checkbox column in the Repositories page lets you select two or more repositories; an `⧉ Workspace (N)` button appears in the toolbar and opens all selected repositories together in a single temporary VS Code `.code-workspace` file generated in `%TEMP%\DevelopmentHub\`
+
+### 🔧 Changed
+
+- Open With icons in the Repositories page are now always rendered in fixed positions (hidden via `visibility: hidden` when not applicable) so all three icons stay vertically aligned across every row
+- Text selection disabled globally via `user-select: none` on `body`; re-enabled for `input`, `textarea`, and `contenteditable` elements
+
+---
+
 ## 0.9 – 2026-03-21
 
 ### ✨ Added
