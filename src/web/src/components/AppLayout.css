@@ -1,0 +1,128 @@
+/* ── root shell ── */
+.app-root {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ── scroll area (below header) ── */
+.app-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* ── header ── */
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 0 0 0 48px;
+  height: 62px;
+  background-color: var(--surface-alpha);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+  flex-shrink: 0;
+  z-index: 100;
+  user-select: none;
+  cursor: default;
+}
+
+.app-brand {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── nav ── */
+.app-nav {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  height: 100%;
+}
+
+.app-nav-link {
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  transition: color 0.12s, border-color 0.12s;
+  cursor: pointer;
+}
+
+.app-nav-link:hover {
+  color: var(--text-primary);
+}
+
+.app-nav-link:focus,
+.app-nav-link:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.app-nav-link--active {
+  color: var(--color-accent);
+  border-bottom-color: var(--color-accent);
+  font-weight: 600;
+}
+
+/* ── right side ── */
+.app-header-end {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+}
+
+.app-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+}
+
+/* ── window control buttons ── */
+.wc-buttons {
+  display: flex;
+  align-items: stretch;
+}
+
+.wc-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 100%;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  border-radius: 0;
+}
+
+.wc-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+}
+
+.wc-btn:focus,
+.wc-btn:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.wc-close:hover {
+  background: #c42b1c;
+  color: #fff;
+}

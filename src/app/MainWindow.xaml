@@ -6,7 +6,8 @@
         mc:Ignorable=""
         Title="DevelopmentHub"
         WindowState="Maximized"
-        WindowStyle="SingleBorderWindow"
+        WindowStyle="None"
+        ResizeMode="CanResize"
         UseLayoutRounding="True"
         SnapsToDevicePixels="True"
         Loaded="Window_Loaded">
