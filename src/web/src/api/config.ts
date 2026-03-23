@@ -23,4 +23,11 @@ export const configApi = {
     fetch('/api/folder-picker')
       .then(r => handleResponse<{ cancelled: boolean; path: string | null }>(r))
       .then(res => res.cancelled ? null : res.path),
+
+  pickFile: (filter?: string): Promise<string | null> => {
+    const params = filter ? `?filter=${encodeURIComponent(filter)}` : '';
+    return fetch(`/api/file-picker${params}`)
+      .then(r => handleResponse<{ cancelled: boolean; path: string | null }>(r))
+      .then(res => res.cancelled ? null : res.path);
+  },
 };

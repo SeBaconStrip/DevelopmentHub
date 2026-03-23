@@ -53,6 +53,12 @@ public class UserConfigService(DashboardDatabase db) : IUserConfigService
             .ToList();
         EnsureProvider(config, "azureDevOps");
         EnsureProvider(config, "github");
+
+        config.RepositoryOpeners ??=
+        [
+            new RepositoryOpenerDao { Id = "default-vscode", Label = "VS Code",       FileExtension = ".code-workspace", ProgramPath = "code", IconType = "vscode",       SortOrder = 0 },
+            new RepositoryOpenerDao { Id = "default-vs",     Label = "Visual Studio", FileExtension = ".sln",            ProgramPath = "",     IconType = "visualstudio", SortOrder = 1 },
+        ];
     }
 
     private static Dictionary<string, string> EnsureProvider(UserConfigDao config, string providerId)

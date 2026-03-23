@@ -16,31 +16,41 @@ public class RepositoryDto
     public double UsageScore { get; set; }
     public string? ScanIssueCode { get; set; }
     public string? ScanIssueMessage { get; set; }
+    public List<string> Tags { get; set; } = [];
 }
 
 public class EntryPointDto
 {
     public string FilePath { get; set; } = string.Empty;
     public string FileName { get; set; } = string.Empty;
-    public EntryPointType Type { get; set; }
+    public string Extension { get; set; } = string.Empty;
 }
 
-public enum EntryPointType
+public class RepositoryOpenerDto
 {
-    Solution,
-    CodeWorkspace,
-    Folder
+    public string Id { get; set; } = string.Empty;
+    public string Label { get; set; } = string.Empty;
+    public string FileExtension { get; set; } = string.Empty;
+    public string ProgramPath { get; set; } = string.Empty;
+    public string IconType { get; set; } = "custom";
+    public string IconPath { get; set; } = string.Empty;
+    public int SortOrder { get; set; }
 }
 
 public class OpenRepositoryRequest
 {
+    /// <summary>ID of the configured opener. Null or empty = open with Explorer.</summary>
+    public string? OpenerId { get; set; }
+    /// <summary>Optional specific entry-point file override.</summary>
     public string? EntryPointPath { get; set; }
-    public OpenWith OpenWith { get; set; } = OpenWith.VsCode;
 }
 
-public enum OpenWith
+public class UpdateTagsRequest
 {
-    VisualStudio,
-    VsCode,
-    Explorer
+    public List<string> Tags { get; set; } = [];
+}
+
+public class OpenMultiWorkspaceRequest
+{
+    public List<string> RepositoryIds { get; set; } = [];
 }

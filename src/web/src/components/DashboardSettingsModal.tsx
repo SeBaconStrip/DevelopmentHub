@@ -7,7 +7,7 @@ import {
 } from "../store/uiStore";
 import { configApi } from "../api/config";
 import { repositoriesApi } from "../api/repositories";
-import type { AppConfig, CustomLink, PullRequestProvider } from "../types";
+import type { AppConfig, CustomLink, PullRequestProvider, RepositoryOpener } from "../types";
 import githubIcon from "../assets/icons/github.svg";
 import azureDevOpsIcon from "../assets/icons/azure-devops.svg";
 import "./DashboardSettingsModal.css";
@@ -87,6 +87,15 @@ function normalizeConfig(config: AppConfig): AppConfig {
       },
     },
     hotkeyBinding: config.hotkeyBinding ?? "Ctrl+Shift+D",
+    repositoryOpeners: (config.repositoryOpeners ?? []).map((o) => ({
+      id: o.id ?? crypto.randomUUID(),
+      label: o.label ?? "",
+      fileExtension: o.fileExtension ?? "",
+      programPath: o.programPath ?? "",
+      iconType: o.iconType ?? "custom",
+      iconPath: o.iconPath ?? "",
+      sortOrder: o.sortOrder ?? 0,
+    })),
   };
 }
 
@@ -168,6 +177,28 @@ export function DashboardSettingsModal({ onClose }: Props) {
     if (path) updateRoot(i, path);
   };
 
+  const addOpener = () =>
+    form && setField("repositoryOpeners", [
+      ...form.repositoryOpeners,
+      { id: crypto.randomUUID(), label: "", fileExtension: "", programPath: "", iconType: "custom", iconPath: "", sortOrder: form.repositoryOpeners.length },
+    ]);
+
+  const removeOpener = (id: string) =>
+    form && setField("repositoryOpeners", form.repositoryOpeners.filter((o) => o.id !== id));
+
+  const updateOpener = (id: string, patch: Partial<RepositoryOpener>) =>
+    form && setField("repositoryOpeners", form.repositoryOpeners.map((o) => o.id === id ? { ...o, ...patch } : o));
+
+  const browseOpenerProgram = async (id: string) => {
+    const path = await configApi.pickFile("Executable files (*.exe)|*.exe|All files (*.*)|*.*");
+    if (path) updateOpener(id, { programPath: path });
+  };
+
+  const browseOpenerIconPath = async (id: string) => {
+    const path = await configApi.pickFile("Icon sources (*.exe;*.ico;*.dll)|*.exe;*.ico;*.dll|All files (*.*)|*.*");
+    if (path) updateOpener(id, { iconPath: path });
+  };
+
   const handleHotkeyCapture = (e: React.KeyboardEvent<HTMLInputElement>) => {
     e.preventDefault();
     const ignored = [
@@ -213,6 +244,11 @@ export function DashboardSettingsModal({ onClose }: Props) {
             removeRoot={removeRoot}
             updateRoot={updateRoot}
             browseRoot={browseRoot}
+            addOpener={addOpener}
+            removeOpener={removeOpener}
+            updateOpener={updateOpener}
+            browseOpenerProgram={browseOpenerProgram}
+            browseOpenerIconPath={browseOpenerIconPath}
           />
         );
       case "pullRequests":
@@ -358,6 +394,11 @@ interface RepositoriesPageProps {
   removeRoot: (i: number) => void;
   updateRoot: (i: number, val: string) => void;
   browseRoot: (i: number) => void;
+  addOpener: () => void;
+  removeOpener: (id: string) => void;
+  updateOpener: (id: string, patch: Partial<RepositoryOpener>) => void;
+  browseOpenerProgram: (id: string) => void;
+  browseOpenerIconPath: (id: string) => void;
 }
 
 function RepositoriesPage({
@@ -367,6 +408,11 @@ function RepositoriesPage({
   removeRoot,
   updateRoot,
   browseRoot,
+  addOpener,
+  removeOpener,
+  updateOpener,
+  browseOpenerProgram,
+  browseOpenerIconPath,
 }: RepositoriesPageProps) {
   const { dashboardWidgets, toggleWidget } = useUiStore();
   const widget = dashboardWidgets.find((w) => w.id === "repositories");
@@ -439,6 +485,77 @@ function RepositoriesPage({
             />
           </Field>
         </div>
+      </Section>
+
+      <Section title="Openers">
+        <p className="settings-field-hint" style={{ marginBottom: 10 }}>
+          Configure which file extensions to search for and how to open them.
+          Leave the program path empty to open via Windows shell association.
+        </p>
+        {form.repositoryOpeners.map((opener) => (
+          <div key={opener.id} className="opener-row">
+            {/* Icon type dropdown */}
+            <select
+              className="settings-input opener-input-icontype"
+              value={opener.iconType}
+              onChange={(e) => updateOpener(opener.id, { iconType: e.target.value })}
+            >
+              <option value="vscode">VS Code</option>
+              <option value="visualstudio">Visual Studio</option>
+              <option value="custom">Custom</option>
+            </select>
+            {/* Label */}
+            <input
+              className="settings-input opener-input-label"
+              placeholder="Label"
+              value={opener.label}
+              onChange={(e) => updateOpener(opener.id, { label: e.target.value })}
+            />
+            {/* Extension */}
+            <input
+              className="settings-input opener-input-ext"
+              placeholder=".ext"
+              value={opener.fileExtension}
+              onChange={(e) => updateOpener(opener.id, { fileExtension: e.target.value })}
+            />
+            {/* Program path */}
+            <input
+              className="settings-input opener-input-program"
+              placeholder="Program or command (empty = shell)"
+              value={opener.programPath}
+              onChange={(e) => updateOpener(opener.id, { programPath: e.target.value })}
+            />
+            <button
+              type="button"
+              className="btn-ghost"
+              title="Browse executable…"
+              onClick={() => browseOpenerProgram(opener.id)}
+            >
+              📁
+            </button>
+            {/* Icon path (only for custom) */}
+            {opener.iconType === "custom" && (
+              <>
+                <input
+                  className="settings-input opener-input-iconpath"
+                  placeholder="Icon (.exe/.ico, optional)"
+                  value={opener.iconPath}
+                  onChange={(e) => updateOpener(opener.id, { iconPath: e.target.value })}
+                />
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  title="Browse icon file…"
+                  onClick={() => browseOpenerIconPath(opener.id)}
+                >
+                  🖼
+                </button>
+              </>
+            )}
+            <button className="btn-remove" onClick={() => removeOpener(opener.id)}>✕</button>
+          </div>
+        ))}
+        <AddLink onClick={addOpener}>+ Add opener</AddLink>
       </Section>
     </>
   );

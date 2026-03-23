@@ -2,21 +2,37 @@ import { Fragment } from "react";
 import vscodeIconUrl from "../../../assets/icons/vscode.svg";
 import visualStudioIconUrl from "../../../assets/icons/visualstudio.svg";
 import explorerIconUrl from "../../../assets/icons/windows-explorer.svg";
-import type { Repository } from "../../../types";
+import type { Repository, RepositoryOpener } from "../../../types";
 import { Empty } from "./shared";
 import "./RepositoriesWidget.css";
 
+function OpenerIcon({ opener, size }: { opener: RepositoryOpener; size: number }) {
+  if (opener.iconType === "vscode")
+    return <img src={vscodeIconUrl} width={size} height={size} alt={opener.label} draggable={false} />;
+  if (opener.iconType === "visualstudio")
+    return <img src={visualStudioIconUrl} width={size} height={size} alt={opener.label} draggable={false} />;
+  if (opener.iconPath)
+    return <img src={`/api/icon-extractor?path=${encodeURIComponent(opener.iconPath)}`} width={size} height={size} alt={opener.label} draggable={false} />;
+  return (
+    <span className="opener-icon-initial" style={{ width: size, height: size, fontSize: size * 0.6 }}>
+      {opener.label ? opener.label[0].toUpperCase() : "?"}
+    </span>
+  );
+}
+
 export function RepositoriesWidget({
   repos,
+  openers,
   openError,
   onClearOpenError,
   onOpen,
   onToggleFav,
 }: {
   repos: Repository[];
+  openers: RepositoryOpener[];
   openError: string | null;
   onClearOpenError: () => void;
-  onOpen: (id: string, openWith: "VsCode" | "VisualStudio" | "Explorer") => void;
+  onOpen: (id: string, openerId?: string) => void;
   onToggleFav: (id: string) => void;
 }) {
   if (repos.length === 0) return <Empty text="No repositories found" />;
@@ -31,10 +47,9 @@ export function RepositoriesWidget({
     <div className="repo-grid">
       {/* header */}
       <div className="repo-grid-header repo-col-name">Repository</div>
+      <div className="repo-grid-header repo-col-tags">Tags</div>
       <div className="repo-grid-header repo-col-branch">Branch</div>
-      <div className="repo-grid-header repo-col-icon" />
-      <div className="repo-grid-header repo-col-icon" />
-      <div className="repo-grid-header repo-col-icon" />
+      <div className="repo-grid-header repo-col-openers" />
       <div className="repo-grid-header repo-col-fav" />
 
       {/* rows */}
@@ -43,6 +58,15 @@ export function RepositoriesWidget({
           {/* name */}
           <div className="repo-cell repo-col-name">
             <span className="item-name">{r.name}</span>
+          </div>
+
+          {/* tags */}
+          <div className="repo-cell repo-col-tags">
+            <div className="repo-tag-list">
+              {r.tags.map((tag) => (
+                <span key={tag} className="repo-tag-chip">{tag}</span>
+              ))}
+            </div>
           </div>
 
           {/* branch + ahead/behind */}
@@ -65,60 +89,25 @@ export function RepositoriesWidget({
             )}
           </div>
 
-          {/* VS Code */}
-          <div className="repo-cell repo-col-icon">
-            {r.entryPoints.some(
-              (ep) => ep.type === "CodeWorkspace" || ep.type === "Folder",
-            ) && (
+          {/* Configured openers + Explorer in one cell for even spacing */}
+          <div className="repo-cell repo-col-openers">
+            {openers.map((opener) => (
               <button
+                key={opener.id}
                 className="item-open-icon"
-                onClick={() => onOpen(r.id, "VsCode")}
-                title="In VS Code öffnen"
+                style={{ visibility: r.entryPoints.some((ep) => ep.extension === opener.fileExtension) ? "visible" : "hidden" }}
+                onClick={() => onOpen(r.id, opener.id)}
+                title={`In ${opener.label} öffnen`}
               >
-                <img
-                  src={vscodeIconUrl}
-                  width="24"
-                  height="24"
-                  alt="VS Code"
-                  draggable={false}
-                />
+                <OpenerIcon opener={opener} size={20} />
               </button>
-            )}
-          </div>
-
-          {/* Visual Studio */}
-          <div className="repo-cell repo-col-icon">
-            {r.entryPoints.some((ep) => ep.type === "Solution") && (
-              <button
-                className="item-open-icon"
-                onClick={() => onOpen(r.id, "VisualStudio")}
-                title="In Visual Studio öffnen"
-              >
-                <img
-                  src={visualStudioIconUrl}
-                  width="24"
-                  height="24"
-                  alt="Visual Studio"
-                  draggable={false}
-                />
-              </button>
-            )}
-          </div>
-
-          {/* Explorer */}
-          <div className="repo-cell repo-col-icon">
+            ))}
             <button
               className="item-open-icon"
-              onClick={() => onOpen(r.id, "Explorer")}
+              onClick={() => onOpen(r.id)}
               title="In Explorer öffnen"
             >
-              <img
-                src={explorerIconUrl}
-                width="24"
-                height="24"
-                alt="Explorer"
-                draggable={false}
-              />
+              <img src={explorerIconUrl} width="20" height="20" alt="Explorer" draggable={false} />
             </button>
           </div>
 

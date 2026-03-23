@@ -12,6 +12,8 @@ public interface IRepositoryService
     Task<RepositoryDto?> OpenAsync(string id, OpenRepositoryRequest request);
     Task<(bool Success, string Output)> SyncAsync(string id, CancellationToken cancellationToken);
     Task<int> RemoveOrphanedAsync(string[] activeRoots);
+    Task<bool> OpenWorkspaceAsync(OpenMultiWorkspaceRequest request);
+    Task<RepositoryDto?> UpdateTagsAsync(string id, UpdateTagsRequest request);
 }
 
 public class RepositoryService(
@@ -41,10 +43,17 @@ public class RepositoryService(
         var cfg = await userConfigService.GetAsync();
         logger.LogInformation("Starting repository scan across {Count} root(s)", cfg.RepositoryRoots.Length);
 
+        var entryPointExtensions = (cfg.RepositoryOpeners ?? [])
+            .Select(o => o.FileExtension.Trim().ToLowerInvariant())
+            .Where(e => !string.IsNullOrEmpty(e))
+            .Distinct()
+            .ToArray();
+
         var discovered = await gitService.ScanDirectoriesAsync(
             cfg.RepositoryRoots,
             cfg.RepoScanDepth,
-            cfg.EntryPointScanDepth);
+            cfg.EntryPointScanDepth,
+            entryPointExtensions);
 
         // Fetch repositories independently so one failure cannot abort the whole scan.
         var fetchTasks = discovered.Select(async repo =>
@@ -154,10 +163,10 @@ public class RepositoryService(
         var entity = db.Repositories.FindOne(r => r.Id == id);
         if (entity is null) return null;
         logger.LogInformation(
-            "Opening repository. RepositoryId={RepositoryId} RepositoryName={RepositoryName} OpenWith={OpenWith} EntryPointPath={EntryPointPath}",
+            "Opening repository. RepositoryId={RepositoryId} RepositoryName={RepositoryName} OpenerId={OpenerId} EntryPointPath={EntryPointPath}",
             entity.Id,
             entity.Name,
-            request.OpenWith,
+            request.OpenerId ?? "(explorer)",
             request.EntryPointPath ?? "(auto)");
 
         var cfg = await userConfigService.GetAsync();
@@ -169,25 +178,25 @@ public class RepositoryService(
 
         bool launched;
 
-        if (request.OpenWith == OpenWith.Explorer)
+        if (string.IsNullOrEmpty(request.OpenerId))
         {
             launched = await launcher.OpenWithExplorerAsync(entity.Path);
         }
-        else if (request.OpenWith == OpenWith.VisualStudio)
+        else
         {
+            var opener = cfg.RepositoryOpeners?.FirstOrDefault(o => o.Id == request.OpenerId);
+            if (opener is null)
+                throw new InvalidOperationException($"Opener '{request.OpenerId}' is not configured.");
+
+            var ext = opener.FileExtension.Trim().ToLowerInvariant();
             var target = request.EntryPointPath
-                ?? entity.EntryPoints.FirstOrDefault(p => p.EndsWith(".sln", StringComparison.OrdinalIgnoreCase));
+                ?? entity.EntryPoints.FirstOrDefault(p =>
+                    System.IO.Path.GetExtension(p).Equals(ext, StringComparison.OrdinalIgnoreCase));
+
             if (target is null)
-                throw new InvalidOperationException($"No .sln file found for repository '{entity.Name}'.");
-            launched = await launcher.OpenWithVisualStudioAsync(target);
-        }
-        else // VsCode
-        {
-            var target = request.EntryPointPath
-                ?? entity.EntryPoints.FirstOrDefault(p => p.EndsWith(".code-workspace", StringComparison.OrdinalIgnoreCase));
-            if (target is null)
-                throw new InvalidOperationException($"No .code-workspace file found for repository '{entity.Name}'.");
-            launched = await launcher.OpenWithVsCodeAsync(target);
+                throw new InvalidOperationException($"No '{ext}' file found for repository '{entity.Name}'.");
+
+            launched = await launcher.OpenWithConfiguredProgramAsync(opener.ProgramPath, target);
         }
 
         if (launched)
@@ -205,10 +214,10 @@ public class RepositoryService(
         else
         {
             logger.LogWarning(
-                "Repository open failed. RepositoryId={RepositoryId} RepositoryName={RepositoryName} OpenWith={OpenWith}",
+                "Repository open failed. RepositoryId={RepositoryId} RepositoryName={RepositoryName} OpenerId={OpenerId}",
                 entity.Id,
                 entity.Name,
-                request.OpenWith);
+                request.OpenerId ?? "(explorer)");
         }
 
         return MapToDto(entity);
@@ -243,6 +252,46 @@ public class RepositoryService(
         return (success, output);
     }
 
+    public Task<RepositoryDto?> UpdateTagsAsync(string id, UpdateTagsRequest request)
+    {
+        var entity = db.Repositories.FindOne(r => r.Id == id);
+        if (entity is null) return Task.FromResult<RepositoryDto?>(null);
+
+        entity.Tags = request.Tags
+            .Select(t => t.Trim())
+            .Where(t => t.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        db.Repositories.Update(entity);
+        return Task.FromResult<RepositoryDto?>(MapToDto(entity));
+    }
+
+    public async Task<bool> OpenWorkspaceAsync(OpenMultiWorkspaceRequest request)
+    {
+        var repos = request.RepositoryIds
+            .Select(id => db.Repositories.FindOne(r => r.Id == id))
+            .Where(r => r is not null)
+            .ToList();
+
+        if (repos.Count == 0) return false;
+
+        var cfg = await userConfigService.GetAsync();
+        var folders = repos
+            .Where(r => IsUnderKnownRoot(r!.Path, cfg.RepositoryRoots))
+            .Select(r => $"{{\"path\":\"{r!.Path.Replace("\\", "/")}\"}}");
+
+        var workspaceJson = $"{{\"folders\":[{string.Join(",", folders)}]}}";
+
+        var tempDir = Path.Combine(Path.GetTempPath(), "DevelopmentHub");
+        Directory.CreateDirectory(tempDir);
+        var workspacePath = Path.Combine(tempDir, $"workspace-{Guid.NewGuid():N}.code-workspace");
+        await File.WriteAllTextAsync(workspacePath, workspaceJson);
+
+        logger.LogInformation("Opening multi-repo workspace. Repos={Count} File={Path}", repos.Count, workspacePath);
+        return await launcher.OpenWithVsCodeAsync(workspacePath);
+    }
+
     public Task<int> RemoveOrphanedAsync(string[] activeRoots)
     {
         logger.LogDebug("Removing orphaned repositories. ActiveRootCount={ActiveRootCount}", activeRoots.Length);
@@ -271,12 +320,7 @@ public class RepositoryService(
         {
             FilePath = p,
             FileName = Path.GetFileName(p),
-            Type = Path.GetExtension(p).ToLowerInvariant() switch
-            {
-                ".sln" => EntryPointType.Solution,
-                ".code-workspace" => EntryPointType.CodeWorkspace,
-                _ => EntryPointType.Folder
-            }
+            Extension = Path.GetExtension(p).ToLowerInvariant()
         }).ToList();
 
         var daysSinceOpen = entity.LastOpenedAt.HasValue
@@ -300,7 +344,8 @@ public class RepositoryService(
             LastSyncedAt = entity.LastSyncedAt,
             UsageScore = usageScore,
             ScanIssueCode = entity.ScanIssueCode,
-            ScanIssueMessage = entity.ScanIssueMessage
+            ScanIssueMessage = entity.ScanIssueMessage,
+            Tags = entity.Tags
         };
     }
 }
