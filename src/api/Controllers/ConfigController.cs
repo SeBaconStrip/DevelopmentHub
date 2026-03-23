@@ -37,7 +37,17 @@ public class ConfigController(
             RepoScanDepth = cfg.RepoScanDepth,
             EntryPointScanDepth = cfg.EntryPointScanDepth,
             HotkeyBinding = cfg.HotkeyBinding,
-            PrRefreshIntervalSeconds = cfg.PrRefreshIntervalSeconds
+            PrRefreshIntervalSeconds = cfg.PrRefreshIntervalSeconds,
+            RepositoryOpeners = (cfg.RepositoryOpeners ?? []).Select(o => new RepositoryOpenerDto
+            {
+                Id = o.Id,
+                Label = o.Label,
+                FileExtension = o.FileExtension,
+                ProgramPath = o.ProgramPath,
+                IconType = o.IconType,
+                IconPath = o.IconPath,
+                SortOrder = o.SortOrder
+            }).ToList()
         });
     }
 
@@ -72,6 +82,16 @@ public class ConfigController(
             current.EntryPointScanDepth = dto.EntryPointScanDepth;
             current.PrRefreshIntervalSeconds = dto.PrRefreshIntervalSeconds;
             current.HotkeyBinding = dto.HotkeyBinding;
+            current.RepositoryOpeners = (dto.RepositoryOpeners ?? []).Select(o => new RepositoryOpenerDao
+            {
+                Id = string.IsNullOrWhiteSpace(o.Id) ? Guid.NewGuid().ToString() : o.Id,
+                Label = o.Label?.Trim() ?? string.Empty,
+                FileExtension = o.FileExtension?.Trim() ?? string.Empty,
+                ProgramPath = o.ProgramPath?.Trim() ?? string.Empty,
+                IconType = o.IconType ?? "custom",
+                IconPath = o.IconPath?.Trim() ?? string.Empty,
+                SortOrder = o.SortOrder
+            }).ToList();
 
             await userConfigService.SaveAsync(current);
             await repositoryService.RemoveOrphanedAsync(current.RepositoryRoots);

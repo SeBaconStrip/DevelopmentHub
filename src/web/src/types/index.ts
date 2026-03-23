@@ -1,7 +1,19 @@
 export interface EntryPoint {
   filePath: string;
   fileName: string;
-  type: 'Solution' | 'CodeWorkspace' | 'Folder';
+  extension: string;
+}
+
+export interface RepositoryOpener {
+  id: string;
+  label: string;
+  fileExtension: string;
+  programPath: string;
+  /** 'vscode' | 'visualstudio' | 'custom' */
+  iconType: string;
+  /** Path to an .exe/.ico file to extract the icon from (used when iconType is 'custom') */
+  iconPath: string;
+  sortOrder: number;
 }
 
 export interface Repository {
@@ -19,11 +31,12 @@ export interface Repository {
   usageScore: number;
   scanIssueCode?: string | null;
   scanIssueMessage?: string | null;
+  tags: string[];
 }
 
 export interface OpenRepositoryRequest {
+  openerId?: string;
   entryPointPath?: string;
-  openWith: 'VisualStudio' | 'VsCode' | 'Explorer';
 }
 
 
@@ -69,6 +82,7 @@ export interface LayoutItem {
 
 export interface AppConfig {
   repositoryRoots: string[];
+  repositoryOpeners: RepositoryOpener[];
   customLinks: CustomLink[];
   workflows: WorkflowDefinition[];
   workflowDefinitionsPath: string;

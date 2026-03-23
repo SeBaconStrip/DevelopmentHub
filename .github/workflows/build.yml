@@ -135,14 +135,14 @@ jobs:
         with:
           name: DevelopmentHub-Setup-${{ steps.calc.outputs.version }}
           path: installer/output/DevelopmentHub-Setup-*.exe
-          retention-days: 7
+          retention-days: 1
 
       - name: Upload Edge extension artifact
         uses: actions/upload-artifact@v4
         with:
           name: DevelopmentHub-Edge-Extension-${{ steps.calc.outputs.version }}
           path: artifacts/DevelopmentHub-Edge-Extension-*.zip
-          retention-days: 7
+          retention-days: 1
 
       - name: Create GitHub Release
         if: github.event_name == 'push'

@@ -9,6 +9,11 @@ public interface ILauncherService
     Task<bool> OpenWithVsCodeAsync(string pathOrWorkspace);
     Task<bool> OpenWithExplorerAsync(string targetPath);
     Task<bool> OpenUrlAsync(string url);
+    /// <summary>
+    /// Opens <paramref name="filePath"/> with the given program.
+    /// When <paramref name="programPath"/> is empty the file is opened via shell association.
+    /// </summary>
+    Task<bool> OpenWithConfiguredProgramAsync(string programPath, string filePath);
 }
 
 public class LauncherService(
@@ -25,6 +30,21 @@ public class LauncherService(
     {
         logger.LogInformation("Opening {Path} in VS Code", pathOrWorkspace);
         return LaunchAsync("code", [pathOrWorkspace]);
+    }
+
+    public Task<bool> OpenWithConfiguredProgramAsync(string programPath, string filePath)
+    {
+        logger.LogInformation("Opening {FilePath} with configured program '{Program}'", filePath,
+            string.IsNullOrWhiteSpace(programPath) ? "(shell association)" : programPath);
+
+        // For .sln files try to reuse a running Visual Studio instance first
+        if (string.Equals(Path.GetExtension(filePath), ".sln", StringComparison.OrdinalIgnoreCase)
+            && TryActivateVisualStudioWithSolution(filePath))
+            return Task.FromResult(true);
+
+        return string.IsNullOrWhiteSpace(programPath)
+            ? LaunchAsync(filePath, [])           // shell association — e.g. Visual Studio via .sln
+            : LaunchAsync(programPath, [filePath]); // explicit program — e.g. "code <path>"
     }
 
     public Task<bool> OpenWithExplorerAsync(string targetPath)
@@ -186,11 +206,106 @@ public class LauncherService(
         }
     }
 
+    private bool TryActivateVisualStudioWithSolution(string solutionPath)
+    {
+        System.Runtime.InteropServices.ComTypes.IRunningObjectTable? rot = null;
+        System.Runtime.InteropServices.ComTypes.IEnumMoniker? enumMoniker = null;
+        System.Runtime.InteropServices.ComTypes.IBindCtx? bindCtx = null;
+
+        try
+        {
+            GetRunningObjectTable(0, out rot);
+            if (rot is null) return false;
+
+            rot.EnumRunning(out enumMoniker);
+            if (enumMoniker is null) return false;
+
+            CreateBindCtx(0, out bindCtx);
+            if (bindCtx is null) return false;
+
+            var monikers = new System.Runtime.InteropServices.ComTypes.IMoniker[1];
+            var targetFull = Path.GetFullPath(solutionPath);
+
+            while (enumMoniker.Next(1, monikers, IntPtr.Zero) == 0)
+            {
+                monikers[0].GetDisplayName(bindCtx, null, out var name);
+                if (string.IsNullOrEmpty(name) ||
+                    !name.StartsWith("!VisualStudio.DTE", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                rot.GetObject(monikers[0], out var obj);
+                if (obj is null) continue;
+
+                try
+                {
+                    dynamic dte = obj;
+
+                    string? openSln;
+                    try { openSln = dte.Solution?.FullName as string; }
+                    catch { continue; }
+
+                    if (string.IsNullOrEmpty(openSln)) continue;
+
+                    if (!string.Equals(Path.GetFullPath(openSln), targetFull,
+                            StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    // Found a running VS with this solution — activate it
+                    try
+                    {
+                        dte.MainWindow.Activate();
+                        var hwnd = new IntPtr((int)dte.MainWindow.HWnd);
+                        if (hwnd != IntPtr.Zero)
+                        {
+                            // Only restore if minimised; leave maximised windows as-is
+                            if (IsIconic(hwnd))
+                                ShowWindowAsync(hwnd, SwRestore);
+                            SetForegroundWindow(hwnd);
+                        }
+                    }
+                    catch { /* activation is best-effort */ }
+
+                    logger.LogInformation("Reused running Visual Studio instance for {Path}", solutionPath);
+                    return true;
+                }
+                catch { /* skip this DTE entry */ }
+                finally
+                {
+                    if (obj is not null && Marshal.IsComObject(obj))
+                        Marshal.ReleaseComObject(obj);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "TryActivateVisualStudioWithSolution failed for {Path}", solutionPath);
+        }
+        finally
+        {
+            if (enumMoniker is not null && Marshal.IsComObject(enumMoniker)) Marshal.ReleaseComObject(enumMoniker);
+            if (bindCtx is not null && Marshal.IsComObject(bindCtx)) Marshal.ReleaseComObject(bindCtx);
+            if (rot is not null && Marshal.IsComObject(rot)) Marshal.ReleaseComObject(rot);
+        }
+
+        return false;
+    }
+
     [DllImport("user32.dll")]
     private static extern bool SetForegroundWindow(IntPtr hWnd);
 
     [DllImport("user32.dll")]
     private static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
+
+    [DllImport("user32.dll")]
+    private static extern bool IsIconic(IntPtr hWnd);
+
+    [DllImport("ole32.dll")]
+    private static extern int GetRunningObjectTable(uint reserved,
+        out System.Runtime.InteropServices.ComTypes.IRunningObjectTable pprot);
+
+    [DllImport("ole32.dll")]
+    private static extern int CreateBindCtx(uint reserved,
+        out System.Runtime.InteropServices.ComTypes.IBindCtx ppbc);
 
     private const int SwRestore = 9;
 }
