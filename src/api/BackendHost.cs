@@ -175,7 +175,14 @@ public static class BackendHost
         else if (Directory.Exists(wwwroot))
         {
             app.UseDefaultFiles();
-            app.UseStaticFiles();
+            app.UseStaticFiles(new StaticFileOptions
+            {
+                OnPrepareResponse = ctx =>
+                {
+                    if (ctx.File.Name.EndsWith(".html", StringComparison.OrdinalIgnoreCase))
+                        ctx.Context.Response.Headers["Cache-Control"] = "no-cache";
+                }
+            });
         }
 
         app.MapControllers();
