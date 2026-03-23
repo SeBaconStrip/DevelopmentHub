@@ -26,7 +26,7 @@ public partial class MainWindow : Window
     [DllImport("user32.dll")] static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
     [DllImport("user32.dll")] static extern bool GetCursorPos(out POINT pt);
 
-    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    [StructLayout(LayoutKind.Sequential)]
     private struct POINT { public int X, Y; }
 
     private const int WM_NCLBUTTONDOWN = 0xA1;
@@ -144,7 +144,7 @@ public partial class MainWindow : Window
             ToggleFromHotkey();
             handled = true;
         }
-        return IntPtr.Zero;
+return IntPtr.Zero;
     }
 
     public void ToggleFromHotkey()

@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using System.IO;
+using System.Threading;
 using System.Windows;
 using Application = System.Windows.Application;
 using MessageBox = System.Windows.MessageBox;
@@ -10,6 +11,8 @@ namespace DevelopmentHub.App;
 
 public partial class App : Application
 {
+    private const string MutexName = "DevelopmentHub_SingleInstance";
+    private Mutex? _mutex;
     private WebApplication? _host;
     private System.Windows.Forms.NotifyIcon? _trayIcon;
     private string _currentHotkey = "Ctrl+Shift+D";
@@ -17,6 +20,16 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        _mutex = new Mutex(true, MutexName, out var isFirstInstance);
+        if (!isFirstInstance)
+        {
+            MessageBox.Show(
+                "DevelopmentHub läuft bereits im Hintergrund.\nÜber das Tray-Icon oder den Hotkey öffnen.",
+                "DevelopmentHub", MessageBoxButton.OK, MessageBoxImage.Information);
+            Environment.Exit(0);
+            return;
+        }
 
         // Keep app alive when all windows are hidden
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
@@ -164,6 +177,8 @@ public partial class App : Application
     protected override void OnExit(ExitEventArgs e)
     {
         _trayIcon?.Dispose();
+        _mutex?.ReleaseMutex();
+        _mutex?.Dispose();
         base.OnExit(e);
     }
 }

@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using DevelopmentHub.Api.Models;
 using DevelopmentHub.Api.Models.Dtos;
 using LibGit2Sharp;
@@ -20,6 +21,7 @@ public static class RepositoryScanIssueCodes
     public const string RemoteNotFoundOrPermissionDenied = "RemoteNotFoundOrPermissionDenied";
     public const string FetchTimeout = "FetchTimeout";
     public const string GitCommandFailed = "GitCommandFailed";
+    public const string GitFailedToStart = "GitFailedToStart";
 }
 
 public sealed class RepositoryFetchResult
@@ -177,10 +179,21 @@ public class GitService(ILogger<GitService> logger) : IGitService
 
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
-        var (success, output, wasCanceled) = await RunGitCommandAsync(repoPath, ["fetch", "--prune"], linked.Token);
+        var (success, output, wasCanceled, failedToStart) = await RunGitCommandAsync(repoPath, ["fetch", "--prune"], linked.Token);
         if (success)
         {
             return new RepositoryFetchResult { Success = true };
+        }
+
+        if (failedToStart)
+        {
+            logger.LogWarning("git failed to start for {Path}", repoPath);
+            return new RepositoryFetchResult
+            {
+                Success = false,
+                IssueCode = RepositoryScanIssueCodes.GitFailedToStart,
+                Message = "git could not be started. Check your internet connection or git installation."
+            };
         }
 
         if (wasCanceled && timeout.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
@@ -239,7 +252,7 @@ public class GitService(ILogger<GitService> logger) : IGitService
         var output = new System.Text.StringBuilder();
 
         // git fetch --prune
-        var (fetchSuccess, fetchOut, _) = await RunGitCommandAsync(repoPath, ["fetch", "--prune"], cancellationToken);
+        var (fetchSuccess, fetchOut, _, _) = await RunGitCommandAsync(repoPath, ["fetch", "--prune"], cancellationToken);
         output.AppendLine("$ git fetch --prune");
         output.AppendLine(fetchOut);
 
@@ -247,14 +260,18 @@ public class GitService(ILogger<GitService> logger) : IGitService
             return (false, output.ToString());
 
         // git pull
-        var (pullSuccess, pullOut, _) = await RunGitCommandAsync(repoPath, ["pull"], cancellationToken);
+        var (pullSuccess, pullOut, _, _) = await RunGitCommandAsync(repoPath, ["pull"], cancellationToken);
         output.AppendLine("$ git pull");
         output.AppendLine(pullOut);
 
         return (pullSuccess, output.ToString());
     }
 
-    private static async Task<(bool Success, string Output, bool WasCanceled)> RunGitCommandAsync(
+    [DllImport("kernel32.dll")] private static extern uint SetErrorMode(uint uMode);
+    private const uint SEM_FAILCRITICALERRORS = 0x0001;
+    private const uint SEM_NOGPFAULTERRORBOX = 0x0002;
+
+    private static async Task<(bool Success, string Output, bool WasCanceled, bool FailedToStart)> RunGitCommandAsync(
         string workingDir, string[] args, CancellationToken cancellationToken)
     {
         var psi = new System.Diagnostics.ProcessStartInfo
@@ -276,7 +293,20 @@ public class GitService(ILogger<GitService> logger) : IGitService
         process.OutputDataReceived += (_, e) => { if (e.Data != null) outputBuilder.AppendLine(e.Data); };
         process.ErrorDataReceived += (_, e) => { if (e.Data != null) outputBuilder.AppendLine(e.Data); };
 
-        process.Start();
+        // Suppress Windows error dialogs (e.g. 0xc0000142 DLL init failure) for the child process
+        var prevMode = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+            ? SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX) : 0;
+        try
+        {
+            process.Start();
+        }
+        catch (Exception)
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) SetErrorMode(prevMode);
+            return (false, string.Empty, false, true);
+        }
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) SetErrorMode(prevMode);
+
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
 
@@ -290,7 +320,7 @@ public class GitService(ILogger<GitService> logger) : IGitService
             return (false, outputBuilder.ToString().Trim(), true);
         }
 
-        return (process.ExitCode == 0, outputBuilder.ToString().Trim(), false);
+        return (process.ExitCode == 0, outputBuilder.ToString().Trim(), false, false);
     }
 
     private static void TryKillProcess(System.Diagnostics.Process process)

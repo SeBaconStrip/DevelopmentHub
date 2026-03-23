@@ -5,7 +5,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## 0.10 – 2026-03-22
+## 0.10 – 2026-03-23
 
 ### ✨ Added
 
@@ -33,6 +33,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - `RepositoryOpeners` was missing from `ConfigDto`, so opener settings were silently discarded on every save and never returned to the frontend — openers are now fully round-tripped through the API
 - `IconPath` field was absent from `RepositoryOpenerDto`, preventing it from being persisted or served
+- Maximized window covered the taskbar when using `WindowStyle="None"` — fixed by adding `WindowChrome` so WPF constrains the maximized bounds to the work area automatically
+- Starting a second instance of the app showed a raw LiteDB file-lock exception — a named mutex now detects duplicate instances and shows a friendly message instead
+- Local installer build used a hardcoded version instead of reading from `version.txt` — the build task now reads the version and appends `-localbuild`; `#ifndef` in the `.iss` file lets the command-line value take precedence
+- Installer shortcut creation failed with `0x80070005 Access Denied` because `{commondesktop}` requires admin rights — changed to `{userdesktop}` to match the `PrivilegesRequired=lowest` setting
+- git startup failure (e.g. `0xc0000142` DLL init error, often triggered without network) showed a raw Windows system dialog — the OS error popup is now suppressed via `SetErrorMode` and the failure is reported as a clean `GitFailedToStart` issue on the repository
+- After installing a new version, the WebView2 could serve a cached `index.html` requiring a manual F5 reload — `Cache-Control: no-cache` is now set on all HTML responses so the frontend is always fetched fresh
 
 ---
 
