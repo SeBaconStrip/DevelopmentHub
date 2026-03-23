@@ -317,7 +317,7 @@ public class GitService(ILogger<GitService> logger) : IGitService
         catch (OperationCanceledException)
         {
             TryKillProcess(process);
-            return (false, outputBuilder.ToString().Trim(), true);
+            return (false, outputBuilder.ToString().Trim(), true, false);
         }
 
         return (process.ExitCode == 0, outputBuilder.ToString().Trim(), false, false);
