@@ -1,0 +1,29 @@
+{
+  "id": "com.example.hello-plugin",
+  "version": "1.0.0",
+  "name": "Hello Plugin",
+  "description": "Example plugin demonstrating widgets and pages.",
+  "minHostVersion": "0.10.0",
+  "frontend": {
+    "bundle": "ui/index.js",
+    "enabled": true,
+    "sdkVersion": "1"
+  },
+  "contributes": {
+    "widgets": [
+      {
+        "id": "com.example.hello-plugin.hello-widget",
+        "label": "Hello Plugin",
+        "icon": "👋",
+        "defaultLayout": { "w": 4, "h": 6 }
+      }
+    ],
+    "routes": [
+      {
+        "path": "/plugins/hello",
+        "navLabel": "Hello Plugin",
+        "navOrder": 100
+      }
+    ]
+  }
+}
