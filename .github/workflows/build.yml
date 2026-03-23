@@ -130,14 +130,16 @@ jobs:
           $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
           & $iscc installer\DevelopmentHub.iss
 
-      - name: Upload installer artifact
+      - name: Upload installer artifact (PR only)
+        if: github.event_name == 'pull_request'
         uses: actions/upload-artifact@v4
         with:
           name: DevelopmentHub-Setup-${{ steps.calc.outputs.version }}
           path: installer/output/DevelopmentHub-Setup-*.exe
           retention-days: 1
 
-      - name: Upload Edge extension artifact
+      - name: Upload Edge extension artifact (PR only)
+        if: github.event_name == 'pull_request'
         uses: actions/upload-artifact@v4
         with:
           name: DevelopmentHub-Edge-Extension-${{ steps.calc.outputs.version }}
