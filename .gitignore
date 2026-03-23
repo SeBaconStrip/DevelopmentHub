@@ -56,6 +56,10 @@ CodeCoverage/
 TestResult.xml
 nunit-*.xml
 
+# Plugins — build output and dependencies
+plugins/*/node_modules/
+plugins/*/ui/
+
 # DevelopmentHub — local secrets and generated files
 backend/appsettings.local.json
 backend/data/*.db

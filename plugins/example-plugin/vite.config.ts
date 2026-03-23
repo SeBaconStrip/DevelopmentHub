@@ -1,8 +1,11 @@
 import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react-swc';
+import react from '@vitejs/plugin-react';
 
 export default defineConfig({
-  plugins: [react()],
+  // Use classic JSX runtime so JSX compiles to React.createElement(...)
+  // instead of importing from react/jsx-runtime.
+  // React is provided at runtime via window.__dhSdk.React.
+  plugins: [react({ jsxRuntime: 'classic' })],
   build: {
     lib: {
       entry: 'src/index.ts',
@@ -12,8 +15,8 @@ export default defineConfig({
     outDir: 'ui',
     emptyOutDir: true,
     rollupOptions: {
-      // These are provided by the host via window.__dhSdk — do not bundle them.
-      external: ['react', 'react-dom', '@tanstack/react-query', 'zustand', 'react-router-dom'],
+      // All of these are provided by the host via window.__dhSdk — do not bundle them.
+      external: ['react', 'react-dom', 'react/jsx-runtime', '@tanstack/react-query', 'zustand', 'react-router-dom'],
     },
   },
 });
