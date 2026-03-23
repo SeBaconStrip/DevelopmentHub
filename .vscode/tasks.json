@@ -68,7 +68,7 @@
     {
       "label": "build installer",
       "type": "shell",
-      "command": "& (Join-Path $env:LOCALAPPDATA 'Programs\\Inno Setup 6\\ISCC.exe') DevelopmentHub.iss",
+      "command": "$version = (Get-Content '../version.txt').Trim() + '.0-localbuild'; & (Join-Path $env:LOCALAPPDATA 'Programs\\Inno Setup 6\\ISCC.exe') \"/DMyAppVersion=$version\" DevelopmentHub.iss",
       "options": {
         "cwd": "${workspaceFolder}/installer"
       },
