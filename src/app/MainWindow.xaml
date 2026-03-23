@@ -11,6 +11,9 @@
         UseLayoutRounding="True"
         SnapsToDevicePixels="True"
         Loaded="Window_Loaded">
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="0" ResizeBorderThickness="4" GlassFrameThickness="0" NonClientFrameEdges="None" />
+    </WindowChrome.WindowChrome>
     <Grid>
         <wv2:WebView2 x:Name="WebView" />
     </Grid>
