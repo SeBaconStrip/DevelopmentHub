@@ -22,4 +22,6 @@ public class RepositoryDao
 
     public string? ScanIssueCode { get; set; }
     public string? ScanIssueMessage { get; set; }
+
+    public List<string> Tags { get; set; } = [];
 }

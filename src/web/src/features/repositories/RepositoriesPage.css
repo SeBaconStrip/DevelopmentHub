@@ -105,7 +105,7 @@
 /* ── table ── */
 .repos-table {
   display: grid;
-  grid-template-columns: 1.4fr 2fr 1.1fr 0.7fr auto auto;
+  grid-template-columns: 36px 1.4fr 2fr 1.1fr 0.7fr 1.4fr auto auto;
   border: 1px solid var(--border-accent);
   border-radius: 12px;
   overflow: hidden;
@@ -194,10 +194,168 @@
   gap: 4px;
 }
 
+/* ── checkbox cell ── */
+.repos-col-check {
+  justify-content: center;
+  padding: 10px 0 10px 10px;
+}
+
+.repo-select-checkbox {
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+  accent-color: var(--color-accent);
+}
+
 /* ── fav cell ── */
 .repos-col-fav {
   padding-right: 12px;
   justify-content: center;
+}
+
+/* ── tag filter row (toolbar card) ── */
+.repos-tag-filter-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-top: 12px;
+  margin-top: 12px;
+  border-top: 1px solid var(--border-accent);
+}
+
+.repos-tag-filter-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-right: 2px;
+}
+
+.repos-tag-filter-chip {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.repos-tag-filter-chip:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.repos-tag-filter-chip--active {
+  background: var(--widget-enabled-bg);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.repos-tag-filter-clear {
+  background: none;
+  border: none;
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 3px 6px;
+  margin-left: 4px;
+}
+
+.repos-tag-filter-clear:hover {
+  color: var(--color-error);
+}
+
+/* ── tags column ── */
+.repos-col-tags.repos-td {
+  flex-wrap: wrap;
+  align-items: flex-start;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+/* ── tag editor ── */
+.tag-editor {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: var(--widget-enabled-bg);
+  color: var(--color-accent);
+  border: 1px solid var(--color-accent);
+  border-radius: 20px;
+  padding: 1px 8px 1px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.tag-chip-remove {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  font-size: 13px;
+  line-height: 1;
+  opacity: 0.6;
+  margin-left: 1px;
+}
+
+.tag-chip-remove:hover {
+  opacity: 1;
+}
+
+.tag-add-btn {
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: 20px;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  padding: 1px 7px;
+  transition: border-color 0.12s, color 0.12s;
+}
+
+.tag-add-btn:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.tag-input {
+  width: 80px;
+  border: 1px solid var(--color-accent);
+  border-radius: 20px;
+  padding: 1px 8px;
+  font-size: 11px;
+  background: var(--input-bg);
+  color: var(--text-primary);
+  font-family: inherit;
+  outline: none;
+}
+
+/* ── custom opener icon initial ── */
+.opener-icon-initial {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  background: var(--surface-muted);
+  color: var(--text-secondary);
+  font-weight: 700;
+  font-family: inherit;
+  line-height: 1;
 }
 
 /* ── empty / loading ── */
