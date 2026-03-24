@@ -5,6 +5,24 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## 0.11 – 2026-03-24
+
+### ✨ Added
+
+- Plugin system — third-party plugins can extend DevelopmentHub with custom dashboard widgets and full pages without modifying the host application
+- `manifest.json` per plugin declares the plugin id, version, minimum host version, backend assembly, frontend bundle, widget contributions, and route contributions
+- Backend plugin interface (`IPlugin`) — plugins implement `ConfigureServices` and `Configure` to register ASP.NET Core services and endpoints; each plugin is loaded in an isolated `AssemblyLoadContext` to prevent assembly conflicts
+- `PluginLoader` scans a configured plugins directory, reads each `manifest.json`, loads the backend assembly if present, and registers all `IPlugin` implementations
+- `PluginRegistry` tracks loaded plugins and exposes their manifests to the host API
+- Frontend plugin loading — the host injects a `__dhSdk` object on `window` exposing React, TanStack Query, Zustand, React Router, the host API base path, and a set of pre-built themed UI components; each plugin's JS bundle is loaded dynamically and calls `__dhSdk.plugin.registerWidget` / `registerRoute` to contribute its UI
+- Themed UI component set available to plugins: `Button`, `Card`, `Input`, `Chip`, `Empty`, `PageRoot`, `Spinner`
+- `@developmenthub/plugin-sdk` npm package — TypeScript type definitions for the entire `DhSdk` interface; install as a dev dependency in any plugin project for full type safety
+- `DevelopmentHub.Plugins` NuGet package — ships `IPlugin`, `PluginManifest`, and related contracts; reference with `ExcludeAssets="runtime"` so the host assembly is not copied into the plugin output
+- Both SDK packages published as CI artifacts on every PR and attached to GitHub Releases on main push
+- Example plugin (`src/plugins/example-plugin/`) demonstrating a backend controller, a dashboard widget, and a full page built against both SDKs
+
+---
+
 ## 0.10 – 2026-03-23
 
 ### ✨ Added
