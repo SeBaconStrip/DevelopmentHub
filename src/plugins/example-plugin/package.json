@@ -6,7 +6,7 @@
     "build": "vite build"
   },
   "devDependencies": {
-    "@developmenthub/plugin-sdk": "file:../../src/web/src/plugin-sdk",
+    "@developmenthub/plugin-sdk": "file:../../web/src/plugin-sdk",
     "@types/react": "^19.0.0",
     "@tanstack/react-query": "^5.0.0",
     "react": "^19.0.0",
