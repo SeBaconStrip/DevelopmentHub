@@ -12,6 +12,27 @@ import type React from 'react';
 import type { QueryClient, UseQueryResult, UseMutationResult } from '@tanstack/react-query';
 import type { NavigateFunction } from 'react-router-dom';
 
+// ── UI component types ─────────────────────────────────────────────────────
+
+export interface PluginUi {
+  /** Themed button. `variant` defaults to `"ghost"`. */
+  Button: React.ComponentType<
+    React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'secondary' | 'ghost' }
+  >;
+  /** Themed surface card. */
+  Card: React.ComponentType<React.HTMLAttributes<HTMLDivElement>>;
+  /** Themed text input, stretches to container width. */
+  Input: React.ComponentType<React.InputHTMLAttributes<HTMLInputElement>>;
+  /** Small inline badge/chip. Pass `color` to override background. */
+  Chip: React.ComponentType<React.HTMLAttributes<HTMLSpanElement> & { color?: string }>;
+  /** Centered muted placeholder for empty lists or states. */
+  Empty: React.ComponentType<React.HTMLAttributes<HTMLDivElement>>;
+  /** Scrollable page wrapper — use as the root element of plugin pages. */
+  PageRoot: React.ComponentType<React.HTMLAttributes<HTMLDivElement>>;
+  /** Animated loading spinner. `size` defaults to `20` (px). */
+  Spinner: React.ComponentType<{ size?: number }>;
+}
+
 export interface PluginRegistration {
   /**
    * Register a React component as a dashboard widget.
@@ -50,6 +71,10 @@ export interface DhSdk {
   // ── Host API ──────────────────────────────────────────────────────────────
   /** Base path for API calls, e.g. `/api`. Use `fetch(apiBase + '/my-endpoint')`. */
   apiBase: '/api';
+
+  // ── UI framework ──────────────────────────────────────────────────────────
+  /** Pre-built, theme-aware React components. Use instead of raw CSS classes. */
+  ui: PluginUi;
 
   // ── Plugin registration ───────────────────────────────────────────────────
   plugin: PluginRegistration;

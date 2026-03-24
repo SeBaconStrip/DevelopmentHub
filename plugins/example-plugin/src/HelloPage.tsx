@@ -1,46 +1,55 @@
-const { React, useQuery, apiBase } = window.__dhSdk;
+const { React, useQuery, apiBase, ui } = window.__dhSdk;
 const { useState } = React;
+const { PageRoot, Card, Input, Button, Spinner } = ui;
 
 export default function HelloPage() {
   const [name, setName] = useState('');
+  const [submitted, setSubmitted] = useState('');
 
-  const { data, isLoading, refetch } = useQuery<{ message: string }>({
-    queryKey: ['hello-plugin', 'greet', name],
+  const { data, isFetching, refetch } = useQuery<{ message: string }>({
+    queryKey: ['hello-plugin', 'greet', submitted],
     queryFn: async () => {
-      const url = name
-        ? `${apiBase}/plugins/hello/greet?name=${encodeURIComponent(name)}`
+      const url = submitted
+        ? `${apiBase}/plugins/hello/greet?name=${encodeURIComponent(submitted)}`
         : `${apiBase}/plugins/hello/greet`;
       const res = await fetch(url);
       if (!res.ok) throw new Error('Request failed');
       return res.json();
     },
-    enabled: true,
   });
 
-  return (
-    <div className="page-root">
-      <div className="card" style={{ maxWidth: 480, margin: '2rem auto', padding: '2rem' }}>
-        <h2>👋 Hello Plugin Page</h2>
-        <p>This page is contributed by the Example Plugin and calls its own backend.</p>
+  function handleGreet() {
+    setSubmitted(name);
+    refetch();
+  }
 
-        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
-          <input
-            className="input"
-            type="text"
+  return (
+    <PageRoot>
+      <Card style={{ maxWidth: 480, margin: '2rem auto', padding: '2rem' }}>
+        <h2 style={{ margin: '0 0 0.5rem' }}>👋 Hello Plugin Page</h2>
+        <p style={{ margin: '0 0 1.5rem', color: 'var(--text-secondary)' }}>
+          This page is contributed by the Example Plugin and calls its own backend.
+        </p>
+
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+          <Input
             placeholder="Enter your name…"
             value={name}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleGreet()}
           />
-          <button className="btn-ghost" onClick={() => refetch()}>
+          <Button variant="primary" onClick={handleGreet} style={{ flexShrink: 0 }}>
             Greet
-          </button>
+          </Button>
         </div>
 
-        {isLoading && <p style={{ marginTop: '1rem', opacity: 0.6 }}>Loading…</p>}
-        {data && (
-          <p style={{ marginTop: '1rem', fontStyle: 'italic' }}>{data.message}</p>
+        {isFetching && <Spinner />}
+        {!isFetching && data && (
+          <p style={{ margin: 0, fontStyle: 'italic', color: 'var(--text-soft)' }}>
+            {data.message}
+          </p>
         )}
-      </div>
-    </div>
+      </Card>
+    </PageRoot>
   );
 }

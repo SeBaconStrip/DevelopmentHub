@@ -4,6 +4,7 @@ import { create } from 'zustand';
 import { useNavigate, Link } from 'react-router-dom';
 import { pluginRegistry } from './PluginRegistry';
 import { useUiStore } from '../store/uiStore';
+import * as PluginUi from '../plugin-sdk/ui';
 
 export interface PluginManifest {
   id: string;
@@ -76,6 +77,7 @@ async function loadPluginBundle(manifest: PluginManifest): Promise<void> {
     useNavigate,
     Link,
     apiBase: '/api',
+    ui: PluginUi,
     plugin: {
       registerWidget(widgetId: string, component: React.ComponentType) {
         const widgetMeta = manifest.contributes.widgets.find((w) => w.id === widgetId);
