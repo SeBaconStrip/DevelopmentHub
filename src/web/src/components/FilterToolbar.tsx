@@ -1,4 +1,5 @@
 import React from "react";
+import "./FilterToolbar.css";
 
 interface FilterOption {
   value: string;
@@ -32,27 +33,31 @@ export function FilterToolbar({
 }: FilterToolbarProps) {
   return (
     <div className={`filter-toolbar${className ? ` ${className}` : ""}`}>
-      <input
-        className="filter-toolbar__search"
-        placeholder={searchPlaceholder}
-        value={search}
-        onChange={(e) => onSearchChange(e.target.value)}
-      />
-      <div className="filter-toolbar__filters">
-        {filters.map((f) => (
-          <button
-            key={f.value}
-            className={`filter-toolbar__btn${filter === f.value ? " filter-toolbar__btn--active" : ""}`}
-            onClick={() => onFilterChange(f.value)}
-          >
-            {f.label}
-          </button>
-        ))}
+      <div className="filter-toolbar__left">
+        <input
+          className="filter-toolbar__search"
+          placeholder={searchPlaceholder}
+          value={search}
+          onChange={(e) => onSearchChange(e.target.value)}
+        />
+        <div className="filter-toolbar__filters">
+          {filters.map((f) => (
+            <button
+              key={f.value}
+              className={`filter-toolbar__btn${filter === f.value ? " filter-toolbar__btn--active" : ""}`}
+              onClick={() => onFilterChange(f.value)}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
       </div>
-      {shownCount < totalCount && (
-        <span className="filter-toolbar__count">{shownCount} / {totalCount}</span>
-      )}
-      {children}
+      <div className="filter-toolbar__right">
+        {shownCount < totalCount && (
+          <span className="filter-toolbar__count">{shownCount} / {totalCount}</span>
+        )}
+        {children}
+      </div>
     </div>
   );
 }
