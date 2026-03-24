@@ -20,7 +20,13 @@ export function useHeaderActions(actions: React.ReactNode, deps: React.Dependenc
   }, deps);
 }
 
-export function AppLayout({ children }: { children: React.ReactNode }) {
+export function AppLayout({
+  children,
+  pluginNavLinks = [],
+}: {
+  children: React.ReactNode;
+  pluginNavLinks?: Array<{ path: string; label: string }>;
+}) {
   const [headerActions, setHeaderActions] = useState<React.ReactNode>(null);
   const [showSettings, setShowSettings] = useState(false);
   const ctx = useMemo(() => ({ setHeaderActions }), []);
@@ -116,6 +122,15 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           >
             Quick Links
           </NavLink>
+          {pluginNavLinks.map((link) => (
+            <NavLink
+              key={link.path}
+              to={link.path}
+              className={({ isActive }) => "app-nav-link" + (isActive ? " app-nav-link--active" : "")}
+            >
+              {link.label}
+            </NavLink>
+          ))}
         </nav>
 
         <div className="app-header-end">
