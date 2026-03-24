@@ -1,5 +1,5 @@
 using DevelopmentHub.Api.Configuration;
-using DevelopmentHub.Api.Models;
+using DevelopmentHub.Api.Models.Dao;
 using DevelopmentHub.Api.Models.Dtos;
 using DevelopmentHub.Api.Services;
 using Microsoft.AspNetCore.Mvc;

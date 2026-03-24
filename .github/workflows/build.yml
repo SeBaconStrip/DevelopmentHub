@@ -92,7 +92,7 @@ jobs:
         shell: pwsh
         run: |
           $version = "${{ steps.calc.outputs.version }}"
-          $manifestPath = "ext/manifest.json"
+          $manifestPath = "src/browser-extension/manifest.json"
           $manifest = Get-Content $manifestPath -Raw | ConvertFrom-Json
           $manifest.version = $version
           $manifest | ConvertTo-Json -Depth 10 | Set-Content $manifestPath
@@ -110,8 +110,27 @@ jobs:
           New-Item -ItemType Directory -Path $staging | Out-Null
           New-Item -ItemType Directory -Path "artifacts" | Out-Null
 
-          Copy-Item "ext/*" $staging -Recurse
+          Copy-Item "src/browser-extension/*" $staging -Recurse
           Compress-Archive -Path "$staging/*" -DestinationPath $zipPath
+
+      - name: Pack plugin SDK (NuGet)
+        shell: bash
+        run: |
+          dotnet pack src/plugins/DevelopmentHub.Plugins.csproj \
+            -c Release \
+            -p:Version=${{ steps.calc.outputs.version }} \
+            -o artifacts/nuget
+
+      - name: Pack plugin SDK (npm)
+        shell: pwsh
+        run: |
+          $version = "${{ steps.calc.outputs.version }}"
+          $pkgPath = "src/web/src/plugin-sdk/package.json"
+          $pkg = Get-Content $pkgPath -Raw | ConvertFrom-Json
+          $pkg.version = $version
+          $pkg | ConvertTo-Json -Depth 10 | Set-Content $pkgPath
+          New-Item -ItemType Directory -Path "artifacts/npm" -Force | Out-Null
+          npm pack src/web/src/plugin-sdk --pack-destination artifacts/npm
 
       - name: Install Inno Setup
         run: choco install innosetup --yes --no-progress
@@ -120,22 +139,22 @@ jobs:
         shell: pwsh
         run: |
           $ver = "${{ steps.calc.outputs.version }}"
-          (Get-Content installer\DevelopmentHub.iss) `
+          (Get-Content src\installer\DevelopmentHub.iss) `
             -replace '#define MyAppVersion ".*"', "#define MyAppVersion `"$ver`"" |
-            Set-Content installer\DevelopmentHub.iss
+            Set-Content src\installer\DevelopmentHub.iss
 
       - name: Build installer
         shell: pwsh
         run: |
           $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
-          & $iscc installer\DevelopmentHub.iss
+          & $iscc src\installer\DevelopmentHub.iss
 
       - name: Upload installer artifact (PR only)
         if: github.event_name == 'pull_request'
         uses: actions/upload-artifact@v4
         with:
           name: DevelopmentHub-Setup-${{ steps.calc.outputs.version }}
-          path: installer/output/DevelopmentHub-Setup-*.exe
+          path: src/installer/output/DevelopmentHub-Setup-*.exe
           retention-days: 1
 
       - name: Upload Edge extension artifact (PR only)
@@ -144,6 +163,16 @@ jobs:
         with:
           name: DevelopmentHub-Edge-Extension-${{ steps.calc.outputs.version }}
           path: artifacts/DevelopmentHub-Edge-Extension-*.zip
+          retention-days: 1
+
+      - name: Upload plugin SDK artifacts (PR only)
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: DevelopmentHub-PluginSDK-${{ steps.calc.outputs.version }}
+          path: |
+            artifacts/nuget/*.nupkg
+            artifacts/npm/*.tgz
           retention-days: 1
 
       - name: Create GitHub Release
@@ -155,7 +184,9 @@ jobs:
           prerelease: false
           generate_release_notes: true
           files: |
-            installer/output/DevelopmentHub-Setup-*.exe
+            src/installer/output/DevelopmentHub-Setup-*.exe
             artifacts/DevelopmentHub-Edge-Extension-*.zip
+            artifacts/nuget/*.nupkg
+            artifacts/npm/*.tgz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

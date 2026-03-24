@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <!-- NuGet package metadata -->
+    <PackageId>DevelopmentHub.Plugins</PackageId>
+    <Description>Plugin SDK for DevelopmentHub. Reference this package at compile-time only (Private=false / ExcludeAssets=runtime) — the host provides the assembly at runtime.</Description>
+    <Authors>DevelopmentHub</Authors>
+    <PackageTags>developmenthub;plugin;sdk</PackageTags>
+    <IsPackable>true</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+</Project>
