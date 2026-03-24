@@ -1,4 +1,4 @@
-using DevelopmentHub.Api.Models;
+using DevelopmentHub.Api.Models.Dao;
 using LiteDB;
 
 namespace DevelopmentHub.Api.Data;

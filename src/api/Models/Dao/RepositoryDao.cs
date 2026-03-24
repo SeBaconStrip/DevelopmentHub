@@ -1,4 +1,4 @@
-namespace DevelopmentHub.Api.Models;
+namespace DevelopmentHub.Api.Models.Dao;
 
 public class RepositoryDao
 {

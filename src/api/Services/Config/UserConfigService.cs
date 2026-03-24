@@ -1,5 +1,5 @@
 using DevelopmentHub.Api.Data;
-using DevelopmentHub.Api.Models;
+using DevelopmentHub.Api.Models.Dao;
 
 namespace DevelopmentHub.Api.Services;
 
