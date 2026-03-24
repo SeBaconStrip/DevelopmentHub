@@ -59,6 +59,9 @@ nunit-*.xml
 # Plugins — build output and dependencies
 plugins/*/node_modules/
 plugins/*/ui/
+plugins/*/backend-dist/
+plugins/*/backend/bin/
+plugins/*/backend/obj/
 
 # DevelopmentHub — local secrets and generated files
 backend/appsettings.local.json

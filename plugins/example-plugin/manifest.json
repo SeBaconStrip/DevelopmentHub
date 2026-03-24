@@ -4,6 +4,10 @@
   "name": "Hello Plugin",
   "description": "Example plugin demonstrating widgets and pages.",
   "minHostVersion": "0.10.0",
+  "backend": {
+    "assembly": "backend-dist/ExamplePlugin.Backend.dll",
+    "enabled": true
+  },
   "frontend": {
     "bundle": "ui/index.js",
     "enabled": true,
