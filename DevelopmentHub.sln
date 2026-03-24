@@ -15,6 +15,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflow", "workflow", "{E8
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DevelopmentHub.Workflow", "src\workflow\DevelopmentHub.Workflow.csproj", "{A3955917-486D-4A1A-ABDA-3AD808071CE6}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "plugins", "plugins", "{07D57EEB-2F50-60C4-C011-FE4FA775C9A8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DevelopmentHub.Plugins", "src\plugins\DevelopmentHub.Plugins.csproj", "{1D4C5EFE-78E1-49B6-B7B0-3CD7AF588297}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -61,6 +65,18 @@ Global
 		{A3955917-486D-4A1A-ABDA-3AD808071CE6}.Release|x64.Build.0 = Release|Any CPU
 		{A3955917-486D-4A1A-ABDA-3AD808071CE6}.Release|x86.ActiveCfg = Release|Any CPU
 		{A3955917-486D-4A1A-ABDA-3AD808071CE6}.Release|x86.Build.0 = Release|Any CPU
+		{1D4C5EFE-78E1-49B6-B7B0-3CD7AF588297}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1D4C5EFE-78E1-49B6-B7B0-3CD7AF588297}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1D4C5EFE-78E1-49B6-B7B0-3CD7AF588297}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{1D4C5EFE-78E1-49B6-B7B0-3CD7AF588297}.Debug|x64.Build.0 = Debug|Any CPU
+		{1D4C5EFE-78E1-49B6-B7B0-3CD7AF588297}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{1D4C5EFE-78E1-49B6-B7B0-3CD7AF588297}.Debug|x86.Build.0 = Debug|Any CPU
+		{1D4C5EFE-78E1-49B6-B7B0-3CD7AF588297}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1D4C5EFE-78E1-49B6-B7B0-3CD7AF588297}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1D4C5EFE-78E1-49B6-B7B0-3CD7AF588297}.Release|x64.ActiveCfg = Release|Any CPU
+		{1D4C5EFE-78E1-49B6-B7B0-3CD7AF588297}.Release|x64.Build.0 = Release|Any CPU
+		{1D4C5EFE-78E1-49B6-B7B0-3CD7AF588297}.Release|x86.ActiveCfg = Release|Any CPU
+		{1D4C5EFE-78E1-49B6-B7B0-3CD7AF588297}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -69,5 +85,6 @@ Global
 		{F5224B14-D782-4D24-98F9-238EDABADE11} = {1AE8ACA6-933B-BF2A-3671-3E2EAC007D16}
 		{B627BA5E-B21E-4C12-8413-7D7FC2096484} = {F95F473B-E98A-ACD6-1986-755F447BE36F}
 		{A3955917-486D-4A1A-ABDA-3AD808071CE6} = {E82C3CE9-5C08-2220-110F-95EADBAB7019}
+		{1D4C5EFE-78E1-49B6-B7B0-3CD7AF588297} = {07D57EEB-2F50-60C4-C011-FE4FA775C9A8}
 	EndGlobalSection
 EndGlobal

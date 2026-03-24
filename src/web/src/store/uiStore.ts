@@ -1,7 +1,9 @@
 import { create } from 'zustand';
 import type { LayoutItem } from '../types';
 
-export type WidgetId = 'repositories' | 'pullRequests' | 'quickLinks' | 'todos' | 'workflows';
+export type WidgetId = string;
+export const BUILTIN_WIDGET_IDS = ['repositories', 'pullRequests', 'quickLinks', 'todos', 'workflows'] as const;
+export type BuiltinWidgetId = typeof BUILTIN_WIDGET_IDS[number];
 export type ThemeId = 'violet' | 'dark' | 'vscode' | 'ocean' | 'orange' | 'nature';
 
 export type { LayoutItem };
@@ -110,6 +112,7 @@ function loadWidgets(): DashboardWidget[] {
 interface UiStore {
   dashboardWidgets: DashboardWidget[];
   toggleWidget: (id: WidgetId) => void;
+  addPluginWidget: (widget: DashboardWidget & { defaultLayout?: { w: number; h: number } }) => void;
   gridLayouts: BreakpointLayouts;
   setGridLayouts: (layouts: BreakpointLayouts) => void;
   resetGridLayouts: () => void;
@@ -117,7 +120,7 @@ interface UiStore {
   setTheme: (theme: ThemeId) => void;
 }
 
-export const useUiStore = create<UiStore>()((set) => ({
+export const useUiStore = create<UiStore>()((set, get) => ({
   dashboardWidgets: loadWidgets(),
   toggleWidget: (id) =>
     set((state) => {
@@ -128,6 +131,26 @@ export const useUiStore = create<UiStore>()((set) => ({
       localStorage.setItem(WIDGETS_KEY, JSON.stringify(enabledMap));
       return { dashboardWidgets: updated };
     }),
+  addPluginWidget: ({ defaultLayout, ...widget }) => {
+    const state = get();
+    if (state.dashboardWidgets.some((w) => w.id === widget.id)) return;
+
+    const updatedWidgets = [...state.dashboardWidgets, widget];
+
+    // Extend existing layouts with the plugin widget's default layout
+    if (defaultLayout) {
+      const updatedLayouts = Object.fromEntries(
+        Object.entries(state.gridLayouts).map(([bp, items]) => {
+          if (items.some((item) => item.i === widget.id)) return [bp, items];
+          const maxY = items.reduce((acc, item) => Math.max(acc, item.y + item.h), 0);
+          return [bp, [...items, { i: widget.id, x: 0, y: maxY, w: defaultLayout.w, h: defaultLayout.h }]];
+        }),
+      );
+      set({ dashboardWidgets: updatedWidgets, gridLayouts: updatedLayouts });
+    } else {
+      set({ dashboardWidgets: updatedWidgets });
+    }
+  },
   gridLayouts: loadLayouts(),
   setGridLayouts: (layouts) => {
     set({ gridLayouts: layouts });
