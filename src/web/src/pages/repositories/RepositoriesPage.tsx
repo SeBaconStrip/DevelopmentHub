@@ -1,6 +1,7 @@
 import { useState, Fragment, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchRepositories, repositoriesApi } from "../../api/repositories";
+import { useRepositoryScan } from "../../hooks/useRepositoryScan";
 import { configApi } from "../../api/config";
 import type { Repository, RepositoryOpener } from "../../types";
 import vscodeIconUrl from "../../assets/icons/vscode.svg";
@@ -23,10 +24,7 @@ export default function RepositoriesPage() {
     queryFn: fetchRepositories,
   });
 
-  const scanMutation = useMutation({
-    mutationFn: repositoriesApi.scan,
-    onSuccess: (data) => queryClient.setQueryData(["repositories"], data),
-  });
+  const scanMutation = useRepositoryScan();
 
   const { data: config } = useQuery({ queryKey: ["config"], queryFn: configApi.get });
   const openers = config?.repositoryOpeners ?? [];

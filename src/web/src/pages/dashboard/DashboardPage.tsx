@@ -13,6 +13,8 @@ import { configApi } from "../../api/config";
 import { fetchPullRequests } from "../../api/pullRequests";
 import { todosApi } from "../../api/todos";
 import { workflowsApi } from "../../api/workflows";
+import { useTodos } from "../../hooks/useTodos";
+import { useRepositoryScan } from "../../hooks/useRepositoryScan";
 import {
   useUiStore,
   type BreakpointLayouts,
@@ -93,10 +95,7 @@ export default function DashboardPage() {
     };
   }, [queryClient]);
 
-  const scanRepos = useMutation({
-    mutationFn: repositoriesApi.scan,
-    onSuccess: (data) => queryClient.setQueryData(["repositories"], data),
-  });
+  const scanRepos = useRepositoryScan();
 
   const [openError, setOpenError] = useState<string | null>(null);
 
@@ -133,29 +132,7 @@ export default function DashboardPage() {
     queryFn: workflowsApi.list,
   });
 
-  const createTodo = useMutation({
-    mutationFn: ({ title, linkUrl }: { title: string; linkUrl?: string }) =>
-      todosApi.create(title, linkUrl),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["todos"] }),
-  });
-  const updateTodo = useMutation({
-    mutationFn: ({ id, title, linkUrl }: { id: string; title: string; linkUrl?: string }) =>
-      todosApi.update(id, title, linkUrl),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["todos"] }),
-  });
-  const toggleTodo = useMutation({
-    mutationFn: ({ id, completed }: { id: string; completed: boolean }) =>
-      todosApi.setCompleted(id, completed),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["todos"] }),
-  });
-  const deleteTodo = useMutation({
-    mutationFn: (id: string) => todosApi.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["todos"] }),
-  });
-  const clearCompletedTodos = useMutation({
-    mutationFn: todosApi.clearCompleted,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["todos"] }),
-  });
+  const { createTodo, updateTodo, toggleTodo, deleteTodo, clearCompletedTodos } = useTodos();
 
   const runWorkflow = useMutation({
     mutationFn: ({ workflowId, request }: { workflowId: string; request: RunWorkflowRequest }) => {

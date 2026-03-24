@@ -6,7 +6,7 @@ import {
   type ThemeId,
 } from "../store/uiStore";
 import { configApi } from "../api/config";
-import { repositoriesApi } from "../api/repositories";
+import { useRepositoryScan } from "../hooks/useRepositoryScan";
 import type { AppConfig, CustomLink, PullRequestProvider, RepositoryOpener } from "../types";
 import githubIcon from "../assets/icons/github.svg";
 import azureDevOpsIcon from "../assets/icons/azure-devops.svg";
@@ -108,10 +108,7 @@ export function DashboardSettingsModal({ onClose }: Props) {
     queryFn: configApi.get,
   });
 
-  const scan = useMutation({
-    mutationFn: repositoriesApi.scan,
-    onSuccess: (data) => queryClient.setQueryData(["repositories"], data),
-  });
+  const scan = useRepositoryScan();
 
   const save = useMutation({
     mutationFn: configApi.save,

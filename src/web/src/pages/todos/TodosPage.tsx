@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { todosApi } from "../../api/todos";
+import { useTodos } from "../../hooks/useTodos";
 import { TodosWidget } from "../dashboard/widgets/TodosWidget";
 import type { TodoItem } from "../../types";
 import "./TodosPage.css";
@@ -8,7 +9,6 @@ import "./TodosPage.css";
 type Filter = "all" | "active" | "completed";
 
 export default function TodosPage() {
-  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
 
@@ -17,36 +17,7 @@ export default function TodosPage() {
     queryFn: todosApi.getAll,
   });
 
-  const createTodo = useMutation({
-    mutationFn: ({ title, linkUrl }: { title: string; linkUrl?: string }) =>
-      todosApi.create(title, linkUrl),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["todos"] }),
-  });
-  const updateTodo = useMutation({
-    mutationFn: ({ id, title, linkUrl }: { id: string; title: string; linkUrl?: string }) =>
-      todosApi.update(id, title, linkUrl),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["todos"] }),
-  });
-  const toggleTodo = useMutation({
-    mutationFn: ({ id, completed }: { id: string; completed: boolean }) =>
-      todosApi.setCompleted(id, completed),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["todos"] }),
-  });
-  const deleteTodo = useMutation({
-    mutationFn: (id: string) => todosApi.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["todos"] }),
-  });
-  const clearCompletedTodos = useMutation({
-    mutationFn: todosApi.clearCompleted,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["todos"] }),
-  });
-
-  const isBusy =
-    createTodo.isPending ||
-    updateTodo.isPending ||
-    toggleTodo.isPending ||
-    deleteTodo.isPending ||
-    clearCompletedTodos.isPending;
+  const { createTodo, updateTodo, toggleTodo, deleteTodo, clearCompletedTodos, isBusy } = useTodos();
 
   const activeCount = todos.filter((t) => !t.completed).length;
   const completedCount = todos.filter((t) => t.completed).length;
