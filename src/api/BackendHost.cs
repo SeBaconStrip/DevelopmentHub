@@ -4,6 +4,7 @@ using DevelopmentHub.Api.Data;
 using DevelopmentHub.Api.Hubs;
 using DevelopmentHub.Api.Logging;
 using DevelopmentHub.Api.Services;
+using DevelopmentHub.Plugins;
 using DevelopmentHub.Workflow;
 using DevelopmentHub.Workflow.Executors;
 using Serilog;
@@ -99,6 +100,22 @@ public static class BackendHost
         builder.Services.AddSingleton<IWorkflowStepExecutor, CopyExecutor>();
         builder.Services.AddSingleton<IWorkflowService, WorkflowService>();
 
+        // ── Plugins ───────────────────────────────────────────────────────────
+        var pluginsPath = string.IsNullOrWhiteSpace(appSettings.PluginsPath)
+            ? Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "DevelopmentHub", "plugins")
+            : appSettings.PluginsPath;
+
+        var pluginLoader = new PluginLoader(
+            LoggerFactory.Create(b => b.AddSerilog()).CreateLogger<PluginLoader>());
+        var loadedPlugins = pluginLoader.LoadAll(pluginsPath);
+
+        builder.Services.AddSingleton<IPluginRegistry>(new PluginRegistry(loadedPlugins));
+
+        foreach (var lp in loadedPlugins)
+            lp.Plugin?.ConfigureServices(builder.Services, builder.Configuration);
+
         // ── Background Services ───────────────────────────────────────────────
         builder.Services.AddHostedService<RepositoryScannerService>();
 
@@ -184,6 +201,10 @@ public static class BackendHost
                 }
             });
         }
+
+        // ── Plugin middleware/routes ──────────────────────────────────────────
+        foreach (var lp in loadedPlugins)
+            lp.Plugin?.Configure(app, app);
 
         app.MapControllers();
         app.MapHub<LogHub>("/hubs/log");

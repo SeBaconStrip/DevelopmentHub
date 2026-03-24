@@ -16,6 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\plugins\DevelopmentHub.Plugins.csproj" />
     <ProjectReference Include="..\workflow\DevelopmentHub.Workflow.csproj" />
   </ItemGroup>
 

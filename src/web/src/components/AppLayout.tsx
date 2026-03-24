@@ -20,7 +20,13 @@ export function useHeaderActions(actions: React.ReactNode, deps: React.Dependenc
   }, deps);
 }
 
-export function AppLayout({ children }: { children: React.ReactNode }) {
+export function AppLayout({
+  children,
+  pluginNavLinks = [],
+}: {
+  children: React.ReactNode;
+  pluginNavLinks?: Array<{ path: string; label: string }>;
+}) {
   const [headerActions, setHeaderActions] = useState<React.ReactNode>(null);
   const [showSettings, setShowSettings] = useState(false);
   const ctx = useMemo(() => ({ setHeaderActions }), []);
@@ -39,7 +45,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       const { x, y } = dragStartPos.current;
       if (Math.abs(e.clientX - x) > 4 || Math.abs(e.clientY - y) > 4) {
         dragStartPos.current = null;
-        (window as any).chrome?.webview?.postMessage("drag");
+        window.chrome?.webview?.postMessage("drag");
       }
     }
     function onMouseUp() {
@@ -54,7 +60,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   }, []);
 
   function sendWindowMsg(msg: string) {
-    (window as any).chrome?.webview?.postMessage(msg);
+    window.chrome?.webview?.postMessage(msg);
   }
 
   function handleHeaderMouseDown(e: React.MouseEvent) {
@@ -116,6 +122,15 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           >
             Quick Links
           </NavLink>
+          {pluginNavLinks.map((link) => (
+            <NavLink
+              key={link.path}
+              to={link.path}
+              className={({ isActive }) => "app-nav-link" + (isActive ? " app-nav-link--active" : "")}
+            >
+              {link.label}
+            </NavLink>
+          ))}
         </nav>
 
         <div className="app-header-end">

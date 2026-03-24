@@ -3,7 +3,13 @@
     "allow": [
       "Bash(dotnet build:*)",
       "Bash(dotnet restore:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(dotnet sln:*)",
+      "Bash(find /c/Projects/DevelopmentHub/src -type d -not -path */obj/* -not -path */bin/*)",
+      "Bash(ls -lh /c/Projects/DevelopmentHub/src/api/Services/*.cs)",
+      "Read(//c/Projects/DevelopmentHub/**)",
+      "Bash(grep -n \"class RunInstallerExecutor\\\\|class RunExecutableExecutor\" /c/Projects/DevelopmentHub/src/workflow/Executors/*.cs)",
+      "Bash(ls -1 /c/Projects/DevelopmentHub/src/api/Models/*.cs)"
     ]
   }
 }

@@ -56,6 +56,13 @@ CodeCoverage/
 TestResult.xml
 nunit-*.xml
 
+# Plugins — build output and dependencies
+src/plugins/*/node_modules/
+src/plugins/*/ui/
+src/plugins/*/backend-dist/
+src/plugins/*/backend/bin/
+src/plugins/*/backend/obj/
+
 # DevelopmentHub — local secrets and generated files
 backend/appsettings.local.json
 backend/data/*.db
@@ -69,5 +76,5 @@ frontend/.vite/
 
 
 publish/
-installer/output/
+src/installer/output/*
 .dotnet/
