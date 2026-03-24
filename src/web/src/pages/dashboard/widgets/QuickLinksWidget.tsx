@@ -2,6 +2,7 @@ import { useState } from "react";
 import { launcherApi } from "../../../api/launcher";
 import type { CustomLink } from "../../../types";
 import { Empty } from "./shared";
+import { ErrorBar } from "../../../components/ErrorBar";
 import "./QuickLinksWidget.css";
 
 export function QuickLinksWidget({ links }: { links: CustomLink[] }) {
@@ -27,12 +28,7 @@ export function QuickLinksWidget({ links }: { links: CustomLink[] }) {
 
   return (
     <div className="quick-links-list">
-      {error && (
-        <div className="panel-error-bar">
-          <span>⚠ {error}</span>
-          <button onClick={() => setError(null)}>✕</button>
-        </div>
-      )}
+      <ErrorBar message={error} onDismiss={() => setError(null)} />
       {links.map((link, index) => (
         <button
           key={`${link.type}-${link.target}-${index}`}

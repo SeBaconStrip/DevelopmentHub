@@ -1,12 +1,15 @@
-import { useState, Fragment, useRef } from "react";
+import { useState, Fragment } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchRepositories, repositoriesApi } from "../../api/repositories";
 import { useRepositoryScan } from "../../hooks/useRepositoryScan";
 import { configApi } from "../../api/config";
-import type { Repository, RepositoryOpener } from "../../types";
-import vscodeIconUrl from "../../assets/icons/vscode.svg";
-import visualStudioIconUrl from "../../assets/icons/visualstudio.svg";
+import type { Repository } from "../../types";
 import explorerIconUrl from "../../assets/icons/windows-explorer.svg";
+import { ErrorBar } from "../../components/ErrorBar";
+import { OpenerIcon } from "../../components/OpenerIcon";
+import { FilterToolbar } from "../../components/FilterToolbar";
+import { TagEditor } from "../../components/TagEditor";
+import { getScanIssueLabel } from "../../utils/repositoryUtils";
 import "./RepositoriesPage.css";
 
 type Filter = "all" | "favorites" | "issues";
@@ -90,58 +93,45 @@ export default function RepositoriesPage() {
       return a.name.localeCompare(b.name);
     });
 
+  const repoFilters = [
+    { value: "all", label: `All (${repos.length})` },
+    { value: "favorites", label: `★ Favorites` },
+    { value: "issues", label: `⚠ Issues${issueCount > 0 ? ` (${issueCount})` : ""}` },
+  ];
+
   return (
     <div className="repos-page">
       <div className="repos-card">
-        <div className="repos-toolbar">
-          <div className="repos-toolbar-left">
-            <input
-              className="repos-search"
-              type="search"
-              placeholder="Search by name or path…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            <div className="repos-filters">
-              {(["all", "favorites", "issues"] as Filter[]).map((f) => (
-                <button
-                  key={f}
-                  className={`repos-filter-btn${filter === f ? " repos-filter-btn--active" : ""}`}
-                  onClick={() => setFilter(f)}
-                >
-                  {f === "all" && `All (${repos.length})`}
-                  {f === "favorites" && `★ Favorites`}
-                  {f === "issues" &&
-                    `⚠ Issues${issueCount > 0 ? ` (${issueCount})` : ""}`}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="repos-toolbar-right">
-            {filtered.length !== repos.length && (
-              <span className="repos-count">{filtered.length} shown</span>
-            )}
-            {selectedIds.size >= 2 && (
-              <button
-                className="btn-secondary"
-                onClick={() => openWorkspaceMutation.mutate()}
-                disabled={openWorkspaceMutation.isPending}
-                title={`${selectedIds.size} Repositories in gemeinsamem Workspace öffnen`}
-              >
-                {openWorkspaceMutation.isPending
-                  ? "Öffne…"
-                  : `⧉ Workspace (${selectedIds.size})`}
-              </button>
-            )}
+        <FilterToolbar
+          search={search}
+          onSearchChange={setSearch}
+          filter={filter}
+          onFilterChange={(f) => setFilter(f as Filter)}
+          filters={repoFilters}
+          searchPlaceholder="Search by name or path…"
+          shownCount={filtered.length}
+          totalCount={repos.length}
+        >
+          {selectedIds.size >= 2 && (
             <button
-              className="btn-primary"
-              onClick={() => scanMutation.mutate()}
-              disabled={scanMutation.isPending}
+              className="btn-secondary"
+              onClick={() => openWorkspaceMutation.mutate()}
+              disabled={openWorkspaceMutation.isPending}
+              title={`${selectedIds.size} Repositories in gemeinsamem Workspace öffnen`}
             >
-              {scanMutation.isPending ? "Scanning…" : "↻ Scan"}
+              {openWorkspaceMutation.isPending
+                ? "Öffne…"
+                : `⧉ Workspace (${selectedIds.size})`}
             </button>
-          </div>
-        </div>
+          )}
+          <button
+            className="btn-primary"
+            onClick={() => scanMutation.mutate()}
+            disabled={scanMutation.isPending}
+          >
+            {scanMutation.isPending ? "Scanning…" : "↻ Scan"}
+          </button>
+        </FilterToolbar>
 
         {allTags.length > 0 && (
           <div className="repos-tag-filter-row">
@@ -163,12 +153,7 @@ export default function RepositoriesPage() {
           </div>
         )}
 
-        {openError && (
-          <div className="repos-error-bar">
-            <span>⚠ {openError}</span>
-            <button onClick={() => setOpenError(null)}>✕</button>
-          </div>
-        )}
+        <ErrorBar message={openError} onDismiss={() => setOpenError(null)} className="repos-error-bar" />
       </div>
 
       {isLoading ? (
@@ -281,83 +266,6 @@ export default function RepositoriesPage() {
         </div>
       )}
     </div>
-  );
-}
-
-function getScanIssueLabel(code: string): string {
-  switch (code) {
-    case "DubiousOwnership":
-      return "Git ownership blocked";
-    case "NotAGitRepository":
-      return "Not a Git repository";
-    case "PathNotFound":
-      return "Path not found";
-    case "RemoteNotFoundOrPermissionDenied":
-      return "Remote missing or no access";
-    case "FetchTimeout":
-      return "Fetch timed out";
-    default:
-      return "Scan warning";
-  }
-}
-
-function TagEditor({ tags, onSave }: { tags: string[]; onSave: (tags: string[]) => void }) {
-  const [adding, setAdding] = useState(false);
-  const [input, setInput] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const commit = () => {
-    const trimmed = input.trim();
-    if (trimmed && !tags.includes(trimmed)) {
-      onSave([...tags, trimmed]);
-    }
-    setInput("");
-    setAdding(false);
-  };
-
-  const remove = (tag: string) => onSave(tags.filter((t) => t !== tag));
-
-  return (
-    <div className="tag-editor">
-      {tags.map((tag) => (
-        <span key={tag} className="tag-chip">
-          {tag}
-          <button className="tag-chip-remove" onClick={() => remove(tag)} title="Tag entfernen">×</button>
-        </span>
-      ))}
-      {adding ? (
-        <input
-          ref={inputRef}
-          className="tag-input"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") commit();
-            if (e.key === "Escape") { setAdding(false); setInput(""); }
-          }}
-          onBlur={commit}
-          autoFocus
-          placeholder="Tag…"
-          maxLength={32}
-        />
-      ) : (
-        <button className="tag-add-btn" onClick={() => setAdding(true)} title="Tag hinzufügen">+</button>
-      )}
-    </div>
-  );
-}
-
-function OpenerIcon({ opener, size }: { opener: RepositoryOpener; size: number }) {
-  if (opener.iconType === "vscode")
-    return <img src={vscodeIconUrl} width={size} height={size} alt={opener.label} draggable={false} />;
-  if (opener.iconType === "visualstudio")
-    return <img src={visualStudioIconUrl} width={size} height={size} alt={opener.label} draggable={false} />;
-  if (opener.iconPath)
-    return <img src={`/api/icon-extractor?path=${encodeURIComponent(opener.iconPath)}`} width={size} height={size} alt={opener.label} draggable={false} />;
-  return (
-    <span className="opener-icon-initial" style={{ width: size, height: size, fontSize: size * 0.6 }}>
-      {opener.label ? opener.label[0].toUpperCase() : "?"}
-    </span>
   );
 }
 

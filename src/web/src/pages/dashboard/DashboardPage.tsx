@@ -1,9 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useHeaderActions } from "../../components/AppLayout";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Responsive, useContainerWidth } from "react-grid-layout";
-import * as signalR from "@microsoft/signalr";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import "./DashboardPage.css";
@@ -15,6 +14,8 @@ import { todosApi } from "../../api/todos";
 import { workflowsApi } from "../../api/workflows";
 import { useTodos } from "../../hooks/useTodos";
 import { useRepositoryScan } from "../../hooks/useRepositoryScan";
+import { useWorkflowModals } from "../../hooks/useWorkflowModals";
+import { useRepositoryHub } from "../../hooks/useRepositoryHub";
 import {
   useUiStore,
   type BreakpointLayouts,
@@ -25,7 +26,6 @@ import { PluginWidget } from "../../plugins/PluginWidget";
 import type {
   Repository,
   PullRequest,
-  RunWorkflowRequest,
   TodoItem,
   WorkflowDefinition,
   WorkflowExecution,
@@ -44,13 +44,6 @@ import { WorkflowExecutionModal } from "./widgets/WorkflowExecutionModal";
 
 export default function DashboardPage() {
   const [isEditMode, setIsEditMode] = useState(false);
-  const [workflowRunError, setWorkflowRunError] = useState<string | null>(null);
-  const [workflowInputModal, setWorkflowInputModal] = useState<WorkflowDefinition | null>(null);
-  const [runningWorkflowId, setRunningWorkflowId] = useState<string | null>(null);
-  const [workflowModal, setWorkflowModal] = useState<{
-    workflow: WorkflowDefinition;
-    executionId: string | null;
-  } | null>(null);
 
   const {
     dashboardWidgets,
@@ -75,25 +68,10 @@ export default function DashboardPage() {
   });
 
   // Invalidate immediately when the backend signals a scan has finished
-  const repoHubRef = useRef<signalR.HubConnection | null>(null);
-  useEffect(() => {
-    const connection = new signalR.HubConnectionBuilder()
-      .withUrl("/hubs/log")
-      .withAutomaticReconnect()
-      .build();
-    repoHubRef.current = connection;
-    connection.on("RepositoriesUpdated", () => {
-      queryClient.invalidateQueries({ queryKey: ["repositories"] });
-    });
-    connection
-      .start()
-      .catch((err) =>
-        console.warn("SignalR (repo updates) connection failed:", err),
-      );
-    return () => {
-      connection.stop();
-    };
+  const handleRepositoriesUpdated = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["repositories"] });
   }, [queryClient]);
+  useRepositoryHub(handleRepositoriesUpdated);
 
   const scanRepos = useRepositoryScan();
 
@@ -134,22 +112,18 @@ export default function DashboardPage() {
 
   const { createTodo, updateTodo, toggleTodo, deleteTodo, clearCompletedTodos } = useTodos();
 
-  const runWorkflow = useMutation({
-    mutationFn: ({ workflowId, request }: { workflowId: string; request: RunWorkflowRequest }) => {
-      setRunningWorkflowId(workflowId);
-      return workflowsApi.run(workflowId, request);
-    },
-    onSuccess: (execution, variables) => {
-      setWorkflowRunError(null);
-      queryClient.invalidateQueries({ queryKey: ["workflow-executions"] });
-
-      const workflow = workflows.find((item) => item.id === variables.workflowId);
-      if (workflow) {
-        setWorkflowModal({ workflow, executionId: execution.id });
-      }
-    },
-    onError: (err) => setWorkflowRunError(err.message),
-    onSettled: () => setRunningWorkflowId(null),
+  const {
+    workflowRunError,
+    setWorkflowRunError,
+    workflowInputModal,
+    setWorkflowInputModal,
+    runningWorkflowId,
+    workflowModal,
+    setWorkflowModal,
+    runWorkflowWithInputs,
+  } = useWorkflowModals({
+    workflows,
+    confirmMessage: (workflow) => `Workflow "${workflow.name}" ausführen?`,
   });
 
   type WidgetConfig = {
@@ -385,19 +359,4 @@ export default function DashboardPage() {
     </div>
   );
 
-  function runWorkflowWithInputs(
-    workflow: WorkflowDefinition,
-    inputs: Record<string, string>,
-  ) {
-    const confirmed =
-      !workflow.requiresConfirmation ||
-      window.confirm(`Workflow "${workflow.name}" ausführen?`);
-    if (!confirmed) return;
-
-    setWorkflowRunError(null);
-    runWorkflow.mutate({
-      workflowId: workflow.id,
-      request: { inputs, confirmed },
-    });
-  }
 }
