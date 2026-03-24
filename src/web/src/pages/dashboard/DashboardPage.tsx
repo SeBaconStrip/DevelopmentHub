@@ -17,7 +17,10 @@ import {
   useUiStore,
   type BreakpointLayouts,
   type WidgetId,
+  BUILTIN_WIDGET_IDS,
+  type BuiltinWidgetId,
 } from "../../store/uiStore";
+import { PluginWidget } from "../../plugins/PluginWidget";
 import type {
   Repository,
   PullRequest,
@@ -180,7 +183,7 @@ export default function DashboardPage() {
     onTitleClick?: () => void;
   };
 
-  const widgetMap: Record<WidgetId, WidgetConfig> = {
+  const widgetMap: Record<BuiltinWidgetId, WidgetConfig> = {
     repositories: {
       onTitleClick: () => navigate("/repositories"),
       body: (
@@ -267,8 +270,11 @@ export default function DashboardPage() {
     },
   };
 
-  const enabled = dashboardWidgets.filter((w) => w.enabled && w.id in widgetMap);
-  const disabled = dashboardWidgets.filter((w) => !w.enabled && w.id in widgetMap);
+  const isBuiltin = (id: string): id is BuiltinWidgetId =>
+    (BUILTIN_WIDGET_IDS as readonly string[]).includes(id);
+
+  const enabled = dashboardWidgets.filter((w) => w.enabled && (isBuiltin(w.id) || true));
+  const disabled = dashboardWidgets.filter((w) => !w.enabled);
 
   const filteredLayouts: BreakpointLayouts = Object.fromEntries(
     Object.entries(gridLayouts).map(([bp, items]) => [
@@ -283,7 +289,7 @@ export default function DashboardPage() {
     setGridLayouts(layouts as BreakpointLayouts);
   }
 
-  function handleToggleWidget(id: WidgetId) {
+  function handleToggleWidget(id: string) {
     toggleWidget(id);
   }
 
@@ -359,21 +365,24 @@ export default function DashboardPage() {
               margin={[16, 16]}
               containerPadding={[0, 0]}
             >
-              {enabled.map((w) => (
-                <div key={w.id} className="panel-wrapper">
-                  <Panel
-                    icon={w.icon}
-                    title={w.label}
-                    badge={widgetMap[w.id].badge}
-                    headerActions={widgetMap[w.id].headerActions}
-                    onTitleClick={widgetMap[w.id].onTitleClick}
-                    isEditMode={isEditMode}
-                    onClose={() => handleToggleWidget(w.id)}
-                  >
-                    {widgetMap[w.id].body}
-                  </Panel>
-                </div>
-              ))}
+              {enabled.map((w) => {
+                const cfg = isBuiltin(w.id) ? widgetMap[w.id] : null;
+                return (
+                  <div key={w.id} className="panel-wrapper">
+                    <Panel
+                      icon={w.icon}
+                      title={w.label}
+                      badge={cfg?.badge}
+                      headerActions={cfg?.headerActions}
+                      onTitleClick={cfg?.onTitleClick}
+                      isEditMode={isEditMode}
+                      onClose={() => handleToggleWidget(w.id)}
+                    >
+                      {cfg ? cfg.body : <PluginWidget widgetId={w.id} />}
+                    </Panel>
+                  </div>
+                );
+              })}
             </Responsive>
           </div>
         )}
