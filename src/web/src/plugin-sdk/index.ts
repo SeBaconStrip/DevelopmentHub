@@ -9,7 +9,7 @@
  */
 
 import type React from 'react';
-import type { QueryClient, UseQueryResult, UseMutationResult } from '@tanstack/react-query';
+import type { QueryClient, UseQueryResult } from '@tanstack/react-query';
 import type { NavigateFunction } from 'react-router-dom';
 
 // ── UI component types ─────────────────────────────────────────────────────

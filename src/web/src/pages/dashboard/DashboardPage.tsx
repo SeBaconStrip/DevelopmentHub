@@ -16,7 +16,6 @@ import { workflowsApi } from "../../api/workflows";
 import {
   useUiStore,
   type BreakpointLayouts,
-  type WidgetId,
   BUILTIN_WIDGET_IDS,
   type BuiltinWidgetId,
 } from "../../store/uiStore";
