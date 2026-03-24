@@ -5,6 +5,33 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## 0.12 – 2026-03-24
+
+### ✨ Added
+
+- WebView2 bridge typed via `interface Window` declaration — `window.chrome?.webview?.postMessage` is now fully type-safe, `as any` cast removed
+
+### 🔧 Changed
+
+- Frontend shared components extracted: `ErrorBar`, `FilterToolbar` (with consolidated CSS replacing five per-page copies), `Modal`, `OpenerIcon`, and `TagEditor` moved to `src/components/`
+- `DashboardSettingsModal` decomposed from 1 155 lines to 306 — each settings tab is now a dedicated component under `src/components/settings/`
+- `TodosWidget` split into `TodoCreateForm`, `TodoItem`, and `TodosCompletedSection` sub-components (341 → 136 lines)
+- Hooks extracted to eliminate duplication: `useWorkflowModals` (shared between DashboardPage and WorkflowsPage), `useRepositoryHub` (SignalR setup removed from DashboardPage), `useTodos`, `useRepositoryScan`
+- `getScanIssueLabel` and `OpenerIcon` deduplicated — were defined identically in both `RepositoriesWidget` and `RepositoriesPage`; now live in `src/utils/repositoryUtils.ts` and `src/components/OpenerIcon.tsx`
+- Backend DAOs moved to `Models/Dao/` with updated namespaces; services reorganized into domain subfolders (`Repositories/`, `PullRequests/`, `Todos/`, `Config/`, `Workflows/`, `Launcher/`, `Infrastructure/`)
+- Provider ID magic strings `"azureDevOps"` and `"github"` replaced with `ProviderId` constants in `UserConfigService`
+- `RunInstallerExecutor` / `RunInstallerStep` renamed to `RunExecutableExecutor` / `RunExecutableStep` to reflect their actual purpose
+- Source tree reorganized: `ext/` → `src/browser-extension/`, `installer/` → `src/installer/`, `plugins/example-plugin/` → `src/plugins/example-plugin/`
+- Solution folder wrappers removed — the four projects now appear directly under the solution root in Solution Explorer instead of each being nested inside a named folder
+
+### 🐛 Fixed
+
+- Unused TypeScript imports (`WidgetId`, `UseMutationResult`) caused strict-mode build errors in CI — removed
+- Dead `pullRequestsApi.getOpen()` export removed from `pullRequests.ts` — only `fetchPullRequests` was ever used
+- Unused `ScriptDto`, `ExecutionDto`, and `ExecutionDetailDto` types deleted — were never referenced
+
+---
+
 ## 0.10 – 2026-03-23
 
 ### ✨ Added
