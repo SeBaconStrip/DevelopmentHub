@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 
-import type { DhSdk } from '../../../src/web/src/plugin-sdk/index';
+import type { DhSdk } from '@developmenthub/plugin-sdk';
 
 declare global {
   interface Window {

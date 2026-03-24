@@ -41,16 +41,34 @@ The compiled output goes to `backend-dist/` (next to `manifest.json`) so the man
       Reference the host SDK for compile-time types only.
       The host provides the actual assembly at runtime — do NOT include it in the output.
     -->
-    <ProjectReference
-      Include="path/to/src/plugins/DevelopmentHub.Plugins.csproj"
-      Private="false"
-      ExcludeAssets="runtime" />
+    <PackageReference Include="DevelopmentHub.Plugins"
+                      Version="1.0.0"
+                      ExcludeAssets="runtime" />
   </ItemGroup>
 
 </Project>
 ```
 
-> `Private="false"` and `ExcludeAssets="runtime"` ensure `DevelopmentHub.Plugins.dll` is not copied into `backend-dist/`. At runtime, the host's already-loaded assembly is used.
+> `ExcludeAssets="runtime"` ensures `DevelopmentHub.Plugins.dll` is not copied into `backend-dist/`. At runtime, the host's already-loaded assembly is used.
+
+### Installing the package
+
+Download `DevelopmentHub.Plugins.{version}.nupkg` from the GitHub Release, then add a local NuGet source pointing to the folder that contains it:
+
+```sh
+dotnet nuget add source /path/to/folder --name DevelopmentHub
+```
+
+Or reference it directly in a `nuget.config` next to your `.csproj`:
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <packageSources>
+    <add key="DevelopmentHub" value="/path/to/folder" />
+  </packageSources>
+</configuration>
+```
 
 ## The `IPlugin` interface
 

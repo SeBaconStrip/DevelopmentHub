@@ -1,0 +1,27 @@
+{
+  "name": "@developmenthub/plugin-sdk",
+  "version": "1.0.0",
+  "description": "TypeScript type definitions for DevelopmentHub plugin development",
+  "types": "index.ts",
+  "files": [
+    "index.ts"
+  ],
+  "peerDependencies": {
+    "@tanstack/react-query": "^5.0.0",
+    "react": "^19.0.0",
+    "react-router-dom": "^7.0.0",
+    "zustand": "^5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@tanstack/react-query": { "optional": true },
+    "react-router-dom": { "optional": true },
+    "zustand": { "optional": true }
+  },
+  "keywords": [
+    "developmenthub",
+    "plugin",
+    "sdk",
+    "types"
+  ],
+  "license": "MIT"
+}

@@ -65,7 +65,12 @@ Inside the plugin directory create the following files.
     "dev": "vite build --watch"
   },
   "devDependencies": {
+    "@developmenthub/plugin-sdk": "^1.0.0",
     "@types/react": "^19.0.0",
+    "@tanstack/react-query": "^5.0.0",
+    "react": "^19.0.0",
+    "react-router-dom": "^7.0.0",
+    "zustand": "^5.0.0",
     "@vitejs/plugin-react": "^4.0.0",
     "typescript": "^5.0.0",
     "vite": "^6.0.0"
@@ -125,7 +130,7 @@ export default defineConfig({
 ```ts
 /// <reference types="vite/client" />
 
-import type { DhSdk } from '../../../src/web/src/plugin-sdk/index';
+import type { DhSdk } from '@developmenthub/plugin-sdk';
 
 declare global {
   interface Window {
@@ -133,8 +138,6 @@ declare global {
   }
 }
 ```
-
-> The relative path above works for plugins inside this repository. For external plugins, replace the import with `@developmenthub/plugin-sdk` once that package is published.
 
 ## 4. Write the components
 
@@ -216,10 +219,9 @@ Create `backend/MyPlugin.csproj`:
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference
-      Include="path/to/src/plugins/DevelopmentHub.Plugins.csproj"
-      Private="false"
-      ExcludeAssets="runtime" />
+    <PackageReference Include="DevelopmentHub.Plugins"
+                      Version="1.0.0"
+                      ExcludeAssets="runtime" />
   </ItemGroup>
 </Project>
 ```
