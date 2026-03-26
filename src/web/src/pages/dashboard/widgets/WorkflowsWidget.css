@@ -102,11 +102,106 @@
   overflow: hidden;
 }
 
+
+.workflow-section-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
 .workflow-input-fields {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 20px 24px 0;
+  padding: 16px 24px 0;
+}
+
+.workflow-steps-advanced {
+  margin: 12px 24px 0;
+  padding-bottom: 16px;
+}
+
+.workflow-steps-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  outline: none;
+}
+
+.workflow-steps-summary::-webkit-details-marker {
+  display: none;
+}
+
+.workflow-steps-summary::before {
+  content: "▶";
+  font-size: 9px;
+  transition: transform 0.15s;
+  display: inline-block;
+}
+
+.workflow-steps-advanced[open] .workflow-steps-summary::before {
+  transform: rotate(90deg);
+}
+
+.workflow-steps-badge {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 15%, transparent);
+  padding: 1px 7px;
+  border-radius: 10px;
+}
+
+.workflow-steps-section {
+  display: flex;
+  flex-direction: column;
+  padding: 10px 0 0;
+}
+
+.workflow-step-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border-subtle, rgba(255,255,255,0.06));
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.workflow-step-row:last-child {
+  border-bottom: none;
+}
+
+.workflow-step-row input[type="checkbox"] {
+  flex-shrink: 0;
+  cursor: pointer;
+  accent-color: var(--color-accent);
+  width: 15px;
+  height: 15px;
+}
+
+.workflow-step-name {
+  flex: 1;
+  color: var(--text-primary);
+}
+
+.workflow-step-type {
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: var(--surface-2, rgba(255,255,255,0.06));
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-family: monospace;
 }
 
 .workflow-log {

@@ -93,13 +93,7 @@ export default function WorkflowsPage() {
             lastExecutionIdByWorkflow={lastExecutionIdByWorkflow}
             workflowRunError={workflowRunError}
             onClearError={() => setWorkflowRunError(null)}
-            onRun={(workflow) => {
-              if (workflow.inputs.length > 0) {
-                setWorkflowInputModal(workflow);
-                return;
-              }
-              runWorkflowWithInputs(workflow, {});
-            }}
+            onRun={(workflow) => setWorkflowInputModal(workflow)}
             onOpenExecution={(workflowId, executionId) => {
               const workflow = workflows.find((w) => w.id === workflowId);
               if (!workflow) return;
@@ -113,11 +107,11 @@ export default function WorkflowsPage() {
         <WorkflowInputModal
           workflow={workflowInputModal}
           onClose={() => setWorkflowInputModal(null)}
-          onSubmit={(inputs) => {
+          onSubmit={(inputs, skippedSteps) => {
             const workflow = workflowInputModal;
             if (!workflow) return;
             setWorkflowInputModal(null);
-            runWorkflowWithInputs(workflow, inputs);
+            runWorkflowWithInputs(workflow, inputs, skippedSteps);
           }}
         />
       )}

@@ -72,8 +72,9 @@ public class WorkflowService(
         var providers = new ProviderSettings(config.PullRequestProviders);
         var inputs = ResolveInputs(definition, request.Inputs);
         var execution = CreateExecution(definition);
+        var skippedSteps = request.SkippedSteps.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        _ = Task.Run(() => ExecuteWorkflowAsync(execution, definition, inputs, providers), CancellationToken.None);
+        _ = Task.Run(() => ExecuteWorkflowAsync(execution, definition, inputs, providers, skippedSteps), CancellationToken.None);
 
         return MapExecutionDto(execution);
     }
@@ -84,7 +85,8 @@ public class WorkflowService(
         WorkflowExecutionState execution,
         WorkflowDefinition definition,
         IReadOnlyDictionary<string, string> inputs,
-        ProviderSettings providers)
+        ProviderSettings providers,
+        HashSet<string>? skippedSteps = null)
     {
         using var cts = new CancellationTokenSource();
 
@@ -95,6 +97,11 @@ public class WorkflowService(
             foreach (var step in definition.Steps)
             {
                 cts.Token.ThrowIfCancellationRequested();
+                if (skippedSteps is { Count: > 0 } && skippedSteps.Contains(step.Name))
+                {
+                    await LogAsync(execution, $"Skipping step '{step.Name}'.", "warning");
+                    continue;
+                }
                 await ExecuteStepAsync(execution, definition, step, inputs, providers, cts.Token);
             }
 

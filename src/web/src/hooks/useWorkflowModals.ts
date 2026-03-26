@@ -37,15 +37,16 @@ export function useWorkflowModals({ workflows, confirmMessage }: UseWorkflowModa
     onSettled: () => setRunningWorkflowId(null),
   });
 
-  function runWorkflowWithInputs(workflow: WorkflowDefinition, inputs: Record<string, string>) {
-    const defaultMessage = confirmMessage
-      ? confirmMessage(workflow)
-      : `Run workflow "${workflow.name}"?`;
-    const confirmed =
-      !workflow.requiresConfirmation || window.confirm(defaultMessage);
-    if (!confirmed) return;
+  function runWorkflowWithInputs(
+    workflow: WorkflowDefinition,
+    inputs: Record<string, string>,
+    skippedSteps: string[] = [],
+  ) {
     setWorkflowRunError(null);
-    runWorkflow.mutate({ workflowId: workflow.id, request: { inputs, confirmed } });
+    runWorkflow.mutate({
+      workflowId: workflow.id,
+      request: { inputs, confirmed: true, skippedSteps },
+    });
   }
 
   return {
