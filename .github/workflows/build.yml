@@ -113,6 +113,25 @@ jobs:
           Copy-Item "ext/*" $staging -Recurse
           Compress-Archive -Path "$staging/*" -DestinationPath $zipPath
 
+      - name: Pack plugin SDK (NuGet)
+        shell: bash
+        run: |
+          dotnet pack src/plugins/DevelopmentHub.Plugins.csproj \
+            -c Release \
+            -p:Version=${{ steps.calc.outputs.version }} \
+            -o artifacts/nuget
+
+      - name: Pack plugin SDK (npm)
+        shell: pwsh
+        run: |
+          $version = "${{ steps.calc.outputs.version }}"
+          $pkgPath = "src/web/src/plugin-sdk/package.json"
+          $pkg = Get-Content $pkgPath -Raw | ConvertFrom-Json
+          $pkg.version = $version
+          $pkg | ConvertTo-Json -Depth 10 | Set-Content $pkgPath
+          New-Item -ItemType Directory -Path "artifacts/npm" -Force | Out-Null
+          npm pack src/web/src/plugin-sdk --pack-destination artifacts/npm
+
       - name: Install Inno Setup
         run: choco install innosetup --yes --no-progress
 
@@ -146,6 +165,16 @@ jobs:
           path: artifacts/DevelopmentHub-Edge-Extension-*.zip
           retention-days: 1
 
+      - name: Upload plugin SDK artifacts (PR only)
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: DevelopmentHub-PluginSDK-${{ steps.calc.outputs.version }}
+          path: |
+            artifacts/nuget/*.nupkg
+            artifacts/npm/*.tgz
+          retention-days: 1
+
       - name: Create GitHub Release
         if: github.event_name == 'push'
         uses: softprops/action-gh-release@v2
@@ -157,5 +186,7 @@ jobs:
           files: |
             installer/output/DevelopmentHub-Setup-*.exe
             artifacts/DevelopmentHub-Edge-Extension-*.zip
+            artifacts/nuget/*.nupkg
+            artifacts/npm/*.tgz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
