@@ -1,8 +1,8 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useLayoutEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useHeaderActions } from "../../components/AppLayout";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Responsive, useContainerWidth } from "react-grid-layout";
+import { Responsive } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import "./DashboardPage.css";
@@ -41,6 +41,10 @@ import { WorkflowInputModal } from "./widgets/WorkflowInputModal";
 import { WorkflowExecutionModal } from "./widgets/WorkflowExecutionModal";
 
 /* ─────────────────────────────────────────────────────────────── layout ── */
+
+// Persists the container width across unmount/remount so the grid never
+// starts with the wrong width when navigating back to the dashboard.
+let _cachedContainerWidth = window.innerWidth;
 
 export default function DashboardPage() {
   const [isEditMode, setIsEditMode] = useState(false);
@@ -110,7 +114,13 @@ export default function DashboardPage() {
     queryFn: workflowsApi.list,
   });
 
-  const { createTodo, updateTodo, toggleTodo, deleteTodo, clearCompletedTodos } = useTodos();
+  const {
+    createTodo,
+    updateTodo,
+    toggleTodo,
+    deleteTodo,
+    clearCompletedTodos,
+  } = useTodos();
 
   const {
     workflowRunError,
@@ -177,9 +187,15 @@ export default function DashboardPage() {
       body: (
         <TodosWidget
           todos={todos}
-          onCreate={(title, linkUrl) => createTodo.mutateAsync({ title, linkUrl })}
-          onUpdate={(id, title, linkUrl) => updateTodo.mutateAsync({ id, title, linkUrl })}
-          onToggleCompleted={(id, completed) => toggleTodo.mutateAsync({ id, completed })}
+          onCreate={(title, linkUrl) =>
+            createTodo.mutateAsync({ title, linkUrl })
+          }
+          onUpdate={(id, title, linkUrl) =>
+            updateTodo.mutateAsync({ id, title, linkUrl })
+          }
+          onToggleCompleted={(id, completed) =>
+            toggleTodo.mutateAsync({ id, completed })
+          }
           onDelete={(id) => deleteTodo.mutateAsync(id)}
           onClearCompleted={() => clearCompletedTodos.mutateAsync()}
           isBusy={
@@ -224,7 +240,9 @@ export default function DashboardPage() {
   const isBuiltin = (id: string): id is BuiltinWidgetId =>
     (BUILTIN_WIDGET_IDS as readonly string[]).includes(id);
 
-  const enabled = dashboardWidgets.filter((w) => w.enabled && (isBuiltin(w.id) || true));
+  const enabled = dashboardWidgets.filter(
+    (w) => w.enabled && (isBuiltin(w.id) || true),
+  );
   const disabled = dashboardWidgets.filter((w) => !w.enabled);
 
   const filteredLayouts: BreakpointLayouts = Object.fromEntries(
@@ -234,14 +252,31 @@ export default function DashboardPage() {
     ]),
   );
 
-  const { containerRef, width: containerWidth } = useContainerWidth();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState(
+    () => _cachedContainerWidth,
+  );
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    setContainerWidth(el.offsetWidth);
+    _cachedContainerWidth = el.offsetWidth;
+    const ro = new ResizeObserver(([entry]) => {
+      _cachedContainerWidth = entry.contentRect.width;
+      setContainerWidth(entry.contentRect.width);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   function handleLayoutChange(_: unknown, layouts: unknown) {
     const incoming = layouts as BreakpointLayouts;
     const merged = Object.fromEntries(
       Object.entries(gridLayouts).map(([bp, items]) => [
         bp,
-        items.map((item) => (incoming[bp] ?? []).find((l) => l.i === item.i) ?? item),
+        items.map(
+          (item) => (incoming[bp] ?? []).find((l) => l.i === item.i) ?? item,
+        ),
       ]),
     );
     setGridLayouts(merged);
@@ -258,7 +293,11 @@ export default function DashboardPage() {
   useHeaderActions(
     <>
       {isEditMode && (
-        <button className="btn-ghost" onClick={resetGridLayoutsCb} title="Reset panel positions to defaults">
+        <button
+          className="btn-ghost"
+          onClick={resetGridLayoutsCb}
+          title="Reset panel positions to defaults"
+        >
           ↺ Reset
         </button>
       )}
@@ -274,97 +313,97 @@ export default function DashboardPage() {
 
   return (
     <div className="dash-page">
-        {/* edit mode: re-add hidden panels */}
-        {isEditMode && disabled.length > 0 && (
-          <div className="dash-hidden-panels">
-            <span className="dash-hidden-label">Hidden panels:</span>
-            {disabled.map((w) => (
-              <button
-                key={w.id}
-                className="btn-add-panel"
-                onClick={() => handleToggleWidget(w.id)}
-              >
-                {w.icon} + {w.label}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {isEditMode && (
-          <div className="dash-edit-hint">
-            <span>✋</span>
-            Drag panels from anywhere · resize from the right, bottom or corner · click ✕ to hide
-          </div>
-        )}
-
-        {enabled.length === 0 ? (
-          <div className="card dash-empty-card">
-            <p>No panels visible</p>
-            <p>
-              Open <strong>⚙ Settings</strong> or use{" "}
-              <strong>✎ Edit Layout</strong> to add panels.
-            </p>
-          </div>
-        ) : (
-          <div ref={containerRef}>
-            <Responsive
-              width={containerWidth}
-              layouts={filteredLayouts}
-              breakpoints={{ lg: 1200, md: 900, sm: 600, xs: 0 }}
-              cols={{ lg: 12, md: 10, sm: 6, xs: 4 }}
-              rowHeight={54}
-              dragConfig={
-                { enabled: isEditMode, cancel: ".panel-close-btn" } as object
-              }
-              resizeConfig={
-                { enabled: isEditMode, handles: ["se", "s", "e"] } as object
-              }
-              onLayoutChange={handleLayoutChange}
-              margin={[16, 16]}
-              containerPadding={[0, 0]}
+      {/* edit mode: re-add hidden panels */}
+      {isEditMode && disabled.length > 0 && (
+        <div className="dash-hidden-panels">
+          <span className="dash-hidden-label">Hidden panels:</span>
+          {disabled.map((w) => (
+            <button
+              key={w.id}
+              className="btn-add-panel"
+              onClick={() => handleToggleWidget(w.id)}
             >
-              {enabled.map((w) => {
-                const cfg = isBuiltin(w.id) ? widgetMap[w.id] : null;
-                return (
-                  <div key={w.id} className="panel-wrapper">
-                    <Panel
-                      icon={w.icon}
-                      title={w.label}
-                      badge={cfg?.badge}
-                      headerActions={cfg?.headerActions}
-                      onTitleClick={cfg?.onTitleClick}
-                      isEditMode={isEditMode}
-                      onClose={() => handleToggleWidget(w.id)}
-                    >
-                      {cfg ? cfg.body : <PluginWidget widgetId={w.id} />}
-                    </Panel>
-                  </div>
-                );
-              })}
-            </Responsive>
-          </div>
-        )}
+              {w.icon} + {w.label}
+            </button>
+          ))}
+        </div>
+      )}
 
-        {workflowInputModal && (
-          <WorkflowInputModal
-            workflow={workflowInputModal}
-            onClose={() => setWorkflowInputModal(null)}
-            onSubmit={(inputs) => {
-              const workflow = workflowInputModal;
-              if (!workflow) return;
-              setWorkflowInputModal(null);
-              runWorkflowWithInputs(workflow, inputs);
-            }}
-          />
-        )}
-        {workflowModal && (
-          <WorkflowExecutionModal
-            workflow={workflowModal.workflow}
-            executionId={workflowModal.executionId}
-            onClose={() => setWorkflowModal(null)}
-          />
-        )}
+      {isEditMode && (
+        <div className="dash-edit-hint">
+          <span>✋</span>
+          Drag panels from anywhere · resize from the right, bottom or corner ·
+          click ✕ to hide
+        </div>
+      )}
+
+      {enabled.length === 0 ? (
+        <div className="card dash-empty-card">
+          <p>No panels visible</p>
+          <p>
+            Open <strong>⚙ Settings</strong> or use{" "}
+            <strong>✎ Edit Layout</strong> to add panels.
+          </p>
+        </div>
+      ) : (
+        <div ref={containerRef}>
+          <Responsive
+            width={containerWidth}
+            layouts={filteredLayouts}
+            breakpoints={{ lg: 1200, md: 900, sm: 600, xs: 0 }}
+            cols={{ lg: 12, md: 10, sm: 6, xs: 4 }}
+            rowHeight={54}
+            dragConfig={
+              { enabled: isEditMode, cancel: ".panel-close-btn" } as object
+            }
+            resizeConfig={
+              { enabled: isEditMode, handles: ["se", "s", "e"] } as object
+            }
+            onLayoutChange={handleLayoutChange}
+            margin={[16, 16]}
+            containerPadding={[0, 0]}
+          >
+            {enabled.map((w) => {
+              const cfg = isBuiltin(w.id) ? widgetMap[w.id] : null;
+              return (
+                <div key={w.id} className="panel-wrapper">
+                  <Panel
+                    icon={w.icon}
+                    title={w.label}
+                    badge={cfg?.badge}
+                    headerActions={cfg?.headerActions}
+                    onTitleClick={cfg?.onTitleClick}
+                    isEditMode={isEditMode}
+                    onClose={() => handleToggleWidget(w.id)}
+                  >
+                    {cfg ? cfg.body : <PluginWidget widgetId={w.id} />}
+                  </Panel>
+                </div>
+              );
+            })}
+          </Responsive>
+        </div>
+      )}
+
+      {workflowInputModal && (
+        <WorkflowInputModal
+          workflow={workflowInputModal}
+          onClose={() => setWorkflowInputModal(null)}
+          onSubmit={(inputs) => {
+            const workflow = workflowInputModal;
+            if (!workflow) return;
+            setWorkflowInputModal(null);
+            runWorkflowWithInputs(workflow, inputs);
+          }}
+        />
+      )}
+      {workflowModal && (
+        <WorkflowExecutionModal
+          workflow={workflowModal.workflow}
+          executionId={workflowModal.executionId}
+          onClose={() => setWorkflowModal(null)}
+        />
+      )}
     </div>
   );
-
 }
