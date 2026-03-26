@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { configApi } from "../../api/config";
 import { QuickLinksWidget } from "../dashboard/widgets/QuickLinksWidget";
+import { FilterToolbar } from "../../components/FilterToolbar";
 import type { CustomLink } from "../../types";
 import "./QuickLinksPage.css";
 
@@ -34,36 +35,25 @@ export default function QuickLinksPage() {
         l.target.toLowerCase().includes(search.toLowerCase()),
     );
 
+  const linkFilters = [
+    { value: "all", label: `All (${links.length})` },
+    { value: "web", label: `🌐 Web${webCount > 0 ? ` (${webCount})` : ""}` },
+    { value: "explorer", label: `📁 Explorer${explorerCount > 0 ? ` (${explorerCount})` : ""}` },
+  ];
+
   return (
     <div className="quick-links-page">
       <div className="quick-links-page-card">
-        <div className="quick-links-page-toolbar">
-          <div className="quick-links-page-toolbar-left">
-            <input
-              className="quick-links-page-search"
-              type="search"
-              placeholder="Search by name or URL…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            <div className="quick-links-page-filters">
-              {(["all", "web", "explorer"] as Filter[]).map((f) => (
-                <button
-                  key={f}
-                  className={`quick-links-page-filter-btn${filter === f ? " quick-links-page-filter-btn--active" : ""}`}
-                  onClick={() => setFilter(f)}
-                >
-                  {f === "all" && `All (${links.length})`}
-                  {f === "web" && `🌐 Web${webCount > 0 ? ` (${webCount})` : ""}`}
-                  {f === "explorer" && `📁 Explorer${explorerCount > 0 ? ` (${explorerCount})` : ""}`}
-                </button>
-              ))}
-            </div>
-          </div>
-          {filtered.length !== links.length && (
-            <span className="quick-links-page-count">{filtered.length} shown</span>
-          )}
-        </div>
+        <FilterToolbar
+          search={search}
+          onSearchChange={setSearch}
+          filter={filter}
+          onFilterChange={(f) => setFilter(f as Filter)}
+          filters={linkFilters}
+          searchPlaceholder="Search by name or URL…"
+          shownCount={filtered.length}
+          totalCount={links.length}
+        />
       </div>
 
       {isLoading ? (
