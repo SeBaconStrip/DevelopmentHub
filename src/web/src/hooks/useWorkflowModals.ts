@@ -13,6 +13,7 @@ export function useWorkflowModals({ workflows, confirmMessage }: UseWorkflowModa
   const [workflowRunError, setWorkflowRunError] = useState<string | null>(null);
   const [workflowInputModal, setWorkflowInputModal] = useState<WorkflowDefinition | null>(null);
   const [runningWorkflowId, setRunningWorkflowId] = useState<string | null>(null);
+  const [lastExecutionIdByWorkflow, setLastExecutionIdByWorkflow] = useState<Record<string, string>>({});
   const [workflowModal, setWorkflowModal] = useState<{
     workflow: WorkflowDefinition;
     executionId: string | null;
@@ -26,6 +27,7 @@ export function useWorkflowModals({ workflows, confirmMessage }: UseWorkflowModa
     onSuccess: (execution, variables) => {
       setWorkflowRunError(null);
       queryClient.invalidateQueries({ queryKey: ["workflow-executions"] });
+      setLastExecutionIdByWorkflow((prev) => ({ ...prev, [variables.workflowId]: execution.id }));
       const workflow = workflows.find((w) => w.id === variables.workflowId);
       if (workflow) {
         setWorkflowModal({ workflow, executionId: execution.id });
@@ -52,6 +54,7 @@ export function useWorkflowModals({ workflows, confirmMessage }: UseWorkflowModa
     workflowInputModal,
     setWorkflowInputModal,
     runningWorkflowId,
+    lastExecutionIdByWorkflow,
     workflowModal,
     setWorkflowModal,
     runWorkflowWithInputs,

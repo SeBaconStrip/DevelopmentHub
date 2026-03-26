@@ -18,7 +18,12 @@ public sealed class RunExecutableExecutor : WorkflowStepExecutor<RunExecutableSt
             throw new InvalidOperationException("runExecutable requires filePath.");
 
         if (!File.Exists(filePath))
-            throw new FileNotFoundException("Installer not found.", filePath);
+        {
+            var resolved = ResolveOnPath(filePath);
+            if (resolved is null)
+                throw new FileNotFoundException("Executable not found.", filePath);
+            filePath = resolved;
+        }
 
         var arguments = step.Arguments.Select(arg => WorkflowHelpers.Render(arg, context.Inputs)).ToArray();
         var renderedArgs = string.Join(" ", arguments.Select(WorkflowHelpers.QuoteArgument));
@@ -52,7 +57,7 @@ public sealed class RunExecutableExecutor : WorkflowStepExecutor<RunExecutableSt
         }
 
         if (!process.Start())
-            throw new InvalidOperationException($"Installer '{filePath}' could not be started.");
+            throw new InvalidOperationException($"Executable '{filePath}' could not be started.");
 
         if (!step.RunElevated)
         {
@@ -67,6 +72,26 @@ public sealed class RunExecutableExecutor : WorkflowStepExecutor<RunExecutableSt
 
         if (!step.SuccessExitCodes.Contains(process.ExitCode))
             throw new InvalidOperationException(
-                $"Installer '{Path.GetFileName(filePath)}' exited with code {process.ExitCode}.");
+                $"Executable '{Path.GetFileName(filePath)}' exited with code {process.ExitCode}.");
+    }
+
+    private static string? ResolveOnPath(string name)
+    {
+        var pathExt = (Environment.GetEnvironmentVariable("PATHEXT") ?? ".EXE;.CMD;.BAT")
+            .Split(';', StringSplitOptions.RemoveEmptyEntries);
+        var searchDirs = (Environment.GetEnvironmentVariable("PATH") ?? "")
+            .Split(';', StringSplitOptions.RemoveEmptyEntries);
+
+        foreach (var dir in searchDirs)
+        {
+            var candidate = Path.Combine(dir.Trim(), name);
+            if (File.Exists(candidate)) return candidate;
+            foreach (var ext in pathExt)
+            {
+                var withExt = candidate + ext;
+                if (File.Exists(withExt)) return withExt;
+            }
+        }
+        return null;
     }
 }

@@ -7,6 +7,7 @@ export function WorkflowsWidget({
   workflows,
   executions,
   runningWorkflowId,
+  lastExecutionIdByWorkflow = {},
   workflowRunError,
   onRun,
   onOpenExecution,
@@ -15,9 +16,10 @@ export function WorkflowsWidget({
   workflows: WorkflowDefinition[];
   executions: WorkflowExecution[];
   runningWorkflowId: string | null;
+  lastExecutionIdByWorkflow?: Record<string, string>;
   workflowRunError: string | null;
   onRun: (workflow: WorkflowDefinition) => void;
-  onOpenExecution: (workflowId: string) => void;
+  onOpenExecution: (workflowId: string, executionId: string) => void;
   onClearError: () => void;
 }) {
   return (
@@ -28,10 +30,11 @@ export function WorkflowsWidget({
       ) : (
         <div className="workflow-list">
           {workflows.map((workflow) => {
-            const latestExecution = executions.find(
-              (execution) => execution.workflowId === workflow.id,
-            );
+            const latestExecution = executions
+              .filter((e) => e.workflowId === workflow.id)
+              .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime())[0];
             const isRunning = runningWorkflowId === workflow.id;
+            const currentExecutionId = lastExecutionIdByWorkflow[workflow.id];
 
             return (
               <div key={workflow.id} className="workflow-card">
@@ -54,10 +57,18 @@ export function WorkflowsWidget({
                       ? ` · ${workflow.inputs.length} input${workflow.inputs.length !== 1 ? "s" : ""}`
                       : ""}
                   </span>
-                  {latestExecution && (
+                  {isRunning && currentExecutionId && (
                     <button
                       className="workflow-link-btn"
-                      onClick={() => onOpenExecution(workflow.id)}
+                      onClick={() => onOpenExecution(workflow.id, currentExecutionId)}
+                    >
+                      ⟳ View current run…
+                    </button>
+                  )}
+                  {!isRunning && latestExecution && (
+                    <button
+                      className="workflow-link-btn"
+                      onClick={() => onOpenExecution(workflow.id, latestExecution.id)}
                     >
                       Last run: {latestExecution.status} ·{" "}
                       {new Date(latestExecution.startedAt).toLocaleString()}
