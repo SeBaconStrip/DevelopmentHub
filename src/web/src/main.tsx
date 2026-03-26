@@ -4,7 +4,7 @@ import "./index.css";
 import App from "./App.tsx";
 
 // Apply stored theme synchronously before first paint to avoid flash
-const VALID_THEMES = ["violet", "dark", "ocean", "orange", "nature"];
+const VALID_THEMES = ["violet", "dark", "vscode", "ocean", "orange", "nature"];
 const storedTheme = localStorage.getItem("dh-theme");
 document.documentElement.setAttribute(
   "data-theme",

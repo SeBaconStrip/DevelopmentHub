@@ -236,7 +236,14 @@ export default function DashboardPage() {
   const { containerRef, width: containerWidth } = useContainerWidth();
 
   function handleLayoutChange(_: unknown, layouts: unknown) {
-    setGridLayouts(layouts as BreakpointLayouts);
+    const incoming = layouts as BreakpointLayouts;
+    const merged = Object.fromEntries(
+      Object.entries(gridLayouts).map(([bp, items]) => [
+        bp,
+        items.map((item) => (incoming[bp] ?? []).find((l) => l.i === item.i) ?? item),
+      ]),
+    );
+    setGridLayouts(merged);
   }
 
   function handleToggleWidget(id: string) {
