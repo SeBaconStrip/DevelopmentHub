@@ -31,11 +31,20 @@
 }
 
 .app-brand {
-  font-size: 15px;
+  font-size: 20px;
   font-weight: 700;
   color: var(--text-primary);
   white-space: nowrap;
   flex-shrink: 0;
+  text-decoration: none;
+  cursor: pointer;
+  outline: none;
+  border: none;
+}
+
+.app-brand:focus,
+.app-brand:focus-visible {
+  outline: none !important;
 }
 
 /* ── nav ── */
