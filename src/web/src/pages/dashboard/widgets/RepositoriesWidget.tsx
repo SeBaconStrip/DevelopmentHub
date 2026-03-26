@@ -1,24 +1,11 @@
 import { Fragment } from "react";
-import vscodeIconUrl from "../../../assets/icons/vscode.svg";
-import visualStudioIconUrl from "../../../assets/icons/visualstudio.svg";
 import explorerIconUrl from "../../../assets/icons/windows-explorer.svg";
 import type { Repository, RepositoryOpener } from "../../../types";
 import { Empty } from "./shared";
+import { ErrorBar } from "../../../components/ErrorBar";
+import { OpenerIcon } from "../../../components/OpenerIcon";
+import { getScanIssueLabel } from "../../../utils/repositoryUtils";
 import "./RepositoriesWidget.css";
-
-function OpenerIcon({ opener, size }: { opener: RepositoryOpener; size: number }) {
-  if (opener.iconType === "vscode")
-    return <img src={vscodeIconUrl} width={size} height={size} alt={opener.label} draggable={false} />;
-  if (opener.iconType === "visualstudio")
-    return <img src={visualStudioIconUrl} width={size} height={size} alt={opener.label} draggable={false} />;
-  if (opener.iconPath)
-    return <img src={`/api/icon-extractor?path=${encodeURIComponent(opener.iconPath)}`} width={size} height={size} alt={opener.label} draggable={false} />;
-  return (
-    <span className="opener-icon-initial" style={{ width: size, height: size, fontSize: size * 0.6 }}>
-      {opener.label ? opener.label[0].toUpperCase() : "?"}
-    </span>
-  );
-}
 
 export function RepositoriesWidget({
   repos,
@@ -38,12 +25,7 @@ export function RepositoriesWidget({
   if (repos.length === 0) return <Empty text="No repositories found" />;
   return (
     <>
-      {openError && (
-        <div className="panel-error-bar">
-          <span>⚠ {openError}</span>
-          <button onClick={onClearOpenError}>✕</button>
-        </div>
-      )}
+      <ErrorBar message={openError} onDismiss={onClearOpenError} />
     <div className="repo-grid">
       {/* header */}
       <div className="repo-grid-header repo-col-name">Repository</div>
@@ -84,7 +66,7 @@ export function RepositoriesWidget({
             )}
             {r.scanIssueCode && (
               <span className="repo-scan-issue" title={r.scanIssueMessage ?? undefined}>
-                ⚠ {getRepositoryScanIssueLabel(r.scanIssueCode)}
+                ⚠ {getScanIssueLabel(r.scanIssueCode)}
               </span>
             )}
           </div>
@@ -128,19 +110,3 @@ export function RepositoriesWidget({
   );
 }
 
-function getRepositoryScanIssueLabel(issueCode: string): string {
-  switch (issueCode) {
-    case "DubiousOwnership":
-      return "Git ownership blocked";
-    case "NotAGitRepository":
-      return "Not a Git repository";
-    case "PathNotFound":
-      return "Path not found";
-    case "RemoteNotFoundOrPermissionDenied":
-      return "Remote missing or no access";
-    case "FetchTimeout":
-      return "Fetch timed out";
-    default:
-      return "Repository scan warning";
-  }
-}

@@ -5,7 +5,7 @@
 #define MyAppPublisher "DevelopmentHub"
 #define MyAppExeName "DevelopmentHub.exe"
 #define MyAppIconFile "DeveloperHubIcon.ico"
-#define PublishDir "..\publish"
+#define PublishDir "..\..\publish"
 
 [Setup]
 AppId={{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}}

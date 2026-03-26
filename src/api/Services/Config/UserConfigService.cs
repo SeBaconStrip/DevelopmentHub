@@ -1,5 +1,5 @@
 using DevelopmentHub.Api.Data;
-using DevelopmentHub.Api.Models;
+using DevelopmentHub.Api.Models.Dao;
 
 namespace DevelopmentHub.Api.Services;
 
@@ -13,6 +13,12 @@ public class UserConfigService(DashboardDatabase db) : IUserConfigService
 {
     private const string ConfigId = "app_config";
     private readonly Lock _configLock = new();
+
+    private static class ProviderId
+    {
+        public const string AzureDevOps = "azureDevOps";
+        public const string GitHub = "github";
+    }
 
     public Task<UserConfigDao> GetAsync()
     {
@@ -51,8 +57,8 @@ public class UserConfigService(DashboardDatabase db) : IUserConfigService
                 Type = string.Equals(link.Type, "explorer", StringComparison.OrdinalIgnoreCase) ? "explorer" : "web"
             })
             .ToList();
-        EnsureProvider(config, "azureDevOps");
-        EnsureProvider(config, "github");
+        EnsureProvider(config, ProviderId.AzureDevOps);
+        EnsureProvider(config, ProviderId.GitHub);
 
         config.RepositoryOpeners ??=
         [

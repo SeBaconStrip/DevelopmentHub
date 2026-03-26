@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchPullRequests } from "../../api/pullRequests";
 import { PullRequestsWidget } from "../dashboard/widgets/PullRequestsWidget";
+import { FilterToolbar } from "../../components/FilterToolbar";
 import type { PullRequest } from "../../types";
 import "./PullRequestsPage.css";
 
@@ -35,37 +36,26 @@ export default function PullRequestsPage() {
   const reviewerCount = prs.filter((pr) => pr.isReviewer).length;
   const draftCount = prs.filter((pr) => pr.isDraft).length;
 
+  const prFilters = [
+    { value: "all", label: `All (${prs.length})` },
+    { value: "mine", label: `Mine${mineCount > 0 ? ` (${mineCount})` : ""}` },
+    { value: "reviewer", label: `Reviewer${reviewerCount > 0 ? ` (${reviewerCount})` : ""}` },
+    { value: "draft", label: `Draft${draftCount > 0 ? ` (${draftCount})` : ""}` },
+  ];
+
   return (
     <div className="pr-page">
       <div className="pr-page-card">
-        <div className="pr-page-toolbar">
-          <div className="pr-page-toolbar-left">
-            <input
-              className="pr-page-search"
-              type="search"
-              placeholder="Search by title, repo or author…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            <div className="pr-page-filters">
-              {(["all", "mine", "reviewer", "draft"] as Filter[]).map((f) => (
-                <button
-                  key={f}
-                  className={`pr-page-filter-btn${filter === f ? " pr-page-filter-btn--active" : ""}`}
-                  onClick={() => setFilter(f)}
-                >
-                  {f === "all" && `All (${prs.length})`}
-                  {f === "mine" && `Mine${mineCount > 0 ? ` (${mineCount})` : ""}`}
-                  {f === "reviewer" && `Reviewer${reviewerCount > 0 ? ` (${reviewerCount})` : ""}`}
-                  {f === "draft" && `Draft${draftCount > 0 ? ` (${draftCount})` : ""}`}
-                </button>
-              ))}
-            </div>
-          </div>
-          {filtered.length !== prs.length && (
-            <span className="pr-page-count">{filtered.length} shown</span>
-          )}
-        </div>
+        <FilterToolbar
+          search={search}
+          onSearchChange={setSearch}
+          filter={filter}
+          onFilterChange={(f) => setFilter(f as Filter)}
+          filters={prFilters}
+          searchPlaceholder="Search by title, repo or author…"
+          shownCount={filtered.length}
+          totalCount={prs.length}
+        />
       </div>
 
       {isLoading ? (

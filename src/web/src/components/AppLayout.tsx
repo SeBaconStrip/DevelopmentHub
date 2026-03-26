@@ -45,7 +45,7 @@ export function AppLayout({
       const { x, y } = dragStartPos.current;
       if (Math.abs(e.clientX - x) > 4 || Math.abs(e.clientY - y) > 4) {
         dragStartPos.current = null;
-        (window as any).chrome?.webview?.postMessage("drag");
+        window.chrome?.webview?.postMessage("drag");
       }
     }
     function onMouseUp() {
@@ -60,7 +60,7 @@ export function AppLayout({
   }, []);
 
   function sendWindowMsg(msg: string) {
-    (window as any).chrome?.webview?.postMessage(msg);
+    window.chrome?.webview?.postMessage(msg);
   }
 
   function handleHeaderMouseDown(e: React.MouseEvent) {

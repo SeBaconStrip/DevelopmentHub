@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { workflowsApi } from "../../../api/workflows";
 import { useLogHub } from "../../../hooks/useLogHub";
 import type { WorkflowDefinition, WorkflowExecutionDetail } from "../../../types";
+import { Modal } from "../../../components/Modal";
 import "./WorkflowsWidget.css";
 
 export function WorkflowExecutionModal({
@@ -38,43 +39,36 @@ export function WorkflowExecutionModal({
   );
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div
-        className="modal-card workflow-modal"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="workflow-modal-header">
-          <div>
-            <h2 className="settings-modal-title">{workflow.name}</h2>
-            <p className="settings-modal-sub">
-              Status:{" "}
-              <span className={`workflow-status workflow-status--${status}`}>
-                {status}
+    <Modal
+      onClose={onClose}
+      title={workflow.name}
+      subtitle={
+        <>
+          Status:{" "}
+          <span className={`workflow-status workflow-status--${status}`}>
+            {status}
+          </span>
+        </>
+      }
+      className="workflow-modal"
+    >
+      <div className="workflow-log">
+        {logLines.length === 0 ? (
+          <p className="empty-msg">Waiting for log output...</p>
+        ) : (
+          logLines.map((line, index) => (
+            <div
+              key={`${line.timestamp}-${index}`}
+              className={`workflow-log-line workflow-log-line--${line.stream}`}
+            >
+              <span className="workflow-log-time">
+                {new Date(line.timestamp).toLocaleTimeString()}
               </span>
-            </p>
-          </div>
-          <button className="settings-modal-close" onClick={onClose}>
-            ×
-          </button>
-        </div>
-        <div className="workflow-log">
-          {logLines.length === 0 ? (
-            <p className="empty-msg">Waiting for log output...</p>
-          ) : (
-            logLines.map((line, index) => (
-              <div
-                key={`${line.timestamp}-${index}`}
-                className={`workflow-log-line workflow-log-line--${line.stream}`}
-              >
-                <span className="workflow-log-time">
-                  {new Date(line.timestamp).toLocaleTimeString()}
-                </span>
-                <span>{line.text}</span>
-              </div>
-            ))
-          )}
-        </div>
+              <span>{line.text}</span>
+            </div>
+          ))
+        )}
       </div>
-    </div>
+    </Modal>
   );
 }

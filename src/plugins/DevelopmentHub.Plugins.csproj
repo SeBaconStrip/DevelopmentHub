@@ -17,4 +17,9 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Exclude nested plugin projects; their obj/ folders would otherwise be picked up by the default **/*.cs glob -->
+    <Compile Remove="example-plugin/**" />
+  </ItemGroup>
+
 </Project>
