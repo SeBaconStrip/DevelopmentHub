@@ -92,7 +92,7 @@ jobs:
         shell: pwsh
         run: |
           $version = "${{ steps.calc.outputs.version }}"
-          $manifestPath = "ext/manifest.json"
+          $manifestPath = "src/browser-extension/manifest.json"
           $manifest = Get-Content $manifestPath -Raw | ConvertFrom-Json
           $manifest.version = $version
           $manifest | ConvertTo-Json -Depth 10 | Set-Content $manifestPath
@@ -110,7 +110,7 @@ jobs:
           New-Item -ItemType Directory -Path $staging | Out-Null
           New-Item -ItemType Directory -Path "artifacts" | Out-Null
 
-          Copy-Item "ext/*" $staging -Recurse
+          Copy-Item "src/browser-extension/*" $staging -Recurse
           Compress-Archive -Path "$staging/*" -DestinationPath $zipPath
 
       - name: Pack plugin SDK (NuGet)
@@ -139,22 +139,22 @@ jobs:
         shell: pwsh
         run: |
           $ver = "${{ steps.calc.outputs.version }}"
-          (Get-Content installer\DevelopmentHub.iss) `
+          (Get-Content src\installer\DevelopmentHub.iss) `
             -replace '#define MyAppVersion ".*"', "#define MyAppVersion `"$ver`"" |
-            Set-Content installer\DevelopmentHub.iss
+            Set-Content src\installer\DevelopmentHub.iss
 
       - name: Build installer
         shell: pwsh
         run: |
           $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
-          & $iscc installer\DevelopmentHub.iss
+          & $iscc src\installer\DevelopmentHub.iss
 
       - name: Upload installer artifact (PR only)
         if: github.event_name == 'pull_request'
         uses: actions/upload-artifact@v4
         with:
           name: DevelopmentHub-Setup-${{ steps.calc.outputs.version }}
-          path: installer/output/DevelopmentHub-Setup-*.exe
+          path: src/installer/output/DevelopmentHub-Setup-*.exe
           retention-days: 1
 
       - name: Upload Edge extension artifact (PR only)
@@ -184,7 +184,7 @@ jobs:
           prerelease: false
           generate_release_notes: true
           files: |
-            installer/output/DevelopmentHub-Setup-*.exe
+            src/installer/output/DevelopmentHub-Setup-*.exe
             artifacts/DevelopmentHub-Edge-Extension-*.zip
             artifacts/nuget/*.nupkg
             artifacts/npm/*.tgz

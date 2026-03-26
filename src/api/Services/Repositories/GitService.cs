@@ -1,5 +1,5 @@
 using System.Runtime.InteropServices;
-using DevelopmentHub.Api.Models;
+using DevelopmentHub.Api.Models.Dao;
 using DevelopmentHub.Api.Models.Dtos;
 using LibGit2Sharp;
 
