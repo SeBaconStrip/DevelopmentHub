@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { workflowsApi } from "../api/workflows";
-import type { WorkflowDefinition, WorkflowExecution, RunWorkflowRequest } from "../types";
+import type { WorkflowDefinition, RunWorkflowRequest } from "../types";
 
 interface UseWorkflowModalsOptions {
   workflows: WorkflowDefinition[];
