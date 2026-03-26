@@ -1,4 +1,4 @@
-namespace DevelopmentHub.Api.Models;
+namespace DevelopmentHub.Api.Models.Dao;
 
 /// <summary>
 /// Singleton LiteDB document storing all user-configurable runtime settings.

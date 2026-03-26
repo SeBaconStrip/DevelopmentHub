@@ -1,5 +1,6 @@
 import type { WorkflowDefinition, WorkflowExecution } from "../../../types";
 import { Empty } from "./shared";
+import { ErrorBar } from "../../../components/ErrorBar";
 import "./WorkflowsWidget.css";
 
 export function WorkflowsWidget({
@@ -21,12 +22,7 @@ export function WorkflowsWidget({
 }) {
   return (
     <>
-      {workflowRunError && (
-        <div className="panel-error-bar">
-          <span>⚠ {workflowRunError}</span>
-          <button onClick={onClearError}>✕</button>
-        </div>
-      )}
+      <ErrorBar message={workflowRunError} onDismiss={onClearError} />
       {workflows.length === 0 ? (
         <Empty text="No workflows yet. Add them in Settings > Workflows." />
       ) : (

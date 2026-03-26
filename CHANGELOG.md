@@ -5,6 +5,51 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## 0.12 – 2026-03-24
+
+### ✨ Added
+
+- WebView2 bridge typed via `interface Window` declaration — `window.chrome?.webview?.postMessage` is now fully type-safe, `as any` cast removed
+
+### 🔧 Changed
+
+- Frontend shared components extracted: `ErrorBar`, `FilterToolbar` (with consolidated CSS replacing five per-page copies), `Modal`, `OpenerIcon`, and `TagEditor` moved to `src/components/`
+- `DashboardSettingsModal` decomposed from 1 155 lines to 306 — each settings tab is now a dedicated component under `src/components/settings/`
+- `TodosWidget` split into `TodoCreateForm`, `TodoItem`, and `TodosCompletedSection` sub-components (341 → 136 lines)
+- Hooks extracted to eliminate duplication: `useWorkflowModals` (shared between DashboardPage and WorkflowsPage), `useRepositoryHub` (SignalR setup removed from DashboardPage), `useTodos`, `useRepositoryScan`
+- `getScanIssueLabel` and `OpenerIcon` deduplicated — were defined identically in both `RepositoriesWidget` and `RepositoriesPage`; now live in `src/utils/repositoryUtils.ts` and `src/components/OpenerIcon.tsx`
+- Backend DAOs moved to `Models/Dao/` with updated namespaces; services reorganized into domain subfolders (`Repositories/`, `PullRequests/`, `Todos/`, `Config/`, `Workflows/`, `Launcher/`, `Infrastructure/`)
+- Provider ID magic strings `"azureDevOps"` and `"github"` replaced with `ProviderId` constants in `UserConfigService`
+- `RunInstallerExecutor` / `RunInstallerStep` renamed to `RunExecutableExecutor` / `RunExecutableStep` to reflect their actual purpose
+- Source tree reorganized: `ext/` → `src/browser-extension/`, `installer/` → `src/installer/`, `plugins/example-plugin/` → `src/plugins/example-plugin/`
+- Solution folder wrappers removed — the four projects now appear directly under the solution root in Solution Explorer instead of each being nested inside a named folder
+
+### 🐛 Fixed
+
+- Unused TypeScript imports (`WidgetId`, `UseMutationResult`) caused strict-mode build errors in CI — removed
+- Dead `pullRequestsApi.getOpen()` export removed from `pullRequests.ts` — only `fetchPullRequests` was ever used
+- Unused `ScriptDto`, `ExecutionDto`, and `ExecutionDetailDto` types deleted — were never referenced
+
+---
+
+## 0.11 – 2026-03-24
+
+### ✨ Added
+
+- Plugin system — third-party plugins can extend DevelopmentHub with custom dashboard widgets and full pages without modifying the host application
+- `manifest.json` per plugin declares the plugin id, version, minimum host version, backend assembly, frontend bundle, widget contributions, and route contributions
+- Backend plugin interface (`IPlugin`) — plugins implement `ConfigureServices` and `Configure` to register ASP.NET Core services and endpoints; each plugin is loaded in an isolated `AssemblyLoadContext` to prevent assembly conflicts
+- `PluginLoader` scans a configured plugins directory, reads each `manifest.json`, loads the backend assembly if present, and registers all `IPlugin` implementations
+- `PluginRegistry` tracks loaded plugins and exposes their manifests to the host API
+- Frontend plugin loading — the host injects a `__dhSdk` object on `window` exposing React, TanStack Query, Zustand, React Router, the host API base path, and a set of pre-built themed UI components; each plugin's JS bundle is loaded dynamically and calls `__dhSdk.plugin.registerWidget` / `registerRoute` to contribute its UI
+- Themed UI component set available to plugins: `Button`, `Card`, `Input`, `Chip`, `Empty`, `PageRoot`, `Spinner`
+- `@developmenthub/plugin-sdk` npm package — TypeScript type definitions for the entire `DhSdk` interface; install as a dev dependency in any plugin project for full type safety
+- `DevelopmentHub.Plugins` NuGet package — ships `IPlugin`, `PluginManifest`, and related contracts; reference with `ExcludeAssets="runtime"` so the host assembly is not copied into the plugin output
+- Both SDK packages published as CI artifacts on every PR and attached to GitHub Releases on main push
+- Example plugin (`src/plugins/example-plugin/`) demonstrating a backend controller, a dashboard widget, and a full page built against both SDKs
+
+---
+
 ## 0.11 – 2026-03-24
 
 ### ✨ Added
