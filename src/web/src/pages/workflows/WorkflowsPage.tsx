@@ -15,16 +15,18 @@ export default function WorkflowsPage() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
 
-  const { data: workflows = [], isLoading } = useQuery<WorkflowDefinition[]>({
+  const { data: workflows = [], isLoading, refetch: refetchWorkflows, isFetching: isFetchingWorkflows } = useQuery<WorkflowDefinition[]>({
     queryKey: ["workflows"],
     queryFn: workflowsApi.list,
   });
 
-  const { data: workflowExecutions = [] } = useQuery<WorkflowExecution[]>({
+  const { data: workflowExecutions = [], refetch: refetchExecutions, isFetching: isFetchingExecutions } = useQuery<WorkflowExecution[]>({
     queryKey: ["workflow-executions"],
     queryFn: workflowsApi.listExecutions,
     refetchInterval: 5000,
   });
+
+  const isRefreshing = isFetchingWorkflows || isFetchingExecutions;
 
   const {
     workflowRunError,
@@ -79,7 +81,16 @@ export default function WorkflowsPage() {
           searchPlaceholder="Search by name or description…"
           shownCount={filtered.length}
           totalCount={workflows.length}
-        />
+        >
+          <button
+            className="btn-ghost"
+            onClick={() => { refetchWorkflows(); refetchExecutions(); }}
+            disabled={isRefreshing}
+            title="Refresh workflows"
+          >
+            ↻ Refresh
+          </button>
+        </FilterToolbar>
       </div>
 
       {isLoading ? (

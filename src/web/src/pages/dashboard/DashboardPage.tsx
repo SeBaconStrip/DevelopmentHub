@@ -228,6 +228,18 @@ export default function DashboardPage() {
         />
       ),
       badge: workflows.length,
+      headerActions: (
+        <button
+          className="panel-action-btn"
+          onClick={() => {
+            queryClient.invalidateQueries({ queryKey: ["workflows"] });
+            queryClient.invalidateQueries({ queryKey: ["workflow-executions"] });
+          }}
+          title="Refresh workflows"
+        >
+          ↻
+        </button>
+      ),
     },
   };
 

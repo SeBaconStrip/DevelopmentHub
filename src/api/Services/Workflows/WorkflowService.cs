@@ -90,6 +90,8 @@ public class WorkflowService(
     {
         using var cts = new CancellationTokenSource();
 
+        var callStack = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { definition.Id };
+
         try
         {
             await LogAsync(execution, $"Starting workflow '{definition.Name}'.", "info");
@@ -102,7 +104,7 @@ public class WorkflowService(
                     await LogAsync(execution, $"Skipping step '{step.Name}'.", "warning");
                     continue;
                 }
-                await ExecuteStepAsync(execution, definition, step, inputs, providers, cts.Token);
+                await ExecuteStepAsync(execution, definition, step, inputs, providers, cts.Token, callStack);
             }
 
             execution.Status = "succeeded";
@@ -142,10 +144,12 @@ public class WorkflowService(
         WorkflowStep step,
         IReadOnlyDictionary<string, string> inputs,
         ProviderSettings providers,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IReadOnlySet<string> callStack,
+        string logPrefix = "")
     {
         var stepLabel = string.IsNullOrWhiteSpace(step.Name) ? step.Type : step.Name;
-        await LogAsync(execution, $"Running step '{stepLabel}' ({step.Type}).", "info");
+        await LogAsync(execution, $"{logPrefix}Running step '{stepLabel}' ({step.Type}).", "info");
 
         if (!_executors.TryGetValue(step.Type, out var executor))
             throw new InvalidOperationException(
@@ -155,11 +159,44 @@ public class WorkflowService(
         {
             Inputs = inputs,
             Providers = providers,
-            LogAsync = (text, stream) => LogAsync(execution, text, stream)
+            LogAsync = (text, stream) => LogAsync(execution, $"{logPrefix}{text}", stream),
+            CallStack = callStack,
+            InvokeWorkflowAsync = (id, subInputs, stack) =>
+                InvokeWorkflowInlineAsync(execution, id, subInputs, providers, stack, logPrefix, cancellationToken)
         };
 
         await executor.ExecuteAsync(step, context, cancellationToken);
-        await LogAsync(execution, $"Step '{stepLabel}' finished.", "success");
+        await LogAsync(execution, $"{logPrefix}Step '{stepLabel}' finished.", "success");
+    }
+
+    private async Task InvokeWorkflowInlineAsync(
+        WorkflowExecutionState execution,
+        string workflowId,
+        IReadOnlyDictionary<string, string> providedInputs,
+        ProviderSettings providers,
+        IReadOnlySet<string> parentCallStack,
+        string parentLogPrefix,
+        CancellationToken cancellationToken)
+    {
+        var definitions = await LoadAsync();
+        var definition = definitions.FirstOrDefault(d =>
+            string.Equals(d.Id, workflowId, StringComparison.OrdinalIgnoreCase))
+            ?? throw new InvalidOperationException($"Workflow '{workflowId}' was not found.");
+
+        var inputs = ResolveInputs(definition, new Dictionary<string, string>(providedInputs, StringComparer.OrdinalIgnoreCase));
+
+        var callStack = new HashSet<string>(parentCallStack, StringComparer.OrdinalIgnoreCase) { definition.Id };
+        var logPrefix = $"{parentLogPrefix}[{definition.Name}] ";
+
+        await LogAsync(execution, $"{logPrefix}Starting sub-workflow '{definition.Name}'.", "info");
+
+        foreach (var step in definition.Steps)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            await ExecuteStepAsync(execution, definition, step, inputs, providers, cancellationToken, callStack, logPrefix);
+        }
+
+        await LogAsync(execution, $"{logPrefix}Sub-workflow '{definition.Name}' completed.", "success");
     }
 
     // ── State management ──────────────────────────────────────────────────────
