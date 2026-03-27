@@ -157,6 +157,7 @@ export interface JsonPatchOperation {
 export interface RunWorkflowRequest {
   inputs: Record<string, string>;
   confirmed: boolean;
+  skippedSteps: string[];
 }
 
 export interface WorkflowExecution {

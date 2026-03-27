@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, createContext, useContext, useMemo } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, Link } from "react-router-dom";
 import { DashboardSettingsModal } from "./DashboardSettingsModal";
 import "./AppLayout.css";
 
@@ -82,7 +82,7 @@ export function AppLayout({
         onMouseDown={handleHeaderMouseDown}
         onDoubleClick={handleHeaderDblClick}
       >
-        <span className="app-brand">Development Hub</span>
+        <Link to="/" className="app-brand" onMouseDown={(e) => e.preventDefault()}>Development Hub</Link>
 
         <nav className="app-nav">
           <NavLink
