@@ -17,6 +17,18 @@ public sealed class StepContext
     /// <summary>Writes a log line to the execution log and broadcasts it via SignalR.</summary>
     public required Func<string, string, Task> LogAsync { get; init; }
 
+    /// <summary>
+    /// The ordered set of workflow IDs currently in the execution call stack, used to detect circular references.
+    /// The root workflow's ID is always the first entry.
+    /// </summary>
+    public IReadOnlySet<string> CallStack { get; init; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Invokes another workflow inline, streaming its logs into the current execution.
+    /// Parameters: workflowId, resolved inputs, current call stack.
+    /// </summary>
+    public Func<string, IReadOnlyDictionary<string, string>, IReadOnlySet<string>, Task>? InvokeWorkflowAsync { get; init; }
+
     /// <summary>Logs an info-level message to the execution log.</summary>
     public Task LogInfoAsync(string text) => LogAsync(text, "info");
 

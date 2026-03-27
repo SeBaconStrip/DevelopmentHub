@@ -15,16 +15,18 @@ export default function WorkflowsPage() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
 
-  const { data: workflows = [], isLoading } = useQuery<WorkflowDefinition[]>({
+  const { data: workflows = [], isLoading, refetch: refetchWorkflows, isFetching: isFetchingWorkflows } = useQuery<WorkflowDefinition[]>({
     queryKey: ["workflows"],
     queryFn: workflowsApi.list,
   });
 
-  const { data: workflowExecutions = [] } = useQuery<WorkflowExecution[]>({
+  const { data: workflowExecutions = [], refetch: refetchExecutions, isFetching: isFetchingExecutions } = useQuery<WorkflowExecution[]>({
     queryKey: ["workflow-executions"],
     queryFn: workflowsApi.listExecutions,
     refetchInterval: 5000,
   });
+
+  const isRefreshing = isFetchingWorkflows || isFetchingExecutions;
 
   const {
     workflowRunError,
@@ -32,6 +34,7 @@ export default function WorkflowsPage() {
     workflowInputModal,
     setWorkflowInputModal,
     runningWorkflowId,
+    lastExecutionIdByWorkflow,
     workflowModal,
     setWorkflowModal,
     runWorkflowWithInputs,
@@ -78,7 +81,16 @@ export default function WorkflowsPage() {
           searchPlaceholder="Search by name or description…"
           shownCount={filtered.length}
           totalCount={workflows.length}
-        />
+        >
+          <button
+            className="btn-ghost"
+            onClick={() => { refetchWorkflows(); refetchExecutions(); }}
+            disabled={isRefreshing}
+            title="Refresh workflows"
+          >
+            ↻ Refresh
+          </button>
+        </FilterToolbar>
       </div>
 
       {isLoading ? (
@@ -89,20 +101,14 @@ export default function WorkflowsPage() {
             workflows={filtered}
             executions={workflowExecutions}
             runningWorkflowId={runningWorkflowId}
+            lastExecutionIdByWorkflow={lastExecutionIdByWorkflow}
             workflowRunError={workflowRunError}
             onClearError={() => setWorkflowRunError(null)}
-            onRun={(workflow) => {
-              if (workflow.inputs.length > 0) {
-                setWorkflowInputModal(workflow);
-                return;
-              }
-              runWorkflowWithInputs(workflow, {});
-            }}
-            onOpenExecution={(workflowId) => {
+            onRun={(workflow) => setWorkflowInputModal(workflow)}
+            onOpenExecution={(workflowId, executionId) => {
               const workflow = workflows.find((w) => w.id === workflowId);
-              const execution = workflowExecutions.find((e) => e.workflowId === workflowId);
-              if (!workflow || !execution) return;
-              setWorkflowModal({ workflow, executionId: execution.id });
+              if (!workflow) return;
+              setWorkflowModal({ workflow, executionId });
             }}
           />
         </div>
@@ -112,11 +118,11 @@ export default function WorkflowsPage() {
         <WorkflowInputModal
           workflow={workflowInputModal}
           onClose={() => setWorkflowInputModal(null)}
-          onSubmit={(inputs) => {
+          onSubmit={(inputs, skippedSteps) => {
             const workflow = workflowInputModal;
             if (!workflow) return;
             setWorkflowInputModal(null);
-            runWorkflowWithInputs(workflow, inputs);
+            runWorkflowWithInputs(workflow, inputs, skippedSteps);
           }}
         />
       )}
