@@ -1,74 +1,111 @@
 # Configuration
 
-## Workflow Folder
+## Setting the Workflow Folder
 
-Workflow definitions are loaded from the folder configured in the application settings UI.
+Workflow definitions are loaded from a folder on disk. You configure the path once in the application settings UI.
 
-Config field:
+Settings field: **Workflow definitions path** (`workflowDefinitionsPath`)
 
-- `workflowDefinitionsPath`
+This should be an absolute path to a folder that exists on disk, for example:
 
-This value is stored in the user configuration and points to a folder on disk.
+```
+C:\DevelopmentHub\Workflows
+```
+
+The backend reads `*.json` files from this folder every time the workflow list is requested. You do not need to restart the application when you add or modify workflow files.
+
+> **Tip:** Keep all your workflow files in one folder. You can use subfolders for organisation, but only files directly in the configured folder (not in subfolders) are loaded.
 
 ## File Format
 
-The workflow folder can contain any number of `*.json` files.
+Each `*.json` file in the folder can contain either:
 
-Each file can contain either:
+**A single workflow:**
+```json
+{
+  "id": "my-workflow",
+  "name": "My Workflow",
+  "steps": [...]
+}
+```
 
-- a single workflow object
-- an array of workflow objects
+**An array of workflows:**
+```json
+[
+  {
+    "id": "workflow-one",
+    "name": "Workflow One",
+    "steps": [...]
+  },
+  {
+    "id": "workflow-two",
+    "name": "Workflow Two",
+    "steps": [...]
+  }
+]
+```
 
-## Loading Rules
-
-The backend:
-
-- scans the configured folder for `*.json`
-- reads file properties case-insensitively
-- normalizes workflow definitions
-- filters out invalid workflows
-- exposes valid workflows via `/api/workflows`
+Both forms are supported and can be mixed across files. You can organise your workflows however you like — one file per workflow, or group related workflows together in a single file.
 
 ## Validation Rules
 
-A workflow is only loaded if it has:
+A workflow is loaded only if all of the following are true:
 
-- a non-empty `id`
-- a non-empty `name`
-- at least one step
+- `id` is present and non-empty
+- `name` is present and non-empty
+- `steps` contains at least one step
 
-## Inputs
+Workflows that fail these checks are silently skipped. If no workflows appear in the dashboard, check the troubleshooting guide.
 
-Inputs are defined inside a workflow and can be referenced in step fields using placeholders.
+## Duplicate IDs
 
-Example placeholder:
+If two workflows have the same `id`, the first one encountered wins and the second is ignored. The load order follows the filesystem's file enumeration order. To avoid surprises, always use unique IDs.
 
-- `{{version}}`
+## Authentication: Using Provider Credentials in Steps
 
-## Authentication Sources
+Some step types can authenticate using credentials that are already configured in the application settings for pull request providers. This means you do not need to embed tokens in workflow files.
 
-Some steps can use existing provider credentials from the application configuration.
+### GitHub
 
-GitHub:
+The GitHub PAT is read from the provider configuration:
 
-- `pullRequestProviders.github.pat`
+- Settings field: `pullRequestProviders.github.pat`
 
-Azure DevOps:
+Used by: `downloadGithubReleaseAsset`
+
+The step will use this PAT automatically unless the step itself specifies an override `pat` field.
+
+Required GitHub fine-grained PAT permission:
+
+- **Contents: Read** (for private repository release assets)
+
+### Azure DevOps
+
+The Azure DevOps credentials are read from the provider configuration:
 
 - `pullRequestProviders.azureDevOps.organization`
 - `pullRequestProviders.azureDevOps.project`
 - `pullRequestProviders.azureDevOps.pat`
 
-Steps can override these values directly.
+Used by: `downloadAzureDevopsPipelineArtifactAsset`
 
-## Elevated Steps
+Any of these three values can be overridden directly on the step. Values set on the step take priority over the provider configuration.
 
-Some sensitive operations may require administrator rights.
+## Per-Step UAC Elevation
 
-The workflow engine supports per-step elevation for selected steps.
+Some steps support running elevated (as administrator) even when DevelopmentHub itself is not running as administrator.
 
-Current support:
+To enable elevation on a step, set:
 
-- `restartWindowsService` via `runElevated: true`
+```json
+"runElevated": true
+```
 
-This keeps the main DevelopmentHub process non-admin and only prompts for elevation when the specific step is executed.
+When the step runs, Windows will show a UAC prompt. The user must confirm the prompt to allow the step to proceed. If the user cancels, the step fails and the workflow stops.
+
+Currently supported on:
+
+- `restartWindowsService`
+- `runExecutable`
+
+This mechanism keeps the main DevelopmentHub process non-admin. Only the specific step that needs elevated rights will prompt for elevation.
