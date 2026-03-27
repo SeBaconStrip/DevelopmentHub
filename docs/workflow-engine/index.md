@@ -1,40 +1,39 @@
 # Workflow Engine
 
-The workflow engine lets DevelopmentHub run repeatable setup, install and maintenance tasks from the dashboard.
+The workflow engine lets DevelopmentHub run repeatable setup, install and maintenance tasks directly from the dashboard — no scripting required.
 
-Use this documentation set as the source of truth for:
-
-- where workflows are stored
-- how workflow files are structured
-- which step types are supported
-- how authentication is resolved
-- how to write and maintain workflow JSON files
+Workflows are defined as JSON files on disk. The backend loads them automatically, collects any required inputs from the user, executes the steps in order and streams the log output live to the dashboard.
 
 ## Documentation Map
 
-- [Overview](./overview.md)
-- [Configuration](./configuration.md)
-- [Workflow Schema](./workflow-schema.md)
-- [Step Reference](./step-reference.md)
-- [Examples](./examples.md)
-- [Troubleshooting](./troubleshooting.md)
+| Document | What it covers |
+|---|---|
+| [Overview](./overview.md) | How the engine works end to end |
+| [Configuration](./configuration.md) | Setting up the workflow folder and credentials |
+| [Workflow Schema](./workflow-schema.md) | All top-level fields, inputs and the placeholder system |
+| [Step Reference](./step-reference.md) | Every step type with all fields and examples |
+| [Examples](./examples.md) | Complete ready-to-use workflow files |
+| [Troubleshooting](./troubleshooting.md) | Common problems and how to fix them |
 
-## Current Capabilities
+## Supported Step Types
 
-The current workflow engine supports these step types:
+| Step type | What it does |
+|---|---|
+| `downloadFile` | Download a file from a direct URL |
+| `downloadGithubReleaseAsset` | Download a GitHub release asset (public or private) |
+| `downloadAzureDevopsPipelineArtifactAsset` | Download an Azure DevOps pipeline artifact |
+| `extractArchive` | Extract a ZIP archive |
+| `copy` | Copy a file or directory |
+| `runExecutable` | Run any executable or installer |
+| `patchJson` | Apply in-place changes to a JSON config file |
+| `restartWindowsService` | Restart a Windows service |
+| `callWorkflow` | Invoke another workflow inline as a sub-workflow |
 
-- `downloadFile`
-- `downloadGithubReleaseAsset`
-- `downloadAzureDevopsPipelineArtifactAsset`
-- `extractArchive`
-- `copy`
-- `runExecutable`
-- `patchJson`
-- `restartWindowsService`
+## Key Behaviours
 
-## Notes
-
-- workflow files are loaded from disk by the backend
-- workflow file property names are read case-insensitively
-- invalid workflows are ignored instead of shown in the dashboard
-- workflow execution logs are streamed live to the UI
+- Workflow files are read from a single folder on disk. New files are picked up automatically on the next request.
+- JSON property names in workflow files are read case-insensitively.
+- Steps run in the order they are defined. If any step fails, the workflow stops immediately.
+- Each step can log its own progress messages. All messages are streamed live to the dashboard.
+- Individual steps can request UAC elevation without requiring the whole application to run as administrator.
+- Workflows can call other workflows using the `callWorkflow` step. Circular references are detected and reported as errors.

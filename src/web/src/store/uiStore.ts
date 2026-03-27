@@ -135,7 +135,20 @@ export const useUiStore = create<UiStore>()((set, get) => ({
     const state = get();
     if (state.dashboardWidgets.some((w) => w.id === widget.id)) return;
 
-    const updatedWidgets = [...state.dashboardWidgets, widget];
+    // Restore previously saved enabled state (e.g. user had hidden the widget)
+    const storedEnabledMap = (() => {
+      try {
+        const s = localStorage.getItem(WIDGETS_KEY);
+        return s ? (JSON.parse(s) as Record<string, boolean>) : {};
+      } catch { return {}; }
+    })();
+    const resolvedWidget = widget.id in storedEnabledMap
+      ? { ...widget, enabled: storedEnabledMap[widget.id] }
+      : widget;
+
+    const updatedWidgets = [...state.dashboardWidgets, resolvedWidget];
+    const enabledMap = Object.fromEntries(updatedWidgets.map((w) => [w.id, w.enabled]));
+    localStorage.setItem(WIDGETS_KEY, JSON.stringify(enabledMap));
 
     // Extend existing layouts with the plugin widget's default layout
     if (defaultLayout) {
@@ -146,6 +159,7 @@ export const useUiStore = create<UiStore>()((set, get) => ({
           return [bp, [...items, { i: widget.id, x: 0, y: maxY, w: defaultLayout.w, h: defaultLayout.h }]];
         }),
       );
+      persistLayoutsDebounced(updatedLayouts);
       set({ dashboardWidgets: updatedWidgets, gridLayouts: updatedLayouts });
     } else {
       set({ dashboardWidgets: updatedWidgets });

@@ -1,106 +1,128 @@
 # Step Reference
 
+Every step shares two common fields:
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `type` | string | Yes | Identifies which step type to execute (see below) |
+| `name` | string | No | A human-readable label shown in the execution log |
+
+The `name` field is optional but strongly recommended. Without it, the step type string is used in log output, which is harder to read.
+
+---
+
 ## `downloadFile`
 
-Downloads a file from a direct URL.
+Downloads a file from any publicly accessible URL and saves it to a local path.
 
-Fields:
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `url` | string | Yes | — | The full URL to download from |
+| `targetPath` | string | Yes | — | The local path where the file will be saved |
+| `overwrite` | boolean | No | `false` | If `false` and the target file already exists, the step fails |
 
-- `url`
-- `targetPath`
-- `overwrite`
+**Notes:**
 
-Example:
+- Parent directories of `targetPath` are created automatically if they do not exist.
+- If the server returns a non-2xx response, the step fails.
+- This step does not follow authentication — use `downloadGithubReleaseAsset` or `downloadAzureDevopsPipelineArtifactAsset` for private assets.
+
+**Example:**
 
 ```json
 {
   "type": "downloadFile",
-  "name": "Download package",
-  "url": "https://example.com/package.zip",
-  "targetPath": "C:\\Temp\\package.zip",
+  "name": "Download release zip",
+  "url": "https://example.com/releases/package-{{version}}.zip",
+  "targetPath": "C:\\Temp\\package-{{version}}.zip",
   "overwrite": true
 }
 ```
 
+---
+
 ## `downloadGithubReleaseAsset`
 
-Downloads a GitHub release asset, including private repository assets when a PAT is available.
+Downloads a specific asset from a GitHub release. Supports both public and private repositories. When downloading from a private repository, a GitHub PAT with `Contents: Read` permission is required.
 
-Fields:
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `owner` | string | Yes | — | The GitHub organisation or user name |
+| `repository` | string | Yes | — | The repository name |
+| `releaseTag` | string | Yes | — | The release tag exactly as it appears on GitHub (e.g. `v1.2.3`) |
+| `assetName` | string | Yes | — | The file name of the asset to download (must match exactly) |
+| `targetPath` | string | Yes | — | The local path where the file will be saved |
+| `overwrite` | boolean | No | `false` | If `false` and the target file already exists, the step fails |
+| `pat` | string | No | — | Override PAT for this step. Falls back to the GitHub PAT in provider settings |
 
-- `owner`
-- `repository`
-- `releaseTag`
-- `assetName`
-- `targetPath`
-- `overwrite`
-- `pat` optional override
+**PAT resolution order:**
 
-Token resolution:
+1. The `pat` field on the step (if set and non-empty)
+2. `pullRequestProviders.github.pat` from application settings
 
-1. `step.pat`
-2. `pullRequestProviders.github.pat`
+**Notes:**
 
-Required GitHub permission:
+- The `releaseTag` must match exactly what GitHub shows, including any `v` prefix.
+- The `assetName` must match the file name of the asset exactly, including the extension.
+- Parent directories of `targetPath` are created automatically if they do not exist.
 
-- fine-grained PAT with `Contents: Read`
-
-Example:
+**Example:**
 
 ```json
 {
   "type": "downloadGithubReleaseAsset",
-  "name": "Download extension zip",
-  "owner": "example-owner",
-  "repository": "example-repository",
+  "name": "Download extension package",
+  "owner": "my-org",
+  "repository": "my-extension",
   "releaseTag": "v{{version}}",
-  "assetName": "package-{{version}}.zip",
-  "targetPath": "C:\\Downloads\\package-{{version}}.zip",
+  "assetName": "extension-{{version}}.zip",
+  "targetPath": "C:\\Downloads\\extension-{{version}}.zip",
   "overwrite": true
 }
 ```
 
+---
+
 ## `downloadAzureDevopsPipelineArtifactAsset`
 
-Downloads an Azure DevOps pipeline artifact or build artifact.
+Downloads a pipeline artifact from Azure DevOps. The artifact is downloaded as a single file (typically a ZIP). Supports two lookup modes: by pipeline run, or by build ID.
 
-Supported lookup modes:
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `organization` | string | No | Provider setting | Azure DevOps organisation name. Falls back to provider settings |
+| `project` | string | No | Provider setting | Azure DevOps project name. Falls back to provider settings |
+| `pipelineId` | string | No* | — | The pipeline definition ID. Required when using pipeline run mode |
+| `runId` | string | No* | — | The pipeline run ID. Required when using pipeline run mode |
+| `buildId` | string | No* | — | The build ID. Required when using build ID mode |
+| `artifactName` | string | Yes | — | The name of the artifact to download |
+| `targetPath` | string | Yes | — | The local path where the artifact file will be saved |
+| `overwrite` | boolean | No | `false` | If `false` and the target file already exists, the step fails |
+| `pat` | string | No | — | Override PAT. Falls back to `pullRequestProviders.azureDevOps.pat` |
 
-- `pipelineId` + `runId`
-- `buildId`
+**Lookup modes:**
 
-Fields:
+You must use exactly one of these combinations:
 
-- `organization` optional override
-- `project` optional override
-- `pipelineId` optional when `buildId` is used
-- `runId` optional when `buildId` is used
-- `buildId` optional when `pipelineId` + `runId` are used
-- `artifactName`
-- `targetPath`
-- `overwrite`
-- `pat` optional override
+- **Pipeline run mode:** provide `pipelineId` + `runId`
+- **Build ID mode:** provide `buildId`
 
-Config fallback:
+**Credential resolution order (for `organization`, `project`, `pat`):**
 
-- `organization` falls back to `pullRequestProviders.azureDevOps.organization`
-- `project` falls back to `pullRequestProviders.azureDevOps.project`
-- `pat` falls back to `pullRequestProviders.azureDevOps.pat`
+1. The value on the step (if set and non-empty)
+2. The corresponding value in `pullRequestProviders.azureDevOps`
 
-Note:
+**Notes:**
 
-- the backend also accepts `downloadAzureDevopsPipelineArtifactAsset`
-- this step downloads the artifact payload as a whole (for example a ZIP/package), not a single file inside the artifact
+- The `artifactName` must match the name of the published artifact exactly (case-sensitive).
+- This step downloads the artifact as a whole (a ZIP file), not an individual file inside it. Use `extractArchive` afterwards to unpack it.
 
-Example using pipeline run:
+**Example using pipeline run:**
 
 ```json
 {
   "type": "downloadAzureDevopsPipelineArtifactAsset",
   "name": "Download pipeline artifact",
-  "organization": "my-org",
-  "project": "MyProject",
-  "pipelineId": "123",
+  "pipelineId": "42",
   "runId": "{{runId}}",
   "artifactName": "drop",
   "targetPath": "C:\\Temp\\drop-{{runId}}.zip",
@@ -108,7 +130,7 @@ Example using pipeline run:
 }
 ```
 
-Example using build ID:
+**Example using build ID:**
 
 ```json
 {
@@ -121,122 +143,148 @@ Example using build ID:
 }
 ```
 
+---
+
 ## `extractArchive`
 
-Extracts a ZIP archive to a target directory.
+Extracts a ZIP archive to a local directory.
 
-Fields:
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `archivePath` | string | Yes | — | Path to the ZIP file to extract |
+| `destinationPath` | string | Yes | — | Directory where the contents will be extracted |
+| `cleanDestination` | boolean | No | `false` | If `true`, the destination directory is deleted before extraction |
 
-- `archivePath`
-- `destinationPath`
-- `cleanDestination`
+**Notes:**
 
-Example:
+- The destination directory is created automatically if it does not exist.
+- Set `cleanDestination: true` when you want a clean install — this removes any leftover files from a previous extraction before the new files are written.
+- Only ZIP files are supported.
+
+**Example:**
 
 ```json
 {
   "type": "extractArchive",
   "name": "Extract package",
-  "archivePath": "C:\\Temp\\package.zip",
+  "archivePath": "C:\\Temp\\package-{{version}}.zip",
   "destinationPath": "C:\\Apps\\Package",
   "cleanDestination": true
 }
 ```
 
-## `runExecutable`
-
-Runs any executable or installer. The legacy discriminator `runInstaller` is also accepted.
-
-Fields:
-
-- `filePath`
-- `arguments`
-- `waitForExit`
-- `successExitCodes`
-- `runElevated`
-
-Example:
-
-```json
-{
-  "type": "runExecutable",
-  "name": "Run setup",
-  "filePath": "C:\\Apps\\Package\\setup.exe",
-  "arguments": ["/silent"],
-  "waitForExit": true,
-  "successExitCodes": [0, 3010]
-}
-```
+---
 
 ## `copy`
 
-Copies a file or directory to a destination path. Creates destination directories automatically.
+Copies a file or an entire directory tree to a new location.
 
-Fields:
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `sourcePath` | string | Yes | — | The file or directory to copy |
+| `destinationPath` | string | Yes | — | The destination file path or directory path |
+| `overwrite` | boolean | No | `true` | If `false` and the destination already exists, the step fails |
 
-- `sourcePath`
-- `destinationPath`
-- `overwrite` — defaults to `true`
+**Behaviour:**
 
-Behavior:
+- If `sourcePath` is a file, it is copied to `destinationPath` (treated as a file path).
+- If `sourcePath` is a directory, the entire directory tree is copied recursively to `destinationPath`.
+- Parent directories of the destination are created automatically.
 
-- if `sourcePath` is a file, copies the single file
-- if `sourcePath` is a directory, copies the directory recursively including all subdirectories
-- if `overwrite` is `false` and the destination already exists, the step fails
-
-Example:
+**Example:**
 
 ```json
 {
   "type": "copy",
   "name": "Deploy config",
-  "sourcePath": "C:\\Temp\\appsettings.json",
+  "sourcePath": "C:\\Configs\\appsettings.production.json",
   "destinationPath": "C:\\Apps\\MyService\\appsettings.json",
   "overwrite": true
 }
 ```
 
+---
+
+## `runExecutable`
+
+Runs any executable, installer or script. Optionally waits for the process to finish and validates its exit code.
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `filePath` | string | Yes | — | Full path to the executable to run |
+| `arguments` | string array | No | `[]` | Arguments to pass to the executable |
+| `waitForExit` | boolean | No | `true` | If `true`, the step waits for the process to finish before continuing |
+| `successExitCodes` | integer array | No | `[0]` | Exit codes that are considered successful. Any other code causes the step to fail |
+| `runElevated` | boolean | No | `false` | If `true`, the process is launched with a UAC elevation prompt |
+
+**Notes:**
+
+- Arguments that contain spaces are automatically wrapped in double quotes.
+- If `waitForExit` is `false`, the process is launched and the step immediately succeeds. Exit code validation is skipped.
+- Common `successExitCodes` for Windows installers: `0` (success) and `3010` (success, reboot required).
+- When `runElevated` is `true`, Windows shows a UAC prompt. If the user cancels, the step fails.
+
+**Example:**
+
+```json
+{
+  "type": "runExecutable",
+  "name": "Run installer",
+  "filePath": "C:\\Temp\\package-{{version}}\\setup.exe",
+  "arguments": ["/silent", "/norestart"],
+  "waitForExit": true,
+  "successExitCodes": [0, 3010],
+  "runElevated": true
+}
+```
+
+---
+
 ## `patchJson`
 
-Creates a backup of the target file (`<file>.bak`) and applies one or more JSON patch operations in sequence.
+Reads a JSON file, applies a list of patch operations, and writes the result back. A backup of the original file is created at `<filePath>.bak` before any changes are written.
 
-Fields:
-
-- `filePath`
-- `operations`
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `filePath` | string | Yes | — | Path to the JSON file to patch |
+| `operations` | array | Yes | — | Ordered list of patch operations to apply |
+| `runElevated` | boolean | No | `false` | If `true`, the patching runs in an elevated process |
 
 ### Operations
 
+Each operation has an `op` field that determines what it does.
+
 #### `set`
 
-Sets a property to a value. Overwrites an existing value or creates the key if it does not exist.
+Sets a property to a value. If the property already exists, its value is replaced. If it does not exist, it is created.
 
 ```json
-{ "op": "set", "path": "$.Flag", "value": true }
+{ "op": "set", "path": "$.FeatureFlags.Enabled", "value": true }
 ```
 
 #### `remove`
 
-Removes a property from its parent object.
+Removes a property from its parent object. Has no effect if the property does not exist.
 
 ```json
-{ "op": "remove", "path": "$.Property.ToRemove" }
+{ "op": "remove", "path": "$.LegacySettings.OldKey" }
 ```
 
 #### `append`
 
-Appends a value to an existing array.
+Appends a value to an existing array. The target path must point to an array.
 
 ```json
-{ "op": "append", "path": "$.FeatureSets", "value": "GHI" }
+{ "op": "append", "path": "$.AllowedHosts", "value": "localhost" }
 ```
 
 ### Path Syntax
 
-- `$.Property`
-- `$.Nested.Property`
+Paths use a subset of JSONPath syntax:
 
-Paths must start with `$.`.
+- Start with `$` (the root of the document)
+- Use `.` to navigate into properties
+- Examples: `$.Property`, `$.Nested.Property`, `$.Section.SubSection.Key`
 
 ### Value Types
 
@@ -244,75 +292,130 @@ The `value` field accepts any JSON-compatible value:
 
 | Type | Example |
 |---|---|
-| boolean | `true` / `false` |
-| number | `42` |
 | string | `"hello"` |
-| string with template | `"{{inputName}}"` |
-| object | `{"key": "val"}` |
-| array | `["a", "b"]` |
+| string with placeholder | `"{{version}}"` |
+| boolean | `true` or `false` |
+| number | `42` |
+| object | `{"key": "value"}` |
+| array | `["a", "b", "c"]` |
 
-Template placeholders (`{{inputName}}`) are only resolved inside string values.
+> Placeholders (`{{inputName}}`) are only resolved inside **string** values. Boolean and numeric values are used as-is.
 
-### Example
+### Full Example
 
 ```json
 {
   "type": "patchJson",
   "name": "Patch appsettings",
-  "filePath": "C:\\Apps\\Package\\appsettings.json",
+  "filePath": "C:\\Apps\\MyService\\appsettings.json",
   "operations": [
+    {
+      "op": "set",
+      "path": "$.ConnectionStrings.Main",
+      "value": "{{connectionString}}"
+    },
     {
       "op": "set",
       "path": "$.FeatureFlags.Enabled",
       "value": true
     },
     {
-      "op": "set",
-      "path": "$.ConnectionStrings.Main",
-      "value": "Server=.;Database=App;Trusted_Connection=True;"
-    },
-    {
       "op": "append",
-      "path": "$.FeatureSets",
-      "value": "NewFeature"
+      "path": "$.AllowedHosts",
+      "value": "localhost"
     },
     {
       "op": "remove",
-      "path": "$.LegacySettings.OldKey"
+      "path": "$.LegacySettings"
     }
   ]
 }
 ```
 
+---
+
 ## `restartWindowsService`
 
-Restarts a Windows service using PowerShell.
+Stops and starts a Windows service using PowerShell. Optionally waits until the service is back in the `Running` state before the step completes.
 
-Fields:
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `serviceName` | string | Yes | — | The exact name of the Windows service (not the display name) |
+| `waitForRunning` | boolean | No | `true` | If `true`, the step waits until the service reaches `Running` state |
+| `timeoutSeconds` | integer | No | `60` | How many seconds to wait for the service to reach `Running` state |
+| `runElevated` | boolean | No | `false` | If `true`, the PowerShell command runs in an elevated process |
 
-- `serviceName`
-- `waitForRunning`
-- `timeoutSeconds`
-- `runElevated` optional
+**Notes:**
 
-If `runElevated` is `true`, the backend starts a separate elevated PowerShell process for this step only.
+- Use the service's internal name (as shown in `services.msc` under "Service name"), not its display name.
+- If the service does not start within `timeoutSeconds`, the step fails.
+- When `runElevated` is `true`, Windows shows a UAC prompt. If the user cancels, the step fails.
 
-Behavior:
-
-- Windows shows a UAC prompt
-- only this single step runs elevated
-- the main DevelopmentHub process stays non-admin
-- if the user cancels the UAC prompt, the step fails
-
-Example:
+**Example:**
 
 ```json
 {
   "type": "restartWindowsService",
-  "name": "Restart service",
+  "name": "Restart API service",
   "serviceName": "MyApiService",
   "waitForRunning": true,
   "timeoutSeconds": 60,
   "runElevated": true
+}
+```
+
+---
+
+## `callWorkflow`
+
+Invokes another workflow inline as a sub-workflow. The sub-workflow's steps run as part of the current execution — there is no separate execution record created. All log output from the sub-workflow appears in the parent's log, prefixed with the sub-workflow name so you can tell which messages come from which workflow.
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `workflowId` | string | Yes | — | The `id` of the workflow to invoke. Supports `{{placeholder}}` substitution |
+| `inputs` | object | No | `{}` | Key-value pairs of input values to pass to the sub-workflow. Values support `{{placeholder}}` substitution |
+
+**Important behaviours:**
+
+- **Inputs are explicit.** The sub-workflow does not automatically inherit the parent's input values. You must pass each value you want to share explicitly in the `inputs` object.
+- **Inputs fall back to defaults.** Any inputs declared in the sub-workflow that are not provided in the `inputs` object will use that input's `defaultValue`. If there is no default, the value is empty.
+- **Circular references are detected.** If workflow A calls B and B calls A (at any depth), the step fails immediately with a clear error message listing the chain. The detection happens before any steps of the sub-workflow run.
+- **Failure propagates.** If any step in the sub-workflow fails, the sub-workflow stops and the failure propagates to the parent workflow, which also stops.
+- **Log prefixing.** Sub-workflow log lines are prefixed with `[SubWorkflowName]`. If sub-workflows are nested, the prefixes stack: `[Outer] [Inner] message`.
+
+**Example — calling a shared setup workflow:**
+
+```json
+{
+  "type": "callWorkflow",
+  "name": "Run shared setup",
+  "workflowId": "shared-setup",
+  "inputs": {
+    "environment": "production",
+    "version": "{{version}}"
+  }
+}
+```
+
+**Example — dynamic workflow ID from an input:**
+
+```json
+{
+  "type": "callWorkflow",
+  "name": "Run environment-specific workflow",
+  "workflowId": "deploy-{{environment}}",
+  "inputs": {
+    "version": "{{version}}"
+  }
+}
+```
+
+**Example — calling a workflow with no inputs:**
+
+```json
+{
+  "type": "callWorkflow",
+  "name": "Run cleanup",
+  "workflowId": "cleanup-temp-files"
 }
 ```
