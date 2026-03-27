@@ -8,7 +8,7 @@ interface UseWorkflowModalsOptions {
   confirmMessage?: (workflow: WorkflowDefinition) => string;
 }
 
-export function useWorkflowModals({ workflows, confirmMessage }: UseWorkflowModalsOptions) {
+export function useWorkflowModals({ workflows }: UseWorkflowModalsOptions) {
   const queryClient = useQueryClient();
   const [workflowRunError, setWorkflowRunError] = useState<string | null>(null);
   const [workflowInputModal, setWorkflowInputModal] = useState<WorkflowDefinition | null>(null);
