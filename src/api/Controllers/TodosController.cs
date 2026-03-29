@@ -1,12 +1,13 @@
 using DevelopmentHub.Api.Models.Dtos;
 using DevelopmentHub.Api.Services;
+using DevelopmentHub.Api.Services.Todos.Sync;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DevelopmentHub.Api.Controllers;
 
 [ApiController]
 [Route("api/todos")]
-public class TodosController(ITodoService todoService) : ControllerBase
+public class TodosController(ITodoService todoService, ITodoSyncService syncService) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<List<TodoItemDto>>> GetAll()
@@ -20,6 +21,7 @@ public class TodosController(ITodoService todoService) : ControllerBase
         try
         {
             var created = await todoService.CreateAsync(request);
+            FireAndForgetSync(created.Id);
             return Ok(created);
         }
         catch (InvalidOperationException ex)
@@ -34,7 +36,9 @@ public class TodosController(ITodoService todoService) : ControllerBase
         try
         {
             var updated = await todoService.UpdateAsync(id, request);
-            return updated is null ? NotFound() : Ok(updated);
+            if (updated is null) return NotFound();
+            FireAndForgetSync(id);
+            return Ok(updated);
         }
         catch (InvalidOperationException ex)
         {
@@ -46,19 +50,29 @@ public class TodosController(ITodoService todoService) : ControllerBase
     public async Task<ActionResult<TodoItemDto>> SetCompleted(string id, [FromQuery] bool completed = true)
     {
         var updated = await todoService.SetCompletedAsync(id, completed);
-        return updated is null ? NotFound() : Ok(updated);
+        if (updated is null) return NotFound();
+        FireAndForgetSync(id);
+        return Ok(updated);
     }
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(string id)
     {
-        return await todoService.DeleteAsync(id) ? NoContent() : NotFound();
+        var deleted = await todoService.DeleteAsync(id);
+        if (!deleted) return NotFound();
+        // Item is already gone locally; run a full sync to propagate the deletion
+        FireAndForgetSync(null);
+        return NoContent();
     }
 
     [HttpDelete("completed")]
     public async Task<IActionResult> ClearCompleted()
     {
         var removed = await todoService.ClearCompletedAsync();
+        FireAndForgetSync(null);
         return Ok(new { removed });
     }
+
+    private void FireAndForgetSync(string? id) =>
+        Task.Run(() => syncService.PushItemAsync(id, CancellationToken.None));
 }
