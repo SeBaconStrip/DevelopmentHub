@@ -5,6 +5,36 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## 0.14 – 2026-03-29
+
+### ✨ Added
+
+- Microsoft To Do sync — bidirectional todo synchronisation via Microsoft Graph API; connect with an Azure AD app registration (device code flow, no redirect server required)
+- Background sync service runs on a configurable interval (default 300 s, minimum 30 s); interval is re-read from config each cycle without a restart
+- SignalR push notification (`TodosUpdated`) emitted after every background sync so the frontend refreshes instantly without waiting for its own poll timer
+- Todo sync settings section — connect/disconnect, list picker, manual "Sync Now" button, and sync interval control
+- Soft-delete: todos cleared or deleted locally are hidden immediately and removed from the remote provider on the next sync cycle, preventing re-pull
+
+### 🔧 Changed
+
+- Conflict resolution uses last-write-wins (`LocalUpdatedAt` vs `RemoteLastModifiedAt`); falls back to field-level comparison when the provider timestamp does not update on status changes
+
+---
+
+## 0.13 – 2026-03-27
+
+### ✨ Added
+
+- Workflow `callWorkflow` step — invoke another workflow inline as a sub-workflow; its steps run as part of the parent execution with no separate execution record
+- Sub-workflow inputs are passed explicitly via an `inputs` map on the step; values support `{{placeholder}}` substitution from the parent workflow
+- Circular reference detection for `callWorkflow` — if a workflow calls itself directly or transitively, execution fails immediately with a clear error message listing the full chain (e.g. `workflow-a → workflow-b → workflow-a`)
+- Sub-workflow log lines appear inline in the parent execution log, prefixed with `[SubWorkflowName]` so output from each level is visually distinguishable; nested calls stack the prefix
+- Refresh button on the Workflows dashboard widget (panel header, consistent with the Repositories widget)
+- Refresh button on the Workflows full page (toolbar, disabled while a fetch is in flight)
+- Workflow engine documentation fully rewritten — all pages updated with field tables, detailed behaviour notes, sub-workflow documentation, and new troubleshooting entries for `callWorkflow`
+
+---
+
 ## 0.12 – 2026-03-24
 
 ### ✨ Added

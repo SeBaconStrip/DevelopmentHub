@@ -13,6 +13,7 @@ import { fetchPullRequests } from "../../api/pullRequests";
 import { todosApi } from "../../api/todos";
 import { workflowsApi } from "../../api/workflows";
 import { useTodos } from "../../hooks/useTodos";
+import { useTodoSyncHub } from "../../hooks/useTodoSyncHub";
 import { useRepositoryScan } from "../../hooks/useRepositoryScan";
 import { useWorkflowModals } from "../../hooks/useWorkflowModals";
 import { useRepositoryHub } from "../../hooks/useRepositoryHub";
@@ -77,6 +78,11 @@ export default function DashboardPage() {
   }, [queryClient]);
   useRepositoryHub(handleRepositoriesUpdated);
 
+  const handleTodosUpdated = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["todos"] });
+  }, [queryClient]);
+  useTodoSyncHub(handleTodosUpdated);
+
   const scanRepos = useRepositoryScan();
 
   const [openError, setOpenError] = useState<string | null>(null);
@@ -100,7 +106,11 @@ export default function DashboardPage() {
 
   const { data: todos = [] } = useQuery<TodoItem[]>({
     queryKey: ["todos"],
-    queryFn: todosApi.getAll,
+    queryFn: () => {
+      console.log("[Todos] Refetching todos from backend");
+      return todosApi.getAll();
+    },
+    refetchInterval: (config?.todoSyncIntervalSeconds ?? 300) * 1000,
   });
 
   const { data: workflowExecutions = [] } = useQuery<WorkflowExecution[]>({

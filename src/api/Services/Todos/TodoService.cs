@@ -21,7 +21,7 @@ public class TodoService(DashboardDatabase db) : ITodoService
 
     public Task<List<TodoItemDto>> GetAllAsync()
     {
-        var todos = db.Todos.FindAll()
+        var todos = db.Todos.Find(t => !t.PendingDelete)
             .OrderBy(t => t.Completed)
             .ThenByDescending(t => t.CreatedAt)
             .Select(MapToDto)
@@ -41,7 +41,9 @@ public class TodoService(DashboardDatabase db) : ITodoService
             Title = title,
             LinkUrl = linkUrl,
             Completed = false,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            LocalUpdatedAt = DateTime.UtcNow,
+            PendingSync = true
         };
 
         db.Todos.Insert(todo);
@@ -60,6 +62,8 @@ public class TodoService(DashboardDatabase db) : ITodoService
 
         todo.Title = title;
         todo.LinkUrl = linkUrl;
+        todo.LocalUpdatedAt = DateTime.UtcNow;
+        todo.PendingSync = true;
         db.Todos.Update(todo);
         return Task.FromResult<TodoItemDto?>(MapToDto(todo));
     }
@@ -72,34 +76,55 @@ public class TodoService(DashboardDatabase db) : ITodoService
 
         todo.Completed = completed;
         todo.CompletedAt = completed ? DateTime.UtcNow : null;
+        todo.LocalUpdatedAt = DateTime.UtcNow;
+        todo.PendingSync = true;
         db.Todos.Update(todo);
         return Task.FromResult<TodoItemDto?>(MapToDto(todo));
     }
 
     public Task<bool> DeleteAsync(string id)
     {
-        return Task.FromResult(db.Todos.Delete(id));
+        var todo = db.Todos.FindById(id);
+        if (todo is null) return Task.FromResult(false);
+
+        if (todo.RemoteId is null)
+            return Task.FromResult(db.Todos.Delete(id));
+
+        todo.PendingDelete = true;
+        db.Todos.Update(todo);
+        return Task.FromResult(true);
     }
 
     public Task<int> ClearCompletedAsync()
     {
-        var completedIds = db.Todos.Find(t => t.Completed).Select(t => t.Id).ToList();
-        var removed = completedIds.Sum(id => db.Todos.Delete(id) ? 1 : 0);
-        return Task.FromResult(removed);
+        var completed = db.Todos.Find(t => t.Completed && !t.PendingDelete).ToList();
+        var count = 0;
+        foreach (var todo in completed)
+        {
+            if (todo.RemoteId is null)
+            {
+                if (db.Todos.Delete(todo.Id)) count++;
+            }
+            else
+            {
+                todo.PendingDelete = true;
+                db.Todos.Update(todo);
+                count++;
+            }
+        }
+        return Task.FromResult(count);
     }
 
-    private static TodoItemDto MapToDto(TodoItemDao todo)
+    private static TodoItemDto MapToDto(TodoItemDao todo) => new()
     {
-        return new TodoItemDto
-        {
-            Id = todo.Id,
-            Title = todo.Title,
-            LinkUrl = todo.LinkUrl,
-            Completed = todo.Completed,
-            CreatedAt = todo.CreatedAt,
-            CompletedAt = todo.CompletedAt
-        };
-    }
+        Id = todo.Id,
+        Title = todo.Title,
+        LinkUrl = todo.LinkUrl,
+        Completed = todo.Completed,
+        CreatedAt = todo.CreatedAt,
+        CompletedAt = todo.CompletedAt,
+        IsSynced = todo.RemoteId is not null
+    };
 
     private static string? NormalizeLinkUrl(string? linkUrl)
     {

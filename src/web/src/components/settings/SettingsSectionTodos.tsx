@@ -1,7 +1,15 @@
+import type { AppConfig } from "../../types";
 import { useUiStore } from "../../store/uiStore";
 import { Section, WidgetRow } from "./SettingsHelpers";
+import { SettingsSectionTodoSync } from "./SettingsSectionTodoSync";
 
-export function SettingsSectionTodos() {
+interface Props {
+  form: AppConfig;
+  setTodoSyncField: (key: string, value: string) => void;
+  setField: <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => void;
+}
+
+export function SettingsSectionTodos({ form, setTodoSyncField, setField }: Props) {
   const { dashboardWidgets, toggleWidget } = useUiStore();
   const widget = dashboardWidgets.find((w) => w.id === "todos");
 
@@ -24,6 +32,12 @@ export function SettingsSectionTodos() {
           clear all completed todos from the widget.
         </p>
       </Section>
+
+      <SettingsSectionTodoSync
+        form={form}
+        setTodoSyncField={setTodoSyncField}
+        setField={setField}
+      />
     </>
   );
 }

@@ -9,28 +9,33 @@ export function useTodos() {
     mutationFn: ({ title, linkUrl }: { title: string; linkUrl?: string }) =>
       todosApi.create(title, linkUrl),
     onSuccess: invalidate,
+    onError: invalidate,
   });
 
   const updateTodo = useMutation({
     mutationFn: ({ id, title, linkUrl }: { id: string; title: string; linkUrl?: string }) =>
       todosApi.update(id, title, linkUrl),
     onSuccess: invalidate,
+    onError: invalidate,
   });
 
   const toggleTodo = useMutation({
     mutationFn: ({ id, completed }: { id: string; completed: boolean }) =>
       todosApi.setCompleted(id, completed),
     onSuccess: invalidate,
+    onError: invalidate,
   });
 
   const deleteTodo = useMutation({
     mutationFn: (id: string) => todosApi.delete(id),
     onSuccess: invalidate,
+    onError: invalidate,
   });
 
   const clearCompletedTodos = useMutation({
     mutationFn: todosApi.clearCompleted,
     onSuccess: invalidate,
+    onError: invalidate,
   });
 
   const isBusy =
