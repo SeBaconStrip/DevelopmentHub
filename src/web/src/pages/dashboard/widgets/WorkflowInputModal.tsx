@@ -44,13 +44,36 @@ export function WorkflowInputModal({
           {workflow.inputs.map((input) => (
             <label key={input.name} className="settings-field">
               <span className="settings-field-label">{input.label || input.name}</span>
-              <input
-                className="settings-input"
-                value={values[input.name] ?? ""}
-                onChange={(e) =>
-                  setValues((prev) => ({ ...prev, [input.name]: e.target.value }))
-                }
-              />
+              {input.type === "bool" ? (
+                <input
+                  type="checkbox"
+                  className="workflow-input-checkbox"
+                  checked={values[input.name] === "true"}
+                  onChange={(e) =>
+                    setValues((prev) => ({ ...prev, [input.name]: e.target.checked ? "true" : "false" }))
+                  }
+                />
+              ) : input.type === "select" ? (
+                <select
+                  className="settings-input"
+                  value={values[input.name] || input.options?.[0] || ""}
+                  onChange={(e) =>
+                    setValues((prev) => ({ ...prev, [input.name]: e.target.value }))
+                  }
+                >
+                  {(input.options ?? []).map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  className="settings-input"
+                  value={values[input.name] ?? ""}
+                  onChange={(e) =>
+                    setValues((prev) => ({ ...prev, [input.name]: e.target.value }))
+                  }
+                />
+              )}
             </label>
           ))}
         </div>
@@ -78,8 +101,11 @@ export function WorkflowInputModal({
 
       <div className="settings-save-bar">
         <button className="btn-primary" onClick={() => onSubmit(values, skippedSteps)}>
-          Run workflow
+          {workflow.runElevated ? "Run elevated" : "Run workflow"}
         </button>
+        {workflow.runElevated && (
+          <span className="workflow-elevated-badge" title="All steps that support UAC elevation will run elevated">elevated</span>
+        )}
         <button className="btn-close" onClick={onClose}>
           Cancel
         </button>

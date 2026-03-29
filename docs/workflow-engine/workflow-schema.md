@@ -7,13 +7,26 @@
   "id": "install-package",
   "name": "Install Package",
   "description": "Downloads the release package from GitHub and installs it.",
-  "requiresConfirmation": true,
+  "runElevated": true,
   "inputs": [
     {
       "name": "version",
       "label": "Version",
       "type": "text",
       "defaultValue": "1.0.0"
+    },
+    {
+      "name": "env",
+      "label": "Environment",
+      "type": "select",
+      "options": ["staging", "production"],
+      "defaultValue": "staging"
+    },
+    {
+      "name": "verbose",
+      "label": "Verbose logging",
+      "type": "bool",
+      "defaultValue": "false"
     }
   ],
   "steps": [
@@ -76,11 +89,64 @@ A short explanation of what the workflow does. Shown below the workflow name on 
 
 ---
 
-### `requiresConfirmation`
+### `runElevated`
 
 **Type:** boolean — **Optional, defaults to `false`**
 
-When `true`, the dashboard shows a confirmation prompt before starting the workflow. Use this for workflows that make irreversible changes, such as modifying configuration files or restarting services.
+When `true`, DevelopmentHub shows **one UAC prompt** when the workflow starts, then routes all privileged operations through a single elevated helper process for the duration of the workflow. No further UAC prompts appear during execution.
+
+Compared to per-step elevation:
+
+| | Workflow-level (`runElevated` on the workflow) | Per-step (`runElevated` on a step) |
+|---|---|---|
+| UAC prompts | One, at workflow start | One per elevated step |
+| stdout/stderr captured | Yes | No |
+| Sub-workflows | Inherit the elevated context | Each elevated step prompts independently |
+
+The workflow card and input modal show an **elevated** badge so users know a UAC prompt is expected before the workflow starts.
+
+When `runElevated: true` is set on the workflow, individual `runElevated` flags on steps are ignored — the workflow-level elevated helper handles all privileged operations.
+
+---
+
+### `variables`
+
+**Type:** object (string → string) — **Optional**
+
+Static key-value pairs that are available as `{{placeholders}}` in every step field, without prompting the user. Use these to avoid repeating the same literal string across multiple steps.
+
+```json
+{
+  "variables": {
+    "installDir": "C:\\Apps\\MyService",
+    "serviceName": "MyApiService"
+  }
+}
+```
+
+You can then write `{{installDir}}` or `{{serviceName}}` in any step field.
+
+**Resolution priority (lowest → highest):**
+
+| Source | Overrides |
+|---|---|
+| `variables` (declared) | — |
+| Built-in variables (`workflowDir`, `workflowFile`) | declared variables |
+| Input defaults | declared variables |
+| User-provided input values | everything |
+
+---
+
+### Built-in variables
+
+These are injected automatically and do not need to be declared. They are always available in every workflow.
+
+| Name | Value |
+|---|---|
+| `workflowDir` | The directory that contains the workflow JSON file (e.g. `C:\Workflows`) |
+| `workflowFile` | The full path to the workflow JSON file (e.g. `C:\Workflows\deploy.json`) |
+
+`workflowDir` is particularly useful for referencing scripts or config files stored alongside the workflow file.
 
 ---
 
@@ -139,13 +205,41 @@ The text shown next to the input field in the user's input modal. Defaults to th
 
 **Type:** string — **Optional, defaults to `"text"`**
 
-The type of input control shown in the modal. Currently only `"text"` is supported.
+The type of input control shown in the modal. Supported values:
+
+| Value | Control | Submitted value |
+|-------|---------|-----------------|
+| `"text"` | Single-line text field | The string the user typed |
+| `"bool"` | Checkbox | `"true"` or `"false"` |
+| `"select"` | Dropdown menu | The selected option string |
+
+For `"select"`, you must also provide the [`options`](#options) field.
 
 ### `defaultValue`
 
 **Type:** string — **Optional**
 
-The value pre-filled in the input field. The user can change it before running the workflow. If omitted, the field starts empty.
+The value pre-filled when the input modal opens. The user can change it before running.
+
+- For `"text"` inputs: the pre-filled string. Defaults to empty.
+- For `"bool"` inputs: `"true"` or `"false"`. Defaults to unchecked (`"false"`) if omitted.
+- For `"select"` inputs: the option that is selected by default. Defaults to the first option if omitted or if the value is not in the options list.
+
+### `options`
+
+**Type:** array of strings — **Required for `"select"` type, ignored otherwise**
+
+The list of choices shown in the dropdown. Each string is used as both the display label and the submitted value.
+
+```json
+{
+  "name": "env",
+  "label": "Environment",
+  "type": "select",
+  "options": ["dev", "staging", "production"],
+  "defaultValue": "staging"
+}
+```
 
 ---
 

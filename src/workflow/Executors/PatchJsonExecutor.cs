@@ -12,7 +12,7 @@ public sealed class PatchJsonExecutor : WorkflowStepExecutor<PatchJsonStep>
 {
     public override string StepType => "patchjson";
 
-    protected override Task ExecuteAsync(
+    protected override async Task ExecuteAsync(
         PatchJsonStep step,
         StepContext context,
         CancellationToken cancellationToken)
@@ -32,7 +32,11 @@ public sealed class PatchJsonExecutor : WorkflowStepExecutor<PatchJsonStep>
 
         var json = root.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + Environment.NewLine;
 
-        if (step.RunElevated)
+        if (context.ElevatedWorker is not null)
+        {
+            await context.ElevatedWorker.WriteFileAsync(filePath, json, context.LogAsync, cancellationToken);
+        }
+        else if (step.RunElevated)
         {
             WriteElevated(filePath, json);
         }
@@ -41,8 +45,6 @@ public sealed class PatchJsonExecutor : WorkflowStepExecutor<PatchJsonStep>
             File.Copy(filePath, $"{filePath}.bak", overwrite: true);
             File.WriteAllText(filePath, json, Encoding.UTF8);
         }
-
-        return Task.CompletedTask;
     }
 
     /// <summary>
