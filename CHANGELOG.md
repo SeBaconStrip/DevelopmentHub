@@ -5,6 +5,26 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## 0.15 – 2026-03-29
+
+### ✨ Added
+
+- Workflow-level elevation — set `runElevated: true` on the workflow to issue a single UAC prompt at startup; all steps that require admin rights run through a shared elevated helper process for the duration of the workflow with no further prompts
+- Elevated helper communicates with the main process over a TCP loopback connection (non-elevated process is the server on a random OS-assigned port) — avoids named-pipe access restrictions between elevation levels
+- `bool` input type — renders a checkbox; submitted value is `"true"` or `"false"`
+- `select` input type — renders a dropdown; requires an `options` array; submitted value is the selected option string
+- Elevated badge shown on workflow cards and the input modal when `runElevated` is set
+- `variables` block — declare static key-value pairs inside the workflow definition; available as `{{placeholders}}` in all step fields without prompting the user
+- Built-in variables `workflowDir` and `workflowFile` — automatically injected into every workflow from the location of its JSON file; useful for referencing scripts or config files stored alongside the workflow
+
+### 🔧 Changed
+
+- Variable resolution follows a four-tier priority chain: declared `variables` → built-in variables → input defaults → user-provided input values
+- Workflow-level `runElevated` supersedes per-step `runElevated` flags — when the workflow-level worker is active, individual step flags are ignored and all privileged operations route through the shared helper
+- Removed `requiresConfirmation` — the field had no meaningful use case and has been removed from the schema, backend, and frontend
+
+---
+
 ## 0.14 – 2026-03-29
 
 ### ✨ Added
