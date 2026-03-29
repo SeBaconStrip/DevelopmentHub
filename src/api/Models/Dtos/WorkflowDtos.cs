@@ -3,8 +3,7 @@ namespace DevelopmentHub.Api.Models.Dtos;
 public class RunWorkflowRequestDto
 {
     public Dictionary<string, string> Inputs { get; set; } = new(StringComparer.OrdinalIgnoreCase);
-    public bool Confirmed { get; set; }
-    public List<string> SkippedSteps { get; set; } = [];
+public List<string> SkippedSteps { get; set; } = [];
 }
 
 public class WorkflowExecutionDto

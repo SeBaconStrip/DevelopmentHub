@@ -41,6 +41,9 @@ export function WorkflowsWidget({
                 <div className="workflow-copy">
                   <div className="workflow-title-row">
                     <span className="item-name">{workflow.name}</span>
+                    {workflow.runElevated && (
+                      <span className="workflow-elevated-badge" title="Runs elevated (UAC)">elevated</span>
+                    )}
                     <span
                       className={`workflow-status workflow-status--${latestExecution?.status ?? "idle"}`}
                     >

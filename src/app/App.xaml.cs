@@ -19,6 +19,15 @@ public partial class App : Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        // Elevated-worker mode: launched by the main instance via UAC to run privileged steps.
+        // Must be checked before base.OnStartup so no WPF window is created.
+        if (e.Args.Length >= 2 && e.Args[0] == "--elevated-worker")
+        {
+            Task.Run(() => ElevatedWorkerServer.RunAsync(e.Args[1])).GetAwaiter().GetResult();
+            Shutdown();
+            return;
+        }
+
         base.OnStartup(e);
 
         _mutex = new Mutex(true, MutexName, out var isFirstInstance);

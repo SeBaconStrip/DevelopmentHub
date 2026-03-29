@@ -29,6 +29,9 @@ public sealed class RestartWindowsServiceExecutor : WorkflowStepExecutor<Restart
             $"$svc = Get-Service -Name '{WorkflowHelpers.EscapePowerShell(serviceName)}'; " +
             $"$svc.WaitForStatus([System.ServiceProcess.ServiceControllerStatus]::Running, [TimeSpan]::FromSeconds({timeoutSeconds})) }}";
 
+        if (context.ElevatedWorker is not null)
+            return context.ElevatedWorker.RestartServiceAsync(serviceName, step.WaitForRunning, step.TimeoutSeconds, context.LogAsync, cancellationToken);
+
         if (step.RunElevated)
         {
             ExecuteElevated(command, serviceName);
