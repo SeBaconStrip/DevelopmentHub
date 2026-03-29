@@ -381,6 +381,85 @@
   color: var(--text-on-primary);
 }
 
+/* ── todo sync ── */
+.todo-sync-status-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.todo-sync-badge {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+  border: 1px solid;
+}
+
+.todo-sync-badge--connected {
+  color: var(--color-success);
+  border-color: var(--color-success);
+  background: color-mix(in srgb, var(--color-success) 12%, transparent);
+}
+
+.todo-sync-badge--disconnected {
+  color: var(--text-muted);
+  border-color: var(--border);
+  background: var(--surface-muted);
+}
+
+.todo-sync-enable-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.todo-sync-auth-box {
+  margin-top: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-muted);
+}
+
+.todo-sync-auth-instruction {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0 0 10px;
+}
+
+.todo-sync-user-code {
+  font-family: monospace;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  color: var(--color-accent);
+  margin-bottom: 10px;
+}
+
+.todo-sync-auth-waiting {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.todo-sync-link {
+  color: var(--color-accent);
+  text-decoration: underline;
+}
+
+.todo-sync-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
 /* ── theme picker ── */
 .theme-picker {
   display: flex;
@@ -491,6 +570,10 @@
   font-size: 12px;
   color: var(--text-secondary);
   pointer-events: none;
+}
+
+.info-tooltip-box a {
+  pointer-events: auto;
 }
 
 .info-tooltip-box p {

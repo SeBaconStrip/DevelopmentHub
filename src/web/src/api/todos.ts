@@ -2,8 +2,16 @@ import type { TodoItem } from "../types";
 
 async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
-    const body = await res.text().catch(() => res.statusText);
-    throw new Error(body || `HTTP ${res.status}`);
+    const text = await res.text().catch(() => "");
+    let message = `HTTP ${res.status}`;
+    try {
+      const json = JSON.parse(text);
+      message = json.detail ?? json.title ?? json.error ?? message;
+    } catch {
+      if (text) message = text;
+    }
+    if (res.status === 404) message = "This todo no longer exists.";
+    throw new Error(message);
   }
 
   if (res.status === 204) {

@@ -8,6 +8,8 @@ public class TodoItemDto
     public bool Completed { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? CompletedAt { get; set; }
+    /// <summary>True when this item is linked to a remote sync provider.</summary>
+    public bool IsSynced { get; set; }
 }
 
 public class CreateTodoItemRequest

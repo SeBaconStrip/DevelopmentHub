@@ -65,6 +65,10 @@ public class UserConfigService(DashboardDatabase db) : IUserConfigService
             new RepositoryOpenerDao { Id = "default-vscode", Label = "VS Code",       FileExtension = ".code-workspace", ProgramPath = "code", IconType = "vscode",       SortOrder = 0 },
             new RepositoryOpenerDao { Id = "default-vs",     Label = "Visual Studio", FileExtension = ".sln",            ProgramPath = "",     IconType = "visualstudio", SortOrder = 1 },
         ];
+
+        config.TodoSyncProviders ??= new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
+        if (config.TodoSyncIntervalSeconds <= 0)
+            config.TodoSyncIntervalSeconds = 300;
     }
 
     private static Dictionary<string, string> EnsureProvider(UserConfigDao config, string providerId)

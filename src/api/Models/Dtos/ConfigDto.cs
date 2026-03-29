@@ -12,6 +12,8 @@ public class ConfigDto
     public string HotkeyBinding { get; set; } = "Ctrl+Shift+D";
     public int PrRefreshIntervalSeconds { get; set; } = 120;
     public List<RepositoryOpenerDto> RepositoryOpeners { get; set; } = [];
+    public Dictionary<string, Dictionary<string, string>> TodoSyncProviders { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    public int TodoSyncIntervalSeconds { get; set; } = 300;
 }
 
 public class CustomLinkDto

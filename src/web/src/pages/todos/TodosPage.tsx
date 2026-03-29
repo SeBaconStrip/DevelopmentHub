@@ -1,7 +1,9 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { todosApi } from "../../api/todos";
+import { configApi } from "../../api/config";
 import { useTodos } from "../../hooks/useTodos";
+import { useTodoSyncHub } from "../../hooks/useTodoSyncHub";
 import { TodosWidget } from "../dashboard/widgets/TodosWidget";
 import { FilterToolbar } from "../../components/FilterToolbar";
 import type { TodoItem } from "../../types";
@@ -12,10 +14,19 @@ type Filter = "all" | "active" | "completed";
 export default function TodosPage() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
+  const queryClient = useQueryClient();
+
+  const handleTodosUpdated = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["todos"] });
+  }, [queryClient]);
+  useTodoSyncHub(handleTodosUpdated);
+
+  const { data: config } = useQuery({ queryKey: ["config"], queryFn: configApi.get });
 
   const { data: todos = [], isLoading } = useQuery<TodoItem[]>({
     queryKey: ["todos"],
     queryFn: todosApi.getAll,
+    refetchInterval: (config?.todoSyncIntervalSeconds ?? 300) * 1000,
   });
 
   const { createTodo, updateTodo, toggleTodo, deleteTodo, clearCompletedTodos, isBusy } = useTodos();

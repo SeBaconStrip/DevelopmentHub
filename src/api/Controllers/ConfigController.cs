@@ -47,7 +47,9 @@ public class ConfigController(
                 IconType = o.IconType,
                 IconPath = o.IconPath,
                 SortOrder = o.SortOrder
-            }).ToList()
+            }).ToList(),
+            TodoSyncProviders = RedactProviderSecrets(cfg.TodoSyncProviders),
+            TodoSyncIntervalSeconds = cfg.TodoSyncIntervalSeconds
         });
     }
 
@@ -92,6 +94,9 @@ public class ConfigController(
                 IconPath = o.IconPath?.Trim() ?? string.Empty,
                 SortOrder = o.SortOrder
             }).ToList();
+            current.TodoSyncProviders = MergeProviderSettings(current.TodoSyncProviders, dto.TodoSyncProviders);
+            if (dto.TodoSyncIntervalSeconds > 0)
+                current.TodoSyncIntervalSeconds = dto.TodoSyncIntervalSeconds;
 
             await userConfigService.SaveAsync(current);
             await repositoryService.RemoveOrphanedAsync(current.RepositoryRoots);
