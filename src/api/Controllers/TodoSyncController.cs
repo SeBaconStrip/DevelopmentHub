@@ -48,7 +48,8 @@ public class TodoSyncController(
             sessionId,
             userCode = deviceCode.UserCode,
             verificationUri = deviceCode.VerificationUri,
-            expiresIn = deviceCode.ExpiresIn
+            expiresIn = deviceCode.ExpiresIn,
+            interval = deviceCode.Interval
         });
     }
 

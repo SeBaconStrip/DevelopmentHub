@@ -11,42 +11,55 @@ public sealed class TodoSyncService(
     ILogger<TodoSyncService> logger) : ITodoSyncService
 {
     private readonly IReadOnlyList<ITodoSyncProvider> _providers = providers.ToList();
+    private int _syncInProgress; // 0 = idle, 1 = running; use Interlocked for thread safety
 
     public async Task SyncAllAsync(CancellationToken ct = default)
     {
-        var config = await userConfigService.GetAsync();
-        logger.LogDebug("SyncAllAsync starting. Providers={ProviderCount}", _providers.Count);
-
-        foreach (var provider in _providers)
+        if (Interlocked.CompareExchange(ref _syncInProgress, 1, 0) != 0)
         {
-            if (!config.TodoSyncProviders.TryGetValue(provider.ProviderId, out var settings))
-            {
-                logger.LogDebug("Skipping provider {ProviderId}: no settings found", provider.ProviderId);
-                continue;
-            }
+            logger.LogDebug("SyncAllAsync skipped: a sync is already in progress");
+            return;
+        }
+        try
+        {
+            var config = await userConfigService.GetAsync();
+            logger.LogDebug("SyncAllAsync starting. Providers={ProviderCount}", _providers.Count);
 
-            var hasClientId = !string.IsNullOrWhiteSpace(settings.GetValueOrDefault("clientId"));
-            var hasListId   = !string.IsNullOrWhiteSpace(settings.GetValueOrDefault("listId"));
-            var hasToken    = !string.IsNullOrWhiteSpace(settings.GetValueOrDefault("refreshToken"));
-            var isEnabled   = settings.GetValueOrDefault("enabled") == "true";
+            foreach (var provider in _providers)
+            {
+                if (!config.TodoSyncProviders.TryGetValue(provider.ProviderId, out var settings))
+                {
+                    logger.LogDebug("Skipping provider {ProviderId}: no settings found", provider.ProviderId);
+                    continue;
+                }
 
-            if (!provider.IsConfigured(settings))
-            {
-                logger.LogDebug(
-                    "Skipping provider {ProviderId}: IsConfigured=false. HasClientId={HasClientId} HasListId={HasListId} HasToken={HasToken} Enabled={Enabled}",
-                    provider.ProviderId, hasClientId, hasListId, hasToken, isEnabled);
-                continue;
-            }
+                var hasClientId = !string.IsNullOrWhiteSpace(settings.GetValueOrDefault("clientId"));
+                var hasListId   = !string.IsNullOrWhiteSpace(settings.GetValueOrDefault("listId"));
+                var hasToken    = !string.IsNullOrWhiteSpace(settings.GetValueOrDefault("refreshToken"));
+                var isEnabled   = settings.GetValueOrDefault("enabled") == "true";
 
-            logger.LogInformation("Running full sync for provider {ProviderId}", provider.ProviderId);
-            try
-            {
-                await SyncProviderAsync(provider, settings, localId: null, ct);
+                if (!provider.IsConfigured(settings))
+                {
+                    logger.LogDebug(
+                        "Skipping provider {ProviderId}: IsConfigured=false. HasClientId={HasClientId} HasListId={HasListId} HasToken={HasToken} Enabled={Enabled}",
+                        provider.ProviderId, hasClientId, hasListId, hasToken, isEnabled);
+                    continue;
+                }
+
+                logger.LogInformation("Running full sync for provider {ProviderId}", provider.ProviderId);
+                try
+                {
+                    await SyncProviderAsync(provider, settings, localId: null, ct);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Todo sync failed for provider {ProviderId}", provider.ProviderId);
+                }
             }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Todo sync failed for provider {ProviderId}", provider.ProviderId);
-            }
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _syncInProgress, 0);
         }
     }
 
@@ -158,7 +171,10 @@ public sealed class TodoSyncService(
 
             if (local.PendingSync)
             {
-                // Local has unsent changes — decide who wins
+                // Local has unsent changes — decide who wins.
+                // Note: LocalUpdatedAt is the local machine clock; remote.LastModifiedAt is the
+                // provider's server clock. Minor clock skew can affect which side wins, but this
+                // is an acceptable trade-off for a last-write-wins strategy.
                 if (local.LocalUpdatedAt >= remote.LastModifiedAt)
                 {
                     logger.LogDebug("Local wins conflict for {Id} '{Title}' — pushing to remote", local.Id, local.Title);
@@ -234,6 +250,7 @@ public sealed class TodoSyncService(
 
     private static bool HasRemoteChanges(TodoItemDao local, RemoteTodoItem remote) =>
         local.Completed != remote.Completed
+        || local.CompletedAt != remote.CompletedAt
         || local.Title != remote.Title
         || local.LinkUrl != remote.LinkUrl;
 

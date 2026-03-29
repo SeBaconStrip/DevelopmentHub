@@ -26,6 +26,8 @@ public sealed class MicrosoftTodoAuthService(
     private const string DeviceCodeEndpoint = "https://login.microsoftonline.com/consumers/oauth2/v2.0/devicecode";
     private const string Scope = "Tasks.ReadWrite offline_access";
 
+    private readonly SemaphoreSlim _refreshLock = new(1, 1);
+
     private static readonly JsonSerializerOptions _json = new(JsonSerializerDefaults.Web);
 
     public async Task<DeviceCodeResponse> StartDeviceCodeFlowAsync(string clientId, CancellationToken ct)
@@ -88,49 +90,64 @@ public sealed class MicrosoftTodoAuthService(
 
     public async Task<string> GetValidAccessTokenAsync(string providerId, IReadOnlyDictionary<string, string> settings, CancellationToken ct)
     {
+        // Fast path: token in the caller's snapshot is still valid
         var accessToken = settings.GetValueOrDefault(MicrosoftTodoSettings.AccessToken, string.Empty);
         var tokenExpiry = settings.GetValueOrDefault(MicrosoftTodoSettings.TokenExpiry, string.Empty);
-        var refreshToken = settings.GetValueOrDefault(MicrosoftTodoSettings.RefreshToken, string.Empty);
-        var clientId = settings.GetValueOrDefault(MicrosoftTodoSettings.ClientId, string.Empty);
-
         if (!string.IsNullOrWhiteSpace(accessToken)
             && DateTime.TryParse(tokenExpiry, out var expiry)
             && expiry > DateTime.UtcNow)
             return accessToken;
 
-        if (string.IsNullOrWhiteSpace(refreshToken) || string.IsNullOrWhiteSpace(clientId))
-            throw new InvalidOperationException("Microsoft To Do is not authenticated. Please connect in Settings.");
-
-        // Refresh the token
-        using var client = httpClientFactory.CreateClient();
-        var content = new FormUrlEncodedContent(new Dictionary<string, string>
+        // Slow path: acquire lock so only one caller refreshes at a time
+        await _refreshLock.WaitAsync(ct);
+        try
         {
-            ["grant_type"] = "refresh_token",
-            ["client_id"] = clientId,
-            ["refresh_token"] = refreshToken,
-            ["scope"] = Scope
-        });
+            // Re-read config — another concurrent caller may have already refreshed
+            var config = await userConfigService.GetAsync();
+            if (!config.TodoSyncProviders.TryGetValue(providerId, out var freshSettings))
+                throw new InvalidOperationException("Microsoft To Do is not authenticated. Please connect in Settings.");
 
-        var response = await client.PostAsync(TokenEndpoint, content, ct);
-        response.EnsureSuccessStatusCode();
+            var freshToken = freshSettings.GetValueOrDefault(MicrosoftTodoSettings.AccessToken, string.Empty);
+            var freshExpiry = freshSettings.GetValueOrDefault(MicrosoftTodoSettings.TokenExpiry, string.Empty);
+            if (!string.IsNullOrWhiteSpace(freshToken)
+                && DateTime.TryParse(freshExpiry, out var freshExpdt)
+                && freshExpdt > DateTime.UtcNow)
+                return freshToken;
 
-        var body = await response.Content.ReadFromJsonAsync<TokenJsonResponse>(_json, ct)
-            ?? throw new InvalidOperationException("Empty token refresh response.");
+            var refreshToken = freshSettings.GetValueOrDefault(MicrosoftTodoSettings.RefreshToken, string.Empty);
+            var clientId = freshSettings.GetValueOrDefault(MicrosoftTodoSettings.ClientId, string.Empty);
+            if (string.IsNullOrWhiteSpace(refreshToken) || string.IsNullOrWhiteSpace(clientId))
+                throw new InvalidOperationException("Microsoft To Do is not authenticated. Please connect in Settings.");
 
-        var newExpiry = DateTime.UtcNow.AddSeconds(body.ExpiresIn - 60);
+            using var client = httpClientFactory.CreateClient();
+            var content = new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["grant_type"] = "refresh_token",
+                ["client_id"] = clientId,
+                ["refresh_token"] = refreshToken,
+                ["scope"] = Scope
+            });
 
-        // Persist refreshed tokens
-        var config = await userConfigService.GetAsync();
-        if (!config.TodoSyncProviders.TryGetValue(providerId, out var providerSettings))
-            providerSettings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var response = await client.PostAsync(TokenEndpoint, content, ct);
+            response.EnsureSuccessStatusCode();
 
-        providerSettings[MicrosoftTodoSettings.AccessToken] = body.AccessToken;
-        providerSettings[MicrosoftTodoSettings.RefreshToken] = body.RefreshToken ?? refreshToken;
-        providerSettings[MicrosoftTodoSettings.TokenExpiry] = newExpiry.ToString("O");
-        config.TodoSyncProviders[providerId] = providerSettings;
-        await userConfigService.SaveAsync(config);
+            var body = await response.Content.ReadFromJsonAsync<TokenJsonResponse>(_json, ct)
+                ?? throw new InvalidOperationException("Empty token refresh response.");
 
-        return body.AccessToken;
+            var newExpiry = DateTime.UtcNow.AddSeconds(body.ExpiresIn - 60);
+
+            freshSettings[MicrosoftTodoSettings.AccessToken] = body.AccessToken;
+            freshSettings[MicrosoftTodoSettings.RefreshToken] = body.RefreshToken ?? refreshToken;
+            freshSettings[MicrosoftTodoSettings.TokenExpiry] = newExpiry.ToString("O");
+            config.TodoSyncProviders[providerId] = freshSettings;
+            await userConfigService.SaveAsync(config);
+
+            return body.AccessToken;
+        }
+        finally
+        {
+            _refreshLock.Release();
+        }
     }
 
     public async Task<List<MicrosoftTodoList>> GetListsAsync(string accessToken, CancellationToken ct)

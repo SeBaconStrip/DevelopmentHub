@@ -10,6 +10,7 @@ export interface StartAuthResponse {
   userCode: string;
   verificationUri: string;
   expiresIn: number;
+  interval: number;
 }
 
 export interface PollAuthResponse {

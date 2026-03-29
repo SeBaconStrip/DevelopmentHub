@@ -5,6 +5,22 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## 0.14 – 2026-03-29
+
+### ✨ Added
+
+- Microsoft To Do sync — bidirectional todo synchronisation via Microsoft Graph API; connect with an Azure AD app registration (device code flow, no redirect server required)
+- Background sync service runs on a configurable interval (default 300 s, minimum 30 s); interval is re-read from config each cycle without a restart
+- SignalR push notification (`TodosUpdated`) emitted after every background sync so the frontend refreshes instantly without waiting for its own poll timer
+- Todo sync settings section — connect/disconnect, list picker, manual "Sync Now" button, and sync interval control
+- Soft-delete: todos cleared or deleted locally are hidden immediately and removed from the remote provider on the next sync cycle, preventing re-pull
+
+### 🔧 Changed
+
+- Conflict resolution uses last-write-wins (`LocalUpdatedAt` vs `RemoteLastModifiedAt`); falls back to field-level comparison when the provider timestamp does not update on status changes
+
+---
+
 ## 0.13 – 2026-03-27
 
 ### ✨ Added

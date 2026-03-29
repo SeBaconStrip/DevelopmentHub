@@ -30,23 +30,32 @@ public sealed class MicrosoftTodoSyncProvider(
     {
         var listId = settings[MicrosoftTodoSettings.ListId];
         var token = await authService.GetValidAccessTokenAsync(ProviderId, settings, ct);
-        using var client = CreateClient(token);
+        var client = CreateClient(token);
 
-        var url = $"{GraphBase}/me/todo/lists/{listId}/tasks?$top=999";
-        var response = await client.GetAsync(url, ct);
-        response.EnsureSuccessStatusCode();
+        var results = new List<RemoteTodoItem>();
+        string? url = $"{GraphBase}/me/todo/lists/{listId}/tasks?$top=100";
 
-        var body = await response.Content.ReadFromJsonAsync<GraphCollectionResponse<GraphTask>>(_json, ct)
-            ?? throw new InvalidOperationException("Empty tasks response.");
+        while (url is not null)
+        {
+            ct.ThrowIfCancellationRequested();
+            var response = await client.GetAsync(url, ct);
+            response.EnsureSuccessStatusCode();
 
-        return body.Value.Select(MapToRemote).ToList();
+            var body = await response.Content.ReadFromJsonAsync<GraphCollectionResponse<GraphTask>>(_json, ct)
+                ?? throw new InvalidOperationException("Empty tasks response.");
+
+            results.AddRange(body.Value.Select(MapToRemote));
+            url = body.NextLink;
+        }
+
+        return results;
     }
 
     public async Task<RemoteTodoItem> CreateTaskAsync(RemoteTodoItem item, IReadOnlyDictionary<string, string> settings, CancellationToken ct)
     {
         var listId = settings[MicrosoftTodoSettings.ListId];
         var token = await authService.GetValidAccessTokenAsync(ProviderId, settings, ct);
-        using var client = CreateClient(token);
+        var client = CreateClient(token);
 
         var payload = MapToGraph(item);
         var content = new StringContent(JsonSerializer.Serialize(payload, _json), Encoding.UTF8, "application/json");
@@ -63,7 +72,7 @@ public sealed class MicrosoftTodoSyncProvider(
     {
         var listId = settings[MicrosoftTodoSettings.ListId];
         var token = await authService.GetValidAccessTokenAsync(ProviderId, settings, ct);
-        using var client = CreateClient(token);
+        var client = CreateClient(token);
 
         var payload = MapToGraph(item);
         var content = new StringContent(JsonSerializer.Serialize(payload, _json), Encoding.UTF8, "application/json");
@@ -81,7 +90,7 @@ public sealed class MicrosoftTodoSyncProvider(
     {
         var listId = settings[MicrosoftTodoSettings.ListId];
         var token = await authService.GetValidAccessTokenAsync(ProviderId, settings, ct);
-        using var client = CreateClient(token);
+        var client = CreateClient(token);
 
         var response = await client.DeleteAsync($"{GraphBase}/me/todo/lists/{listId}/tasks/{remoteId}", ct);
         if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
@@ -115,9 +124,9 @@ public sealed class MicrosoftTodoSyncProvider(
             : null
     };
 
-    private static HttpClient CreateClient(string token)
+    private HttpClient CreateClient(string token)
     {
-        var client = new HttpClient();
+        var client = httpClientFactory.CreateClient("MicrosoftGraph");
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         return client;
     }
@@ -127,6 +136,7 @@ public sealed class MicrosoftTodoSyncProvider(
     private sealed class GraphCollectionResponse<T>
     {
         [JsonPropertyName("value")] public List<T> Value { get; init; } = [];
+        [JsonPropertyName("@odata.nextLink")] public string? NextLink { get; init; }
     }
 
     private sealed class GraphTask

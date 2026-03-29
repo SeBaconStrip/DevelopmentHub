@@ -122,11 +122,21 @@ public class ConfigController(
         foreach (var (providerId, settings) in providers)
         {
             var redacted = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var hasCredentials = false;
             foreach (var (key, value) in settings)
             {
-                redacted[key] = IsSecretKey(key) && !string.IsNullOrEmpty(value) ? "***" : value;
+                if (IsSecretKey(key) && !string.IsNullOrEmpty(value))
+                {
+                    redacted[key] = "***";
+                    hasCredentials = true;
+                }
+                else
+                {
+                    redacted[key] = value;
+                }
             }
-
+            // Expose a stable boolean so the frontend never has to check for "***"
+            redacted["connected"] = hasCredentials ? "true" : "false";
             result[providerId] = redacted;
         }
 
@@ -154,6 +164,9 @@ public class ConfigController(
 
             foreach (var (key, value) in settings)
             {
+                // Skip redacted secrets and the computed "connected" key (read-only, not persisted)
+                if (key.Equals("connected", StringComparison.OrdinalIgnoreCase))
+                    continue;
                 if (IsSecretKey(key) && (value is "***" or "" || value is null))
                     continue;
 

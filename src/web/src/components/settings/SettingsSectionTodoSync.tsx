@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { AppConfig } from "../../types";
 import { todoSyncApi, type MicrosoftTodoList } from "../../api/todoSync";
@@ -15,7 +15,7 @@ type AuthPhase = "idle" | "polling" | "done" | "error";
 export function SettingsSectionTodoSync({ form, setTodoSyncField, setField }: Props) {
   const queryClient = useQueryClient();
   const msSettings = form.todoSyncProviders?.microsoftTodo ?? {};
-  const isConnected = msSettings.refreshToken === "***";
+  const isConnected = msSettings.connected === "true";
   const clientId = msSettings.clientId ?? "";
   const listId = msSettings.listId ?? "";
   const listName = msSettings.listName ?? "";
@@ -30,22 +30,7 @@ export function SettingsSectionTodoSync({ form, setTodoSyncField, setField }: Pr
   const [syncing, setSyncing] = useState(false);
   const pollIntervalRef = useRef<number | null>(null);
 
-  useEffect(() => {
-    if (isConnected) {
-      loadLists();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isConnected]);
-
-  useEffect(() => {
-    return () => {
-      if (pollIntervalRef.current !== null) {
-        clearInterval(pollIntervalRef.current);
-      }
-    };
-  }, []);
-
-  async function loadLists() {
+  const loadLists = useCallback(async () => {
     setListsLoading(true);
     try {
       const fetched = await todoSyncApi.getMicrosoftLists();
@@ -55,7 +40,21 @@ export function SettingsSectionTodoSync({ form, setTodoSyncField, setField }: Pr
     } finally {
       setListsLoading(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    if (isConnected) {
+      loadLists();
+    }
+  }, [isConnected, loadLists]);
+
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current !== null) {
+        clearInterval(pollIntervalRef.current);
+      }
+    };
+  }, []);
 
   async function handleConnect() {
     if (!clientId.trim()) {
@@ -69,28 +68,43 @@ export function SettingsSectionTodoSync({ form, setTodoSyncField, setField }: Pr
       setUserCode(resp.userCode);
       setVerificationUri(resp.verificationUri);
 
-      const { sessionId } = resp;
+      const { sessionId, interval, expiresIn } = resp;
+
+      const stopPolling = () => {
+        if (pollIntervalRef.current !== null) {
+          clearInterval(pollIntervalRef.current);
+          pollIntervalRef.current = null;
+        }
+      };
+
+      // Auto-cancel when the device code expires
+      const expiryTimer = window.setTimeout(() => {
+        stopPolling();
+        setAuthPhase("error");
+        setAuthError("Authentication expired. Please try again.");
+      }, expiresIn * 1000);
+
       pollIntervalRef.current = window.setInterval(async () => {
         try {
           const poll = await todoSyncApi.pollMicrosoftAuth(sessionId);
           if (poll.status === "succeeded") {
-            clearInterval(pollIntervalRef.current!);
-            pollIntervalRef.current = null;
+            stopPolling();
+            clearTimeout(expiryTimer);
             setAuthPhase("done");
             await queryClient.invalidateQueries({ queryKey: ["config"] });
           } else if (poll.status === "failed" || poll.status === "expired") {
-            clearInterval(pollIntervalRef.current!);
-            pollIntervalRef.current = null;
+            stopPolling();
+            clearTimeout(expiryTimer);
             setAuthPhase("error");
             setAuthError(poll.error ?? `Authentication ${poll.status}.`);
           }
         } catch {
-          clearInterval(pollIntervalRef.current!);
-          pollIntervalRef.current = null;
+          stopPolling();
+          clearTimeout(expiryTimer);
           setAuthPhase("error");
           setAuthError("Failed to poll authentication status.");
         }
-      }, 5000);
+      }, interval * 1000);
     } catch (err: unknown) {
       setAuthPhase("error");
       setAuthError(
