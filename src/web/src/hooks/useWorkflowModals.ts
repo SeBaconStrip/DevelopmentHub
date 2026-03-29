@@ -45,7 +45,7 @@ export function useWorkflowModals({ workflows }: UseWorkflowModalsOptions) {
     setWorkflowRunError(null);
     runWorkflow.mutate({
       workflowId: workflow.id,
-      request: { inputs, confirmed: true, skippedSteps },
+      request: { inputs, skippedSteps },
     });
   }
 

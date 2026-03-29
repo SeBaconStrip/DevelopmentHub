@@ -107,7 +107,7 @@ export interface WorkflowDefinition {
   id: string;
   name: string;
   description: string;
-  requiresConfirmation: boolean;
+  runElevated: boolean;
   inputs: WorkflowInput[];
   steps: WorkflowStep[];
 }
@@ -115,8 +115,9 @@ export interface WorkflowDefinition {
 export interface WorkflowInput {
   name: string;
   label: string;
-  type: "text";
+  type: "text" | "bool" | "select";
   defaultValue: string;
+  options?: string[];
 }
 
 export interface WorkflowStep {
@@ -159,7 +160,6 @@ export interface JsonPatchOperation {
 
 export interface RunWorkflowRequest {
   inputs: Record<string, string>;
-  confirmed: boolean;
   skippedSteps: string[];
 }
 

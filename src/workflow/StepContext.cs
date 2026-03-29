@@ -1,3 +1,4 @@
+using DevelopmentHub.Workflow.Elevation;
 using DevelopmentHub.Workflow.Steps;
 
 namespace DevelopmentHub.Workflow;
@@ -22,6 +23,19 @@ public sealed class StepContext
     /// The root workflow's ID is always the first entry.
     /// </summary>
     public IReadOnlySet<string> CallStack { get; init; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// When set, all elevated operations for this step are routed through the already-running
+    /// elevated worker process (one UAC prompt for the whole workflow) instead of spawning a
+    /// new elevated subprocess per step.
+    /// </summary>
+    public ElevatedWorkerClient? ElevatedWorker { get; init; }
+
+    /// <summary>
+    /// When <see langword="true"/>, all steps that support UAC elevation will run elevated,
+    /// regardless of their own <c>RunElevated</c> flag. Set from the parent workflow's <c>RunElevated</c> property.
+    /// </summary>
+    public bool WorkflowRunElevated { get; init; }
 
     /// <summary>
     /// Invokes another workflow inline, streaming its logs into the current execution.

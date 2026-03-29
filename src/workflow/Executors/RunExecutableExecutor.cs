@@ -27,22 +27,36 @@ public sealed class RunExecutableExecutor : WorkflowStepExecutor<RunExecutableSt
 
         var arguments = step.Arguments.Select(arg => WorkflowHelpers.Render(arg, context.Inputs)).ToArray();
         var renderedArgs = string.Join(" ", arguments.Select(WorkflowHelpers.QuoteArgument));
+        var workingDirectory = Path.GetDirectoryName(filePath) ?? Environment.CurrentDirectory;
+
+        // ── Route through elevated worker (one UAC prompt for the whole workflow) ──
+        if (context.ElevatedWorker is not null)
+        {
+            await context.ElevatedWorker.RunExecutableAsync(
+                filePath, renderedArgs, workingDirectory,
+                step.SuccessExitCodes, step.WaitForExit,
+                context.LogAsync, cancellationToken);
+            return;
+        }
+
+        // ── Per-step elevation (individual UAC prompt) ────────────────────────────
+        var runElevated = step.RunElevated;
 
         var psi = new ProcessStartInfo
         {
             FileName = filePath,
             Arguments = renderedArgs,
-            UseShellExecute = step.RunElevated,
-            Verb = step.RunElevated ? "runas" : string.Empty,
-            RedirectStandardOutput = !step.RunElevated,
-            RedirectStandardError = !step.RunElevated,
+            UseShellExecute = runElevated,
+            Verb = runElevated ? "runas" : string.Empty,
+            RedirectStandardOutput = !runElevated,
+            RedirectStandardError = !runElevated,
             CreateNoWindow = true,
-            WorkingDirectory = Path.GetDirectoryName(filePath) ?? Environment.CurrentDirectory
+            WorkingDirectory = workingDirectory,
         };
 
         using var process = new Process { StartInfo = psi };
 
-        if (!step.RunElevated)
+        if (!runElevated)
         {
             process.OutputDataReceived += async (_, args) =>
             {
@@ -59,7 +73,7 @@ public sealed class RunExecutableExecutor : WorkflowStepExecutor<RunExecutableSt
         if (!process.Start())
             throw new InvalidOperationException($"Executable '{filePath}' could not be started.");
 
-        if (!step.RunElevated)
+        if (!runElevated)
         {
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();

@@ -215,14 +215,16 @@ Runs any executable, installer or script. Optionally waits for the process to fi
 | `arguments` | string array | No | `[]` | Arguments to pass to the executable |
 | `waitForExit` | boolean | No | `true` | If `true`, the step waits for the process to finish before continuing |
 | `successExitCodes` | integer array | No | `[0]` | Exit codes that are considered successful. Any other code causes the step to fail |
-| `runElevated` | boolean | No | `false` | If `true`, the process is launched with a UAC elevation prompt |
+| `runElevated` | boolean | No | `false` | If `true`, the process runs with administrative privileges (see notes) |
 
 **Notes:**
 
 - Arguments that contain spaces are automatically wrapped in double quotes.
 - If `waitForExit` is `false`, the process is launched and the step immediately succeeds. Exit code validation is skipped.
 - Common `successExitCodes` for Windows installers: `0` (success) and `3010` (success, reboot required).
-- When `runElevated` is `true`, Windows shows a UAC prompt. If the user cancels, the step fails.
+- **Elevation behaviour** depends on where `runElevated` is set:
+  - If the **workflow** has `runElevated: true`, the process runs through the workflow's shared elevated helper — no UAC prompt at this step, and stdout/stderr are captured normally.
+  - If only this **step** has `runElevated: true`, Windows shows a UAC prompt for this step only. If the user cancels, the step fails. Output is not captured.
 
 **Example:**
 
@@ -248,7 +250,7 @@ Reads a JSON file, applies a list of patch operations, and writes the result bac
 |---|---|---|---|---|
 | `filePath` | string | Yes | — | Path to the JSON file to patch |
 | `operations` | array | Yes | — | Ordered list of patch operations to apply |
-| `runElevated` | boolean | No | `false` | If `true`, the patching runs in an elevated process |
+| `runElevated` | boolean | No | `false` | If `true`, the file write runs with administrative privileges (see `runExecutable` elevation notes) |
 
 ### Operations
 
@@ -343,13 +345,13 @@ Stops and starts a Windows service using PowerShell. Optionally waits until the 
 | `serviceName` | string | Yes | — | The exact name of the Windows service (not the display name) |
 | `waitForRunning` | boolean | No | `true` | If `true`, the step waits until the service reaches `Running` state |
 | `timeoutSeconds` | integer | No | `60` | How many seconds to wait for the service to reach `Running` state |
-| `runElevated` | boolean | No | `false` | If `true`, the PowerShell command runs in an elevated process |
+| `runElevated` | boolean | No | `false` | If `true`, the service restart runs with administrative privileges (see `runExecutable` elevation notes) |
 
 **Notes:**
 
 - Use the service's internal name (as shown in `services.msc` under "Service name"), not its display name.
 - If the service does not start within `timeoutSeconds`, the step fails.
-- When `runElevated` is `true`, Windows shows a UAC prompt. If the user cancels, the step fails.
+- See the `runExecutable` step for a full explanation of per-step vs. workflow-level elevation behaviour.
 
 **Example:**
 

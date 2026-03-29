@@ -9,7 +9,6 @@ Downloads a versioned ZIP from a direct URL.
   "id": "download-tool",
   "name": "Download Tool",
   "description": "Downloads a specific version of the tool from the public release server.",
-  "requiresConfirmation": false,
   "inputs": [
     {
       "name": "version",
@@ -41,7 +40,6 @@ Downloads an asset from a private GitHub repository. Requires a PAT configured i
   "id": "download-private-gh-release",
   "name": "Download Private GitHub Release",
   "description": "Downloads a versioned package from the private GitHub repository.",
-  "requiresConfirmation": false,
   "inputs": [
     {
       "name": "version",
@@ -76,7 +74,6 @@ Downloads the `drop` artifact from a specific pipeline run.
   "id": "download-ado-artifact",
   "name": "Download Pipeline Artifact",
   "description": "Downloads the drop artifact from a specific Azure DevOps pipeline run.",
-  "requiresConfirmation": false,
   "inputs": [
     {
       "name": "runId",
@@ -110,7 +107,6 @@ Extracts an already-downloaded ZIP to a clean destination folder.
   "id": "extract-local-package",
   "name": "Extract Local Package",
   "description": "Extracts a locally downloaded package ZIP, replacing any previous extraction.",
-  "requiresConfirmation": false,
   "inputs": [
     {
       "name": "version",
@@ -142,7 +138,6 @@ Copies a prepared config file to the service directory, overwriting the existing
   "id": "deploy-config",
   "name": "Deploy Config File",
   "description": "Copies the production config to the service folder.",
-  "requiresConfirmation": false,
   "steps": [
     {
       "type": "copy",
@@ -166,7 +161,6 @@ Updates values in an `appsettings.json` file in-place. A `.bak` backup is create
   "id": "patch-appsettings",
   "name": "Patch App Settings",
   "description": "Updates the connection string and feature flags in appsettings.json.",
-  "requiresConfirmation": true,
   "inputs": [
     {
       "name": "connectionString",
@@ -203,16 +197,15 @@ Updates values in an `appsettings.json` file in-place. A `.bak` backup is create
 
 ---
 
-## Restart a Windows Service
+## Restart a Windows Service (per-step elevation)
 
-Restarts a service and waits for it to be running again. Uses UAC elevation since the main process is not running as administrator.
+Restarts a service and waits for it to be running again. Uses per-step `runElevated` — one UAC prompt for this step only. If multiple steps in a workflow need elevation, consider using `runElevated: true` on the workflow instead (one prompt for everything).
 
 ```json
 {
   "id": "restart-api-service",
   "name": "Restart API Service",
-  "description": "Restarts the API Windows service. Requires UAC confirmation.",
-  "requiresConfirmation": true,
+  "description": "Restarts the API Windows service. Requires UAC elevation.",
   "steps": [
     {
       "type": "restartWindowsService",
@@ -237,7 +230,6 @@ A complete install workflow: downloads a versioned package, extracts it, and run
   "id": "install-package",
   "name": "Install Package",
   "description": "Downloads the release package, extracts it and runs the silent installer.",
-  "requiresConfirmation": true,
   "inputs": [
     {
       "name": "version",
@@ -288,7 +280,6 @@ A realistic end-to-end deploy workflow. Downloads a release, installs it, patche
   "id": "full-deploy",
   "name": "Full Deploy",
   "description": "Downloads the release, runs the installer, patches the config and restarts the service.",
-  "requiresConfirmation": true,
   "inputs": [
     {
       "name": "version",
@@ -354,6 +345,112 @@ A realistic end-to-end deploy workflow. Downloads a release, installs it, patche
 
 ---
 
+## Run an Entire Workflow Elevated
+
+Use `runElevated: true` on the workflow to show **one UAC prompt** at the start and run all privileged steps through a shared elevated helper. No further UAC prompts appear during execution, and stdout/stderr from elevated processes is captured and shown in the log. The dashboard shows an **elevated** badge on the workflow card and in the input modal.
+
+```json
+{
+  "id": "full-deploy-elevated",
+  "name": "Full Deploy",
+  "description": "Downloads the release, installs it, patches the config and restarts the service. Requires UAC.",
+  "runElevated": true,
+  "inputs": [
+    {
+      "name": "version",
+      "label": "Version",
+      "type": "text",
+      "defaultValue": "1.0.0"
+    }
+  ],
+  "steps": [
+    {
+      "type": "downloadGithubReleaseAsset",
+      "name": "Download installer",
+      "owner": "my-org",
+      "repository": "my-repo",
+      "releaseTag": "v{{version}}",
+      "assetName": "setup-{{version}}.exe",
+      "targetPath": "C:\\Temp\\setup-{{version}}.exe",
+      "overwrite": true
+    },
+    {
+      "type": "runExecutable",
+      "name": "Run installer",
+      "filePath": "C:\\Temp\\setup-{{version}}.exe",
+      "arguments": ["/silent", "/norestart"],
+      "waitForExit": true,
+      "successExitCodes": [0, 3010]
+    },
+    {
+      "type": "patchJson",
+      "name": "Patch config",
+      "filePath": "C:\\Apps\\MyService\\appsettings.json",
+      "operations": [
+        { "op": "set", "path": "$.App.Version", "value": "{{version}}" }
+      ]
+    },
+    {
+      "type": "restartWindowsService",
+      "name": "Restart service",
+      "serviceName": "MyApiService",
+      "waitForRunning": true,
+      "timeoutSeconds": 60
+    }
+  ]
+}
+```
+
+Note that none of the steps need `"runElevated": true` individually — the workflow-level flag covers all of them.
+
+---
+
+## Bool and Select Inputs
+
+Use `"type": "bool"` for a checkbox and `"type": "select"` for a dropdown. Both are submitted as strings (`"true"`/`"false"` for bool, the selected option for select) and can be used in `{{placeholders}}` just like text inputs.
+
+```json
+{
+  "id": "deploy-with-options",
+  "name": "Deploy with Options",
+  "description": "Deploys to a selected environment with optional verbose logging.",
+  "inputs": [
+    {
+      "name": "env",
+      "label": "Environment",
+      "type": "select",
+      "options": ["dev", "staging", "production"],
+      "defaultValue": "dev"
+    },
+    {
+      "name": "verbose",
+      "label": "Verbose logging",
+      "type": "bool",
+      "defaultValue": "false"
+    },
+    {
+      "name": "version",
+      "label": "Version",
+      "type": "text",
+      "defaultValue": "1.0.0"
+    }
+  ],
+  "steps": [
+    {
+      "type": "runExecutable",
+      "name": "Run deploy script",
+      "filePath": "C:\\Scripts\\deploy.cmd",
+      "arguments": ["--env", "{{env}}", "--version", "{{version}}", "--verbose", "{{verbose}}"],
+      "waitForExit": true
+    }
+  ]
+}
+```
+
+The `{{env}}` placeholder will resolve to whichever option the user picks (e.g. `"staging"`), and `{{verbose}}` will be `"true"` or `"false"` depending on whether the checkbox is checked.
+
+---
+
 ## Calling Another Workflow (Sub-Workflows)
 
 ### Shared Sub-Workflow Pattern
@@ -401,7 +498,6 @@ This pattern splits a large workflow into reusable pieces. A `shared-setup` work
   "id": "deploy-production",
   "name": "Deploy to Production",
   "description": "Runs shared setup and applies production-specific configuration.",
-  "requiresConfirmation": true,
   "inputs": [
     {
       "name": "version",
@@ -475,8 +571,7 @@ You can put multiple related workflows in a single file:
     "id": "deploy-staging",
     "name": "Deploy to Staging",
     "description": "Deploys to the staging environment.",
-    "requiresConfirmation": false,
-    "inputs": [
+      "inputs": [
       { "name": "version", "label": "Version", "type": "text", "defaultValue": "1.0.0" }
     ],
     "steps": [
@@ -500,8 +595,7 @@ You can put multiple related workflows in a single file:
     "id": "deploy-production",
     "name": "Deploy to Production",
     "description": "Deploys to the production environment.",
-    "requiresConfirmation": true,
-    "inputs": [
+      "inputs": [
       { "name": "version", "label": "Version", "type": "text", "defaultValue": "1.0.0" }
     ],
     "steps": [

@@ -36,8 +36,7 @@ The backend normalizes and validates the definitions. Workflows that are missing
 When the user clicks **Run** on a workflow card:
 
 1. If the workflow declares inputs, the dashboard opens an input modal and asks the user to fill in the values.
-2. If the workflow has `requiresConfirmation: true`, the user is shown a confirmation prompt.
-3. The dashboard sends the collected inputs to the backend.
+2. The dashboard sends the collected inputs to the backend.
 4. The backend starts executing the workflow in the background and immediately returns an execution ID.
 5. The dashboard opens the execution log modal and subscribes to live log updates via SignalR.
 6. The backend executes each step in order, logging progress after each action.
@@ -60,7 +59,19 @@ A step of type `callWorkflow` can invoke another workflow inline. The sub-workfl
 
 ### 6. Elevation
 
-Some steps support `runElevated: true`. When this flag is set, the backend spawns a separate elevated process for that step only and waits for it to finish. Windows shows a UAC prompt to the user. The main DevelopmentHub process never runs as administrator.
+DevelopmentHub never runs its main process as administrator. When a step needs elevated privileges, one of two mechanisms is used depending on where `runElevated` is set:
+
+**Workflow-level elevation (`runElevated: true` on the workflow)**
+
+One UAC prompt is shown at the start of the workflow. DevelopmentHub launches a short-lived elevated helper process and communicates with it over a private TCP loopback connection for the duration of the workflow. Every step that needs elevation routes its work through this helper — no further UAC prompts appear. The helper shuts down automatically when the workflow finishes.
+
+This is the recommended approach when multiple steps need administrative access. It is also the only mode where stdout/stderr output from elevated executables is captured and streamed back to the execution log.
+
+Sub-workflows called via `callWorkflow` inherit the elevated helper from their parent — they do not trigger additional UAC prompts.
+
+**Per-step elevation (`runElevated: true` on a step)**
+
+A new elevated process is spawned for that individual step only. Windows shows a UAC prompt each time. Output from the elevated process cannot be captured and will not appear in the execution log. Use this when only one or two isolated steps need elevation and a workflow-level prompt is not desired.
 
 ## Execution States
 
