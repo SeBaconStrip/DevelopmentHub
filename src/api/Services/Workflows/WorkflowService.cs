@@ -304,13 +304,27 @@ public class WorkflowService(
     {
         var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var input in definition.Inputs)
+        // 1. Declared variables (lowest priority — provide static defaults)
+        foreach (var (key, value) in definition.Variables)
+            result[key] = value;
+
+        // 2. Built-in automatic variables (override declared variables)
+        if (!string.IsNullOrWhiteSpace(definition.SourcePath))
         {
-            result[input.Name] = provided is not null && provided.TryGetValue(input.Name, out var v)
-                ? v
-                : input.DefaultValue ?? string.Empty;
+            result["workflowDir"] = Path.GetDirectoryName(definition.SourcePath) ?? string.Empty;
+            result["workflowFile"] = definition.SourcePath;
         }
 
+        // 3. Input defaults (override variables for inputs that the user did not supply)
+        foreach (var input in definition.Inputs)
+        {
+            if (provided is not null && provided.TryGetValue(input.Name, out var supplied))
+                result[input.Name] = supplied;
+            else
+                result[input.Name] = input.DefaultValue ?? string.Empty;
+        }
+
+        // 4. Any extra user-provided values not declared as inputs (highest priority)
         if (provided is not null)
         {
             foreach (var (key, value) in provided)
@@ -352,7 +366,7 @@ public class WorkflowService(
                     parsed = single is not null ? [single] : [];
                 }
 
-                definitions.AddRange(parsed.Select((d, i) => Normalize(d, BuildKey(filePath, i))));
+                definitions.AddRange(parsed.Select((d, i) => Normalize(d, BuildKey(filePath, i), filePath)));
             }
             catch (Exception ex)
             {
@@ -367,18 +381,20 @@ public class WorkflowService(
             .ToList();
     }
 
-    private static WorkflowDefinition Normalize(WorkflowDefinition d, string key) =>
+    private static WorkflowDefinition Normalize(WorkflowDefinition d, string key, string filePath) =>
         new()
         {
             Id = string.IsNullOrWhiteSpace(d.Id) ? CreateDeterministicId(key) : d.Id.Trim(),
             Name = d.Name.Trim(),
             Description = d.Description.Trim(),
             RunElevated = d.RunElevated,
+            Variables = d.Variables,
             Inputs = d.Inputs.Select(i => i with
             {
                 Label = string.IsNullOrWhiteSpace(i.Label) ? i.Name : i.Label
             }).ToList(),
-            Steps = d.Steps.Where(s => !string.IsNullOrWhiteSpace(s.Type)).ToList()
+            Steps = d.Steps.Where(s => !string.IsNullOrWhiteSpace(s.Type)).ToList(),
+            SourcePath = Path.GetFullPath(filePath),
         };
 
     private static string BuildKey(string filePath, int index) =>

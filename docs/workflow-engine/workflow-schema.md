@@ -109,6 +109,47 @@ When `runElevated: true` is set on the workflow, individual `runElevated` flags 
 
 ---
 
+### `variables`
+
+**Type:** object (string → string) — **Optional**
+
+Static key-value pairs that are available as `{{placeholders}}` in every step field, without prompting the user. Use these to avoid repeating the same literal string across multiple steps.
+
+```json
+{
+  "variables": {
+    "installDir": "C:\\Apps\\MyService",
+    "serviceName": "MyApiService"
+  }
+}
+```
+
+You can then write `{{installDir}}` or `{{serviceName}}` in any step field.
+
+**Resolution priority (lowest → highest):**
+
+| Source | Overrides |
+|---|---|
+| `variables` (declared) | — |
+| Built-in variables (`workflowDir`, `workflowFile`) | declared variables |
+| Input defaults | declared variables |
+| User-provided input values | everything |
+
+---
+
+### Built-in variables
+
+These are injected automatically and do not need to be declared. They are always available in every workflow.
+
+| Name | Value |
+|---|---|
+| `workflowDir` | The directory that contains the workflow JSON file (e.g. `C:\Workflows`) |
+| `workflowFile` | The full path to the workflow JSON file (e.g. `C:\Workflows\deploy.json`) |
+
+`workflowDir` is particularly useful for referencing scripts or config files stored alongside the workflow file.
+
+---
+
 ### `inputs`
 
 **Type:** array of input objects — **Optional**

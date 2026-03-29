@@ -17,11 +17,24 @@ public sealed class WorkflowDefinition
     /// <summary>When <see langword="true"/>, all steps that support UAC elevation will run elevated.</summary>
     public bool RunElevated { get; init; }
 
+    /// <summary>
+    /// Static key-value pairs available as <c>{{placeholders}}</c> in all step fields.
+    /// These are resolved before user inputs, so inputs with the same name override them.
+    /// </summary>
+    public IReadOnlyDictionary<string, string> Variables { get; init; } = new Dictionary<string, string>();
+
     /// <summary>Input definitions whose values are collected from the user before execution.</summary>
     public IReadOnlyList<WorkflowInput> Inputs { get; init; } = [];
 
     /// <summary>Ordered list of steps to execute sequentially.</summary>
     public IReadOnlyList<Steps.WorkflowStep> Steps { get; init; } = [];
+
+    /// <summary>
+    /// The absolute path to the JSON file this workflow was loaded from.
+    /// Set by the loader — not read from JSON.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string SourcePath { get; init; } = string.Empty;
 }
 
 /// <summary>Defines a single user-supplied input for a workflow.</summary>
