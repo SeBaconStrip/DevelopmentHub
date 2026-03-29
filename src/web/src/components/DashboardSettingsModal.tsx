@@ -133,6 +133,22 @@ export function DashboardSettingsModal({ onClose }: Props) {
         : prev,
     );
 
+  const setTodoSyncField = (key: string, value: string) =>
+    setForm((prev) =>
+      prev
+        ? {
+            ...prev,
+            todoSyncProviders: {
+              ...(prev.todoSyncProviders ?? {}),
+              microsoftTodo: {
+                ...(prev.todoSyncProviders?.microsoftTodo ?? {}),
+                [key]: value,
+              },
+            },
+          }
+        : prev,
+    );
+
   const addRoot = () =>
     form && setField("repositoryRoots", [...form.repositoryRoots, ""]);
 
@@ -228,7 +244,13 @@ export function DashboardSettingsModal({ onClose }: Props) {
       case "workflows":
         return <SettingsSectionWorkflows form={form} setField={setField} />;
       case "todos":
-        return <SettingsSectionTodos />;
+        return (
+          <SettingsSectionTodos
+            form={form}
+            setTodoSyncField={setTodoSyncField}
+            setField={setField}
+          />
+        );
       case "integrations":
         return (
           <SettingsSectionIntegrations

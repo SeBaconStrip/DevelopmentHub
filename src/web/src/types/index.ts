@@ -64,6 +64,7 @@ export interface TodoItem {
   completed: boolean;
   createdAt: string;
   completedAt: string | null;
+  isSynced: boolean;
 }
 
 export type PullRequestProvider = 'azureDevOps' | 'github';
@@ -92,6 +93,8 @@ export interface AppConfig {
   entryPointScanDepth: number;
   hotkeyBinding: string;
   prRefreshIntervalSeconds: number;
+  todoSyncProviders: Record<string, Record<string, string>>;
+  todoSyncIntervalSeconds: number;
 }
 
 export interface CustomLink {

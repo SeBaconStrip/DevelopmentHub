@@ -21,6 +21,11 @@ public class UserConfigDao
 
     /// <summary>null means "never configured" → service will inject defaults.</summary>
     public List<RepositoryOpenerDao>? RepositoryOpeners { get; set; }
+
+    /// <summary>Per-provider todo sync settings. Key = providerId (e.g. "microsoftTodo").</summary>
+    public Dictionary<string, Dictionary<string, string>> TodoSyncProviders { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    /// <summary>Background sync interval in seconds. 0 = use default (300).</summary>
+    public int TodoSyncIntervalSeconds { get; set; } = 300;
 }
 
 public class RepositoryOpenerDao
