@@ -2,15 +2,25 @@ using DevelopmentHub.Workflow.Steps;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
+using System.Runtime.Versioning;
+using System.ServiceProcess;
 using System.Text;
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 
 namespace DevelopmentHub.Workflow.Executors;
 
-/// <summary>Executes <see cref="RestartWindowsServiceStep"/>: restarts a Windows service via PowerShell, with optional UAC elevation.</summary>
+/// <summary>Executes <see cref="RestartWindowsServiceStep"/>: restarts a Windows service, with optional UAC elevation.</summary>
+[SupportedOSPlatform("windows")]
 public sealed class RestartWindowsServiceExecutor : WorkflowStepExecutor<RestartWindowsServiceStep>
 {
     public override string StepType => "restartwindowsservice";
+
+    // Windows service names may only contain letters, digits, spaces, underscores, hyphens, and dots.
+    // Rejecting anything outside this set prevents shell-metacharacter injection in the per-step
+    // elevated path, which constructs a PowerShell script to restart the service under UAC.
+    private static readonly Regex _safeServiceName =
+        new(@"^[A-Za-z0-9][A-Za-z0-9 _.\-]*$", RegexOptions.Compiled);
 
     protected override Task ExecuteAsync(
         RestartWindowsServiceStep step,
@@ -21,45 +31,30 @@ public sealed class RestartWindowsServiceExecutor : WorkflowStepExecutor<Restart
         if (string.IsNullOrWhiteSpace(serviceName))
             throw new InvalidOperationException("restartWindowsService requires serviceName.");
 
+        if (!_safeServiceName.IsMatch(serviceName))
+            throw new InvalidOperationException(
+                $"Service name '{serviceName}' contains characters that are not allowed. " +
+                "Only letters, digits, spaces, underscores, hyphens, and dots are permitted.");
+
         var timeoutSeconds = step.TimeoutSeconds <= 0 ? 60 : step.TimeoutSeconds;
-        var waitForRunningLiteral = step.WaitForRunning ? "$true" : "$false";
-        var command =
-            $"Restart-Service -Name '{WorkflowHelpers.EscapePowerShell(serviceName)}' -Force -ErrorAction Stop; " +
-            $"if ({waitForRunningLiteral}) {{ " +
-            $"$svc = Get-Service -Name '{WorkflowHelpers.EscapePowerShell(serviceName)}'; " +
-            $"$svc.WaitForStatus([System.ServiceProcess.ServiceControllerStatus]::Running, [TimeSpan]::FromSeconds({timeoutSeconds})) }}";
 
         if (context.ElevatedWorker is not null)
             return context.ElevatedWorker.RestartServiceAsync(serviceName, step.WaitForRunning, step.TimeoutSeconds, context.LogAsync, cancellationToken);
 
         if (step.RunElevated)
         {
-            ExecuteElevated(command, serviceName);
+            // Per-step elevated path: service name has already been validated above.
+            ExecuteElevated(serviceName, step.WaitForRunning, timeoutSeconds);
             return Task.CompletedTask;
         }
 
-        var psi = new ProcessStartInfo
-        {
-            FileName = "powershell.exe",
-            Arguments = $"-NoProfile -NonInteractive -Command \"{command}\"",
-            UseShellExecute = false,
-            RedirectStandardError = true,
-            RedirectStandardOutput = true,
-            CreateNoWindow = true
-        };
-
-        using var process = Process.Start(psi)
-            ?? throw new InvalidOperationException($"Service '{serviceName}' could not be restarted.");
-        process.WaitForExit();
-
-        if (process.ExitCode != 0)
-        {
-            var error = process.StandardError.ReadToEnd();
-            throw new InvalidOperationException(
-                string.IsNullOrWhiteSpace(error)
-                    ? $"Service '{serviceName}' restart failed with exit code {process.ExitCode}."
-                    : error.Trim());
-        }
+        using var controller = new ServiceController(serviceName);
+        var timeout = TimeSpan.FromSeconds(timeoutSeconds);
+        controller.Stop();
+        controller.WaitForStatus(ServiceControllerStatus.Stopped, timeout);
+        controller.Start();
+        if (step.WaitForRunning)
+            controller.WaitForStatus(ServiceControllerStatus.Running, timeout);
 
         return Task.CompletedTask;
     }
@@ -67,14 +62,22 @@ public sealed class RestartWindowsServiceExecutor : WorkflowStepExecutor<Restart
     /// <summary>
     /// Writes a temporary PowerShell script, runs it in an elevated process via UAC, then reads the
     /// JSON result file to surface any error message back to the caller.
+    /// The service name is validated by the caller to contain only safe characters.
     /// </summary>
-    private static void ExecuteElevated(string command, string serviceName)
+    private static void ExecuteElevated(string serviceName, bool waitForRunning, int timeoutSeconds)
     {
         var tempScriptPath = Path.Combine(Path.GetTempPath(), $"developmenthub-elevated-{Guid.NewGuid():N}.ps1");
         var tempResultPath = Path.Combine(Path.GetTempPath(), $"developmenthub-elevated-{Guid.NewGuid():N}.json");
 
         try
         {
+            var waitForRunningLiteral = waitForRunning ? "$true" : "$false";
+            var command =
+                $"Restart-Service -Name '{WorkflowHelpers.EscapePowerShell(serviceName)}' -Force -ErrorAction Stop; " +
+                $"if ({waitForRunningLiteral}) {{ " +
+                $"$svc = Get-Service -Name '{WorkflowHelpers.EscapePowerShell(serviceName)}'; " +
+                $"$svc.WaitForStatus([System.ServiceProcess.ServiceControllerStatus]::Running, [TimeSpan]::FromSeconds({timeoutSeconds})) }}";
+
             var script = $$"""
 $ErrorActionPreference = 'Stop'
 

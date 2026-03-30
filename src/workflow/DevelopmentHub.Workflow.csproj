@@ -10,6 +10,8 @@
   <ItemGroup>
     <!-- IHttpClientFactory + System.Net.Http transitive -->
     <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.0" />
+    <!-- ServiceController for restart-service executor (Windows-only at runtime) -->
+    <PackageReference Include="System.ServiceProcess.ServiceController" Version="9.0.0" />
   </ItemGroup>
 
 </Project>

@@ -107,6 +107,7 @@ public static class BackendHost
         builder.Services.AddSingleton<IWorkflowStepExecutor, CopyExecutor>();
         builder.Services.AddSingleton<IWorkflowStepExecutor, CallWorkflowExecutor>();
         builder.Services.AddSingleton<IWorkflowService, WorkflowService>();
+        builder.Services.AddSingleton<ApiTokenService>();
 
         // ── Plugins ───────────────────────────────────────────────────────────
         var pluginsPath = string.IsNullOrWhiteSpace(appSettings.PluginsPath)
@@ -193,6 +194,43 @@ public static class BackendHost
         app.UseRouting();
         app.UseWebSockets();
         app.UseCors("LocalDev");
+
+        // Require the per-process token on all API and hub routes so that other local processes
+        // cannot call the API without the user's knowledge. The token is injected into the WebView
+        // as window.__devHubToken and is only known to this process.
+        app.Use(async (ctx, next) =>
+        {
+            var path = ctx.Request.Path.Value ?? "";
+            if (path.StartsWith("/api/", StringComparison.OrdinalIgnoreCase)
+                || path.StartsWith("/hubs/", StringComparison.OrdinalIgnoreCase))
+            {
+                var tokenSvc = ctx.RequestServices.GetRequiredService<ApiTokenService>();
+
+                // Standard API calls send the token in a custom header.
+                var token = ctx.Request.Headers["X-Dev-Hub-Token"].FirstOrDefault();
+
+                // SignalR WebSocket upgrade cannot carry custom headers; it sends the token as
+                // a query parameter when accessTokenFactory is configured on the client.
+                if (token is null)
+                    token = ctx.Request.Query["access_token"].FirstOrDefault();
+
+                // SignalR negotiate (HTTP) sends the token as Authorization: Bearer <token>.
+                if (token is null)
+                {
+                    var auth = ctx.Request.Headers.Authorization.FirstOrDefault() ?? "";
+                    if (auth.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                        token = auth["Bearer ".Length..];
+                }
+
+                if (token != tokenSvc.Token)
+                {
+                    ctx.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                    return;
+                }
+            }
+
+            await next();
+        });
 
         if (app.Environment.IsDevelopment())
         {

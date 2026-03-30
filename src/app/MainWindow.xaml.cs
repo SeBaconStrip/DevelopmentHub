@@ -34,6 +34,9 @@ public partial class MainWindow : Window
 
     public Action? RequestExit { get; set; }
 
+    /// <summary>Per-process secret injected into every WebView document as <c>window.__devHubToken</c>.</summary>
+    public string? ApiToken { get; set; }
+
     private string _hotkeyBinding = "Ctrl+Shift+D";
     private bool _hotkeyInitialized = false;
     private WindowState _lastNonMinimizedWindowState = WindowState.Maximized;
@@ -225,6 +228,12 @@ return IntPtr.Zero;
         WebView.CoreWebView2.Settings.AreDevToolsEnabled = _isDev;
 
         WebView.CoreWebView2.WebMessageReceived += OnWebMessageReceived;
+
+        // Inject the per-process API token into every document before any scripts run.
+        // The React app reads window.__devHubToken and includes it in all API requests.
+        if (ApiToken is not null)
+            await WebView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(
+                $"window.__devHubToken = '{ApiToken}';");
 
         // Open all external links (e.g. PR URLs) in the default system browser
         WebView.CoreWebView2.NewWindowRequested += (_, e) =>
