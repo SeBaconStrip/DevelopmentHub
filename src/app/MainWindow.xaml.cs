@@ -13,7 +13,7 @@ public partial class MainWindow : Window
     private static readonly bool _isDev =
         Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development";
     private static readonly string AppUrl =
-        _isDev ? "http://localhost:5173" : "http://localhost:6131";
+        _isDev ? "http://localhost:5173" : "http://localhost:7631";
     private const int HotkeyId = 1;
     private const uint MOD_CTRL = 0x0002, MOD_SHIFT = 0x0004, VK_D = 0x44;
 

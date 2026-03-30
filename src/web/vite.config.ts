@@ -13,11 +13,11 @@ export default defineConfig(({ mode }) => {
       port,
       proxy: {
         '/api': {
-          target: 'http://localhost:5131',
+          target: 'http://localhost:7131',
           changeOrigin: true,
         },
         '/hubs': {
-          target: 'http://localhost:5131',
+          target: 'http://localhost:7131',
           changeOrigin: true,
           ws: true,
         },
