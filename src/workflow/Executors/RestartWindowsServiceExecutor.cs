@@ -72,17 +72,20 @@ public sealed class RestartWindowsServiceExecutor : WorkflowStepExecutor<Restart
         try
         {
             var waitForRunningLiteral = waitForRunning ? "$true" : "$false";
-            var command =
-                $"Restart-Service -Name '{WorkflowHelpers.EscapePowerShell(serviceName)}' -Force -ErrorAction Stop; " +
-                $"if ({waitForRunningLiteral}) {{ " +
-                $"$svc = Get-Service -Name '{WorkflowHelpers.EscapePowerShell(serviceName)}'; " +
-                $"$svc.WaitForStatus([System.ServiceProcess.ServiceControllerStatus]::Running, [TimeSpan]::FromSeconds({timeoutSeconds})) }}";
 
+            // The service name is assigned to a PowerShell variable once (single-quoted, with
+            // any embedded single-quotes doubled) so that subsequent usages never touch
+            // user-controlled data directly in command text.
             var script = $$"""
 $ErrorActionPreference = 'Stop'
+$ServiceName = '{{WorkflowHelpers.EscapePowerShell(serviceName)}}'
 
 try {
-    {{command}}
+    Restart-Service -Name $ServiceName -Force -ErrorAction Stop
+    if ({{waitForRunningLiteral}}) {
+        $svc = Get-Service -Name $ServiceName
+        $svc.WaitForStatus([System.ServiceProcess.ServiceControllerStatus]::Running, [TimeSpan]::FromSeconds({{timeoutSeconds}}))
+    }
 
     @{
         success = $true
