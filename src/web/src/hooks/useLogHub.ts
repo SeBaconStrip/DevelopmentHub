@@ -12,7 +12,7 @@ export function useLogHub(
     if (executionId === null) return;
 
     const connection = new signalR.HubConnectionBuilder()
-      .withUrl('/hubs/log')
+      .withUrl('/hubs/log', { accessTokenFactory: () => window.__devHubToken ?? '' })
       .withAutomaticReconnect()
       .build();
 

@@ -5,4 +5,6 @@ interface Window {
       postMessage: (message: string) => void;
     };
   };
+  /** Per-process API token injected by the WPF host via AddScriptToExecuteOnDocumentCreatedAsync. */
+  __devHubToken?: string;
 }

@@ -26,8 +26,8 @@ Simple proof of concept for Microsoft Edge:
 The background service worker keeps a WebSocket connection to one of these
 backend endpoints:
 
-- `ws://localhost:6131/ws/browser-tab-bridge`
-- `ws://localhost:5131/ws/browser-tab-bridge`
+- `ws://localhost:7631/ws/browser-tab-bridge`
+- `ws://localhost:7131/ws/browser-tab-bridge`
 
 If DevelopmentHub sends a URL, the extension tries to focus an existing tab
 with the same normalized URL or opens a new one, then acknowledges the command

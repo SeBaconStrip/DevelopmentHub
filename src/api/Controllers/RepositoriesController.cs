@@ -36,9 +36,9 @@ public class RepositoriesController(IRepositoryService repositoryService) : Cont
             var result = await repositoryService.OpenAsync(id, request);
             return result is null ? NotFound() : Ok(result);
         }
-        catch (InvalidOperationException ex)
+        catch (InvalidOperationException)
         {
-            return BadRequest(new { error = ex.Message });
+            return BadRequest(new { error = "Could not open repository. Check opener configuration." });
         }
     }
 

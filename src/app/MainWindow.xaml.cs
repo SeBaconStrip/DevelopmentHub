@@ -13,7 +13,7 @@ public partial class MainWindow : Window
     private static readonly bool _isDev =
         Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development";
     private static readonly string AppUrl =
-        _isDev ? "http://localhost:5173" : "http://localhost:6131";
+        _isDev ? "http://localhost:5173" : "http://localhost:7631";
     private const int HotkeyId = 1;
     private const uint MOD_CTRL = 0x0002, MOD_SHIFT = 0x0004, VK_D = 0x44;
 
@@ -33,6 +33,9 @@ public partial class MainWindow : Window
     private const int HTCAPTION = 2;
 
     public Action? RequestExit { get; set; }
+
+    /// <summary>Per-process secret injected into every WebView document as <c>window.__devHubToken</c>.</summary>
+    public string? ApiToken { get; set; }
 
     private string _hotkeyBinding = "Ctrl+Shift+D";
     private bool _hotkeyInitialized = false;
@@ -225,6 +228,12 @@ return IntPtr.Zero;
         WebView.CoreWebView2.Settings.AreDevToolsEnabled = _isDev;
 
         WebView.CoreWebView2.WebMessageReceived += OnWebMessageReceived;
+
+        // Inject the per-process API token into every document before any scripts run.
+        // The React app reads window.__devHubToken and includes it in all API requests.
+        if (ApiToken is not null)
+            await WebView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(
+                $"window.__devHubToken = '{ApiToken}';");
 
         // Open all external links (e.g. PR URLs) in the default system browser
         WebView.CoreWebView2.NewWindowRequested += (_, e) =>
