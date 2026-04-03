@@ -9,7 +9,9 @@
       "Bash(ls -lh /c/Projects/DevelopmentHub/src/api/Services/*.cs)",
       "Read(//c/Projects/DevelopmentHub/**)",
       "Bash(grep -n \"class RunInstallerExecutor\\\\|class RunExecutableExecutor\" /c/Projects/DevelopmentHub/src/workflow/Executors/*.cs)",
-      "Bash(ls -1 /c/Projects/DevelopmentHub/src/api/Models/*.cs)"
+      "Bash(ls -1 /c/Projects/DevelopmentHub/src/api/Models/*.cs)",
+      "Bash(xargs grep:*)",
+      "Bash(find /c/Projects/DevelopmentHub/docs -type f -name *.md)"
     ]
   }
 }

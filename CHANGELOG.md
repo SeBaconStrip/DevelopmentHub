@@ -3,8 +3,6 @@
 All notable changes are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
----
-
 ## 0.15 – 2026-03-29
 
 ### ✨ Added
@@ -22,6 +20,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Variable resolution follows a four-tier priority chain: declared `variables` → built-in variables → input defaults → user-provided input values
 - Workflow-level `runElevated` supersedes per-step `runElevated` flags — when the workflow-level worker is active, individual step flags are ignored and all privileged operations route through the shared helper
 - Removed `requiresConfirmation` — the field had no meaningful use case and has been removed from the schema, backend, and frontend
+
+### 🐛 Fixed
+
+- `GET /api/icon-extractor`: path is now resolved to an absolute path before use, neutralising directory traversal sequences; requests for file types outside `.exe`, `.dll`, `.ico`, and `.com` are rejected
+- `RepositoryService.OpenAsync`: caller-supplied `EntryPointPath` is validated to be within the repository directory before being passed to the launcher; scanned entry points remain trusted
+- `RepositoryService.OpenWorkspaceAsync`: workspace JSON is now built with `JsonSerializer.Serialize` instead of string interpolation, preventing JSON injection via repository paths containing quote characters
+- All exception `Message` values that were previously returned to clients in API error responses are replaced with generic messages; full exceptions continue to be logged server-side
+- `RestartWindowsServiceExecutor`: the validated service name is now assigned to a `$ServiceName` PowerShell variable once at script startup; all cmdlets reference the variable rather than re-interpolating user data into command text
 
 ---
 

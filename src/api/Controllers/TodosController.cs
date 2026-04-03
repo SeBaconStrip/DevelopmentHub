@@ -24,9 +24,9 @@ public class TodosController(ITodoService todoService, ITodoSyncService syncServ
             FireAndForgetSync(created.Id);
             return Ok(created);
         }
-        catch (InvalidOperationException ex)
+        catch (InvalidOperationException)
         {
-            return BadRequest(new { error = ex.Message });
+            return BadRequest(new { error = "Could not create item." });
         }
     }
 
@@ -40,9 +40,9 @@ public class TodosController(ITodoService todoService, ITodoSyncService syncServ
             FireAndForgetSync(id);
             return Ok(updated);
         }
-        catch (InvalidOperationException ex)
+        catch (InvalidOperationException)
         {
-            return BadRequest(new { error = ex.Message });
+            return BadRequest(new { error = "Could not update item." });
         }
     }
 

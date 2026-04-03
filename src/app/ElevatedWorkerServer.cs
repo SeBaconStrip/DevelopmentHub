@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using System.ServiceProcess;
 using System.Text;
 using System.Text.Json;
 
@@ -124,44 +125,17 @@ internal static class ElevatedWorkerServer
     {
         var serviceName = command.ServiceName!;
         var timeoutSeconds = command.TimeoutSeconds <= 0 ? 60 : command.TimeoutSeconds;
-        var waitLiteral = command.WaitForRunning ? "$true" : "$false";
-        var escaped = EscapePowerShell(serviceName);
+        var timeout = TimeSpan.FromSeconds(timeoutSeconds);
 
-        var ps = $"Restart-Service -Name '{escaped}' -Force -ErrorAction Stop; " +
-                 $"if ({waitLiteral}) {{ $svc = Get-Service -Name '{escaped}'; " +
-                 $"$svc.WaitForStatus([System.ServiceProcess.ServiceControllerStatus]::Running, [TimeSpan]::FromSeconds({timeoutSeconds})) }}";
+        using var controller = new ServiceController(serviceName);
+        controller.Stop();
+        controller.WaitForStatus(ServiceControllerStatus.Stopped, timeout);
+        controller.Start();
 
-        var psi = new ProcessStartInfo
-        {
-            FileName = "powershell.exe",
-            Arguments = $"-NoProfile -NonInteractive -Command \"{ps}\"",
-            UseShellExecute = false,        // Already elevated
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true,
-        };
+        if (command.WaitForRunning)
+            controller.WaitForStatus(ServiceControllerStatus.Running, timeout);
 
-        using var process = Process.Start(psi)
-            ?? throw new InvalidOperationException("Could not start PowerShell.");
-
-        var stdoutTask = process.StandardOutput.ReadToEndAsync();
-        var stderrTask = process.StandardError.ReadToEndAsync();
-        process.WaitForExit();
-
-        foreach (var text in SplitLines(await stdoutTask))
-            await SendLogAsync(writer, text, "stdout");
-
-        if (process.ExitCode != 0)
-        {
-            var error = (await stderrTask).Trim();
-            await SendErrorAsync(writer, string.IsNullOrWhiteSpace(error)
-                ? $"Service '{serviceName}' restart failed with exit code {process.ExitCode}."
-                : error);
-        }
-        else
-        {
-            await SendDoneAsync(writer);
-        }
+        await SendDoneAsync(writer);
     }
 
     // ── Wire helpers ──────────────────────────────────────────────────────────
@@ -183,5 +157,4 @@ internal static class ElevatedWorkerServer
                .Select(l => l.TrimEnd('\r'))
                .Where(l => !string.IsNullOrWhiteSpace(l));
 
-    private static string EscapePowerShell(string value) => value.Replace("'", "''");
 }

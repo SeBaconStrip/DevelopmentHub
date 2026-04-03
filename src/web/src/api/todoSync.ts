@@ -1,3 +1,5 @@
+import { apiFetch } from './client';
+
 const BASE = "/api/todo-sync";
 
 export interface MicrosoftTodoList {
@@ -20,7 +22,7 @@ export interface PollAuthResponse {
 
 export const todoSyncApi = {
   async startMicrosoftAuth(clientId: string): Promise<StartAuthResponse> {
-    const res = await fetch(`${BASE}/microsoft-todo/auth/start`, {
+    const res = await apiFetch(`${BASE}/microsoft-todo/auth/start`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ clientId }),
@@ -33,17 +35,17 @@ export const todoSyncApi = {
   },
 
   async pollMicrosoftAuth(sessionId: string): Promise<PollAuthResponse> {
-    const res = await fetch(`${BASE}/microsoft-todo/auth/poll/${sessionId}`);
+    const res = await apiFetch(`${BASE}/microsoft-todo/auth/poll/${sessionId}`);
     if (!res.ok) throw new Error("Poll request failed.");
     return res.json();
   },
 
   async disconnectMicrosoft(): Promise<void> {
-    await fetch(`${BASE}/microsoft-todo/auth`, { method: "DELETE" });
+    await apiFetch(`${BASE}/microsoft-todo/auth`, { method: "DELETE" });
   },
 
   async getMicrosoftLists(): Promise<MicrosoftTodoList[]> {
-    const res = await fetch(`${BASE}/microsoft-todo/lists`);
+    const res = await apiFetch(`${BASE}/microsoft-todo/lists`);
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       throw new Error(body.error ?? "Failed to fetch lists.");
@@ -53,7 +55,7 @@ export const todoSyncApi = {
 
   async triggerSync(): Promise<void> {
     console.log("[TodoSync] Triggering manual sync");
-    const res = await fetch(`${BASE}/sync`, { method: "POST" });
+    const res = await apiFetch(`${BASE}/sync`, { method: "POST" });
     if (!res.ok) throw new Error("Sync failed.");
     console.log("[TodoSync] Manual sync completed");
   },

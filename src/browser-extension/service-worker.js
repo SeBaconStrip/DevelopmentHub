@@ -61,8 +61,8 @@ function normalizeUrlWithoutSearch(rawUrl) {
 }
 
 const WS_BASES = [
-  "ws://localhost:6131/ws/browser-tab-bridge",
-  "ws://localhost:5131/ws/browser-tab-bridge",
+  "ws://localhost:7631/ws/browser-tab-bridge",
+  "ws://localhost:7131/ws/browser-tab-bridge",
 ];
 
 let bridgeSocket = null;

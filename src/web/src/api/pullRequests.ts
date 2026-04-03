@@ -1,4 +1,5 @@
 import type { PullRequest } from '../types';
+import { apiFetch } from './client';
 
 async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
@@ -9,4 +10,4 @@ async function handleResponse<T>(res: Response): Promise<T> {
 }
 
 export const fetchPullRequests = (): Promise<PullRequest[]> =>
-  fetch('/api/pullrequests').then(r => handleResponse(r));
+  apiFetch('/api/pullrequests').then(r => handleResponse(r));

@@ -33,7 +33,7 @@ public class TodoSyncController(
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Failed to start Microsoft To Do device code flow");
-            return BadRequest(new { error = ex.Message });
+            return BadRequest(new { error = "Failed to start authentication. Check your client ID and try again." });
         }
 
         var sessionId = Guid.NewGuid().ToString("N");
@@ -73,7 +73,7 @@ public class TodoSyncController(
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Error polling for Microsoft To Do token");
-            return Ok(new { status = "failed", error = ex.Message });
+            return Ok(new { status = "failed", error = "Token poll failed. Please retry or restart authentication." });
         }
 
         if (result.Status != "succeeded")
@@ -144,7 +144,7 @@ public class TodoSyncController(
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Failed to fetch Microsoft To Do lists");
-            return BadRequest(new { error = ex.Message });
+            return BadRequest(new { error = "Failed to retrieve lists. Please check your connection and try again." });
         }
     }
 
@@ -161,7 +161,7 @@ public class TodoSyncController(
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Manual todo sync failed");
-            return StatusCode(500, new { error = ex.Message });
+            return StatusCode(500, new { error = "Sync failed. Please try again." });
         }
     }
 

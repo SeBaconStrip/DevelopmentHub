@@ -189,9 +189,27 @@ public class RepositoryService(
                 throw new InvalidOperationException($"Opener '{request.OpenerId}' is not configured.");
 
             var ext = opener.FileExtension.Trim().ToLowerInvariant();
-            var target = request.EntryPointPath
-                ?? entity.EntryPoints.FirstOrDefault(p =>
+            string? target;
+
+            if (request.EntryPointPath is not null)
+            {
+                // Validate that a caller-supplied path cannot escape the repository directory.
+                var resolvedTarget = System.IO.Path.GetFullPath(request.EntryPointPath);
+                var resolvedRepo   = System.IO.Path.GetFullPath(entity.Path);
+                var repoPrefix     = resolvedRepo.TrimEnd(System.IO.Path.DirectorySeparatorChar,
+                                                           System.IO.Path.AltDirectorySeparatorChar)
+                                     + System.IO.Path.DirectorySeparatorChar;
+
+                if (!resolvedTarget.StartsWith(repoPrefix, StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidOperationException("Entry point path must be within the repository directory.");
+
+                target = request.EntryPointPath;
+            }
+            else
+            {
+                target = entity.EntryPoints.FirstOrDefault(p =>
                     System.IO.Path.GetExtension(p).Equals(ext, StringComparison.OrdinalIgnoreCase));
+            }
 
             if (target is null)
                 throw new InvalidOperationException($"No '{ext}' file found for repository '{entity.Name}'.");
@@ -279,9 +297,10 @@ public class RepositoryService(
         var cfg = await userConfigService.GetAsync();
         var folders = repos
             .Where(r => IsUnderKnownRoot(r!.Path, cfg.RepositoryRoots))
-            .Select(r => $"{{\"path\":\"{r!.Path.Replace("\\", "/")}\"}}");
+            .Select(r => new { path = r!.Path.Replace("\\", "/") })
+            .ToArray();
 
-        var workspaceJson = $"{{\"folders\":[{string.Join(",", folders)}]}}";
+        var workspaceJson = System.Text.Json.JsonSerializer.Serialize(new { folders });
 
         var tempDir = Path.Combine(Path.GetTempPath(), "DevelopmentHub");
         Directory.CreateDirectory(tempDir);
