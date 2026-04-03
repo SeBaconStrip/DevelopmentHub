@@ -39,6 +39,10 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>appsettings.Production.json</Link>
     </Content>
+    <Content Include="..\api\appsettings.local.json" Condition="Exists('..\api\appsettings.local.json')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>appsettings.local.json</Link>
+    </Content>
   </ItemGroup>
 
   <!-- On publish: build the React app, then copy dist/ → wwwroot/ -->

@@ -94,6 +94,12 @@
   border-color: var(--color-accent);
 }
 
+.settings-nav-item--sub {
+  padding-left: 28px;
+  font-size: 12px;
+  opacity: 0.85;
+}
+
 .settings-nav-icon {
   font-size: 15px;
   width: 18px;
@@ -115,6 +121,21 @@
   flex: 1;
   padding: 20px 24px;
   overflow-y: auto;
+}
+
+/* ── restart warning banner ── */
+.settings-restart-warning {
+  background: color-mix(in srgb, var(--color-warning, #f59e0b) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-warning, #f59e0b) 50%, transparent);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 13px;
+  padding: 8px 12px;
+  margin-bottom: 16px;
+}
+
+.settings-restart-warning::before {
+  content: "⚠ ";
 }
 
 /* ── page hint ── */
@@ -608,4 +629,53 @@
   font-size: 11px;
   color: var(--text-muted);
   font-style: italic;
+}
+
+/* ── Plugin settings entries ──────────────────────────────────────────────── */
+.plugin-settings-entry {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  background: var(--surface);
+}
+
+.plugin-settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.plugin-settings-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.plugin-settings-name {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.plugin-settings-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.plugin-settings-version {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: monospace;
+}
+
+.plugin-settings-fields {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }

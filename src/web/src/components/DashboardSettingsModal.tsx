@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { AppConfig, PullRequestProvider, RepositoryOpener } from "../types";
 import { configApi } from "../api/config";
+import { apiFetch } from "../api/client";
 import { useRepositoryScan } from "../hooks/useRepositoryScan";
 import { SettingsSectionGeneral } from "./settings/SettingsSectionGeneral";
 import { SettingsSectionRepositories } from "./settings/SettingsSectionRepositories";
@@ -11,6 +12,9 @@ import { SettingsSectionWorkflows } from "./settings/SettingsSectionWorkflows";
 import { SettingsSectionTodos } from "./settings/SettingsSectionTodos";
 import { SettingsSectionIntegrations } from "./settings/SettingsSectionIntegrations";
 import { SettingsSectionAppearance } from "./settings/SettingsSectionAppearance";
+import { SettingsSectionPlugins } from "./settings/SettingsSectionPlugins";
+import { SettingsSectionPluginDetail } from "./settings/SettingsSectionPluginDetail";
+import type { PluginManifest } from "../plugins/PluginLoader";
 import "./DashboardSettingsModal.css";
 
 type NavPage =
@@ -21,9 +25,11 @@ type NavPage =
   | "workflows"
   | "todos"
   | "integrations"
-  | "appearance";
+  | "appearance"
+  | "plugins"
+  | `plugin:${string}`;
 
-const NAV_ITEMS: { id: NavPage; icon: string; label: string }[] = [
+const STATIC_NAV_ITEMS: { id: NavPage; icon: string; label: string }[] = [
   { id: "general", icon: "⚙", label: "General" },
   { id: "repositories", icon: "📁", label: "Repositories" },
   { id: "pullRequests", icon: "⎇", label: "Pull Requests" },
@@ -32,6 +38,7 @@ const NAV_ITEMS: { id: NavPage; icon: string; label: string }[] = [
   { id: "todos", icon: "✅", label: "Todos" },
   { id: "integrations", icon: "🔌", label: "Integrations" },
   { id: "appearance", icon: "🎨", label: "Appearance" },
+  { id: "plugins", icon: "🔌", label: "Plugins" },
 ];
 
 interface Props {
@@ -54,6 +61,8 @@ function normalizeConfig(config: AppConfig): AppConfig {
       steps: workflow.steps ?? [],
     })),
     workflowDefinitionsPath: config.workflowDefinitionsPath ?? "",
+    pluginsFolderPath: config.pluginsFolderPath ?? "",
+    pluginSettings: config.pluginSettings ?? {},
     pullRequestProviders: {
       ...existingProviders,
       azureDevOps: {
@@ -88,6 +97,11 @@ export function DashboardSettingsModal({ onClose }: Props) {
   const { data, isLoading } = useQuery({
     queryKey: ["config"],
     queryFn: configApi.get,
+  });
+
+  const { data: installedPlugins = [] } = useQuery<PluginManifest[]>({
+    queryKey: ["plugins"],
+    queryFn: () => apiFetch("/api/plugins").then(r => r.json()),
   });
 
   const scan = useRepositoryScan();
@@ -260,6 +274,15 @@ export function DashboardSettingsModal({ onClose }: Props) {
         );
       case "appearance":
         return <SettingsSectionAppearance />;
+      case "plugins":
+        return <SettingsSectionPlugins form={form} savedConfig={data ? normalizeConfig(JSON.parse(JSON.stringify(data))) : null} setField={setField} />;
+      default:
+        if (page.startsWith("plugin:")) {
+          const pluginId = page.slice("plugin:".length);
+          const manifest = installedPlugins.find(p => p.id === pluginId);
+          if (manifest) return <SettingsSectionPluginDetail manifest={manifest} />;
+        }
+        return null;
     }
   };
 
@@ -285,7 +308,7 @@ export function DashboardSettingsModal({ onClose }: Props) {
 
         <div className="settings-modal-layout">
           <nav className="settings-sidebar">
-            {NAV_ITEMS.map((item) => (
+            {STATIC_NAV_ITEMS.map((item) => (
               <button
                 key={item.id}
                 className={`settings-nav-item${page === item.id ? " settings-nav-item--active" : ""}`}
@@ -293,6 +316,16 @@ export function DashboardSettingsModal({ onClose }: Props) {
               >
                 <span className="settings-nav-icon">{item.icon}</span>
                 <span className="settings-nav-label">{item.label}</span>
+              </button>
+            ))}
+            {installedPlugins.filter(p => (p.settings ?? []).length > 0).map((p) => (
+              <button
+                key={`plugin:${p.id}`}
+                className={`settings-nav-item settings-nav-item--sub${page === `plugin:${p.id}` ? " settings-nav-item--active" : ""}`}
+                onClick={() => setPage(`plugin:${p.id}`)}
+              >
+                <span className="settings-nav-icon">⚙</span>
+                <span className="settings-nav-label">{p.name || p.id}</span>
               </button>
             ))}
           </nav>

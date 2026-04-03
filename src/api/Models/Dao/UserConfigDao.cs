@@ -26,6 +26,17 @@ public class UserConfigDao
     public Dictionary<string, Dictionary<string, string>> TodoSyncProviders { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     /// <summary>Background sync interval in seconds. 0 = use default (300).</summary>
     public int TodoSyncIntervalSeconds { get; set; } = 300;
+
+    /// <summary>Configurable plugins directory (overrides AppSettings.PluginsPath).</summary>
+    public string PluginsFolderPath { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Per-plugin settings. Outer key = pluginId.
+    /// Inner dict: "enabled" ("true"/"false") + plugin-declared setting keys.
+    /// Absent key means plugin is enabled (default).
+    /// </summary>
+    public Dictionary<string, Dictionary<string, string>> PluginSettings { get; set; }
+        = new(StringComparer.OrdinalIgnoreCase);
 }
 
 public class RepositoryOpenerDao

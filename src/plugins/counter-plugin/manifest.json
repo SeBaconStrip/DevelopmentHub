@@ -1,0 +1,42 @@
+{
+  "id": "com.example.counter-plugin",
+  "version": "1.0.3",
+  "name": "Counter Plugin",
+  "description": "Example plugin demonstrating a backend-driven counter with configurable step.",
+  "minHostVersion": "0.10.0",
+  "backend": {
+    "assembly": "backend-dist/ExamplePlugin.Backend.dll",
+    "enabled": true
+  },
+  "frontend": {
+    "bundle": "ui/index.js",
+    "enabled": true,
+    "sdkVersion": "1"
+  },
+  "settings": [
+    {
+      "key": "step",
+      "label": "Add step",
+      "type": "select",
+      "defaultValue": "1",
+      "options": ["1", "2", "5", "10"]
+    }
+  ],
+  "contributes": {
+    "widgets": [
+      {
+        "id": "com.example.counter-plugin.counter-widget",
+        "label": "Counter",
+        "icon": "🔢",
+        "defaultLayout": { "w": 4, "h": 6 }
+      }
+    ],
+    "routes": [
+      {
+        "path": "/plugins/counter",
+        "navLabel": "Counter",
+        "navOrder": 100
+      }
+    ]
+  }
+}

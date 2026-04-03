@@ -6,15 +6,15 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace ExamplePlugin.Backend;
 
-public class HelloPlugin : IPlugin
+public class CounterPlugin : IPlugin
 {
-    public string Id => "com.example.hello-plugin";
+    public string Id => "com.example.counter-plugin";
 
     public void ConfigureServices(IServiceCollection services, IConfiguration configuration)
     {
-        // Register this assembly's controllers with the host's MVC pipeline.
+        services.AddSingleton<CounterService>();
         services.AddControllers()
-            .AddApplicationPart(typeof(HelloPlugin).Assembly);
+            .AddApplicationPart(typeof(CounterPlugin).Assembly);
     }
 
     public void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes)
