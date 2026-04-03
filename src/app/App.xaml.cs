@@ -56,6 +56,11 @@ public partial class App : Application
 
             _host = DevelopmentHub.Api.BackendHost.Create([]);
 
+            // The token is available as soon as the DI container is built (before StartAsync).
+            var apiToken = _host.Services
+                .GetRequiredService<DevelopmentHub.Api.Services.ApiTokenService>()
+                .Token;
+
             // Wire native folder picker so the frontend can call /api/folder-picker
             DevelopmentHub.Api.Services.FolderPickerBridge.Picker = () =>
             {
@@ -95,7 +100,7 @@ public partial class App : Application
                 return tcs.Task;
             };
 
-            var window = new MainWindow();
+            var window = new MainWindow { ApiToken = apiToken };
 
             // Start Kestrel on a background thread so it never blocks the UI thread
             _ = Task.Run(async () =>

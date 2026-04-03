@@ -4,7 +4,7 @@ import { useEffect } from "react";
 export function useTodoSyncHub(onTodosUpdated: () => void) {
   useEffect(() => {
     const connection = new signalR.HubConnectionBuilder()
-      .withUrl("/hubs/log")
+      .withUrl("/hubs/log", { accessTokenFactory: () => window.__devHubToken ?? '' })
       .withAutomaticReconnect()
       .build();
     connection.on("TodosUpdated", () => {
