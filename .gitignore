@@ -65,6 +65,7 @@ src/plugins/*/backend/obj/
 
 # DevelopmentHub — local secrets and generated files
 backend/appsettings.local.json
+src/api/appsettings.local.json
 backend/data/*.db
 backend/data/*.sqlite
 frontend/node_modules/

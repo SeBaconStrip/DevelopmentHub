@@ -49,7 +49,9 @@ public class ConfigController(
                 SortOrder = o.SortOrder
             }).ToList(),
             TodoSyncProviders = RedactProviderSecrets(cfg.TodoSyncProviders),
-            TodoSyncIntervalSeconds = cfg.TodoSyncIntervalSeconds
+            TodoSyncIntervalSeconds = cfg.TodoSyncIntervalSeconds,
+            PluginsFolderPath = cfg.PluginsFolderPath,
+            PluginSettings = cfg.PluginSettings
         });
     }
 
@@ -97,6 +99,10 @@ public class ConfigController(
             current.TodoSyncProviders = MergeProviderSettings(current.TodoSyncProviders, dto.TodoSyncProviders);
             if (dto.TodoSyncIntervalSeconds > 0)
                 current.TodoSyncIntervalSeconds = dto.TodoSyncIntervalSeconds;
+            current.PluginsFolderPath = dto.PluginsFolderPath?.Trim() ?? string.Empty;
+            // Only sync the "enabled" flag from the form — all other per-plugin keys
+            // are managed by PUT /api/plugins/{id}/settings and must not be overwritten.
+            current.PluginSettings = MergePluginEnabledFlags(current.PluginSettings, dto.PluginSettings);
 
             await userConfigService.SaveAsync(current);
             await repositoryService.RemoveOrphanedAsync(current.RepositoryRoots);
@@ -174,6 +180,24 @@ public class ConfigController(
             }
         }
 
+        return result;
+    }
+
+    private static Dictionary<string, Dictionary<string, string>> MergePluginEnabledFlags(
+        Dictionary<string, Dictionary<string, string>> current,
+        Dictionary<string, Dictionary<string, string>>? incoming)
+    {
+        var result = new Dictionary<string, Dictionary<string, string>>(current, StringComparer.OrdinalIgnoreCase);
+        foreach (var (pluginId, incomingSettings) in incoming ?? new(StringComparer.OrdinalIgnoreCase))
+        {
+            if (!result.TryGetValue(pluginId, out var existing))
+            {
+                existing = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                result[pluginId] = existing;
+            }
+            if (incomingSettings.TryGetValue("enabled", out var enabled))
+                existing["enabled"] = enabled;
+        }
         return result;
     }
 

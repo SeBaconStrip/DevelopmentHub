@@ -14,6 +14,8 @@ public class ConfigDto
     public List<RepositoryOpenerDto> RepositoryOpeners { get; set; } = [];
     public Dictionary<string, Dictionary<string, string>> TodoSyncProviders { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public int TodoSyncIntervalSeconds { get; set; } = 300;
+    public string PluginsFolderPath { get; set; } = string.Empty;
+    public Dictionary<string, Dictionary<string, string>> PluginSettings { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 }
 
 public class CustomLinkDto

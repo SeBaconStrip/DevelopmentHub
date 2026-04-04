@@ -20,7 +20,7 @@
       Reference the host SDK for compile-time types only.
       At runtime the host provides these assemblies — they must NOT be bundled.
     -->
-    <ProjectReference Include="../../../src/plugins/DevelopmentHub.Plugins.csproj"
+    <ProjectReference Include="../../DevelopmentHub.Plugins.csproj"
                       Private="false"
                       ExcludeAssets="runtime" />
   </ItemGroup>

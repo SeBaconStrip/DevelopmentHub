@@ -1,4 +1,5 @@
 using DevelopmentHub.Api.BackgroundServices;
+using DevelopmentHub.Api.Models.Dao;
 using DevelopmentHub.Api.Configuration;
 using DevelopmentHub.Api.Data;
 using DevelopmentHub.Api.Hubs;
@@ -65,6 +66,22 @@ public static class BackendHost
                 "DevelopmentHub", "developmenthub.db")
             : appSettings.LiteDbPath;
 
+        // ── Plugins (early config read, before DashboardDatabase opens the file) ─
+        // DashboardDatabase holds the LiteDB connection open for the app lifetime,
+        // so we must read the user config in a short-lived connection first and
+        // close it before registering DashboardDatabase.
+        UserConfigDao? startupUserConfig = null;
+        try
+        {
+            using var startupDb = new LiteDB.LiteDatabase(liteDbPath);
+            startupUserConfig = startupDb.GetCollection<UserConfigDao>("app_config")
+                                         .FindById("app_config");
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Could not read user config for plugin startup — plugins will not be loaded");
+        }
+
         builder.Services.AddSingleton(new DashboardDatabase(liteDbPath));
 
         // ── HttpClient for Azure DevOps ───────────────────────────────────────
@@ -110,11 +127,7 @@ public static class BackendHost
         builder.Services.AddSingleton<ApiTokenService>();
 
         // ── Plugins ───────────────────────────────────────────────────────────
-        var pluginsPath = string.IsNullOrWhiteSpace(appSettings.PluginsPath)
-            ? Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "DevelopmentHub", "plugins")
-            : appSettings.PluginsPath;
+        var pluginsPath = startupUserConfig?.PluginsFolderPath ?? string.Empty;
 
         var pluginLoader = new PluginLoader(
             LoggerFactory.Create(b => b.AddSerilog()).CreateLogger<PluginLoader>());
@@ -122,8 +135,17 @@ public static class BackendHost
 
         builder.Services.AddSingleton<IPluginRegistry>(new PluginRegistry(loadedPlugins));
 
+        var pluginStates = startupUserConfig?.PluginSettings
+            ?? new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
+
         foreach (var lp in loadedPlugins)
-            lp.Plugin?.ConfigureServices(builder.Services, builder.Configuration);
+        {
+            var isEnabled = !pluginStates.TryGetValue(lp.Manifest.Id, out var ps)
+                || !ps.TryGetValue("enabled", out var enabledVal)
+                || enabledVal != "false";
+            if (isEnabled)
+                lp.Plugin?.ConfigureServices(builder.Services, builder.Configuration);
+        }
 
         // ── Background Services ───────────────────────────────────────────────
         builder.Services.AddHostedService<RepositoryScannerService>();
@@ -204,8 +226,14 @@ public static class BackendHost
         app.Use(async (ctx, next) =>
         {
             var path = ctx.Request.Path.Value ?? "";
-            if (path.StartsWith("/api/", StringComparison.OrdinalIgnoreCase)
-                || path.StartsWith("/hubs/", StringComparison.OrdinalIgnoreCase))
+            // Plugin bundles and assets are loaded by <script> tags and img tags which
+            // cannot send custom headers — exempt them from the token check.
+            var isPluginStatic = path.StartsWith("/api/plugins/", StringComparison.OrdinalIgnoreCase)
+                && (path.Contains("/ui/", StringComparison.OrdinalIgnoreCase)
+                    || path.Contains("/assets/", StringComparison.OrdinalIgnoreCase));
+            if (!isPluginStatic
+                && (path.StartsWith("/api/", StringComparison.OrdinalIgnoreCase)
+                    || path.StartsWith("/hubs/", StringComparison.OrdinalIgnoreCase)))
             {
                 var tokenSvc = ctx.RequestServices.GetRequiredService<ApiTokenService>();
 
@@ -253,7 +281,13 @@ public static class BackendHost
 
         // ── Plugin middleware/routes ──────────────────────────────────────────
         foreach (var lp in loadedPlugins)
-            lp.Plugin?.Configure(app, app);
+        {
+            var isEnabled = !pluginStates.TryGetValue(lp.Manifest.Id, out var ps2)
+                || !ps2.TryGetValue("enabled", out var ev2)
+                || ev2 != "false";
+            if (isEnabled)
+                lp.Plugin?.Configure(app, app);
+        }
 
         app.MapControllers();
         app.MapHub<LogHub>("/hubs/log");

@@ -7,7 +7,7 @@ import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import "./DashboardPage.css";
 
-import { fetchRepositories, repositoriesApi } from "../../api/repositories";
+import { repositoriesApi } from "../../api/repositories";
 import { configApi } from "../../api/config";
 import { fetchPullRequests } from "../../api/pullRequests";
 import { todosApi } from "../../api/todos";
@@ -68,7 +68,7 @@ export default function DashboardPage() {
 
   const { data: repos = [], refetch: refetchRepos } = useQuery<Repository[]>({
     queryKey: ["repositories"],
-    queryFn: fetchRepositories,
+    queryFn: repositoriesApi.getAll,
     refetchInterval: (config?.scanIntervalMinutes ?? 30) * 60 * 1000,
   });
 

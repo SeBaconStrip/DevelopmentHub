@@ -11,11 +11,4 @@ public class AppSettings
     /// Defaults to %LOCALAPPDATA%\DevelopmentHub\developmenthub.db when empty.
     /// </summary>
     public string LiteDbPath { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Directory containing plugin subdirectories.
-    /// Defaults to %LOCALAPPDATA%\DevelopmentHub\plugins when empty.
-    /// </summary>
-    public string PluginsPath { get; set; } = string.Empty;
 }
-

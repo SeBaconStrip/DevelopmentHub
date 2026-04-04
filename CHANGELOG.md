@@ -3,6 +3,34 @@
 All notable changes are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 0.16 – 2026-04-04
+
+### ✨ Added
+
+- Per-plugin settings pages — each plugin with declared `settings[]` gets a dedicated sub-page under **Settings → Plugins → *Plugin Name***; settings save immediately on change without a Save button
+- `GET /api/plugins/{id}/settings` and `PUT /api/plugins/{id}/settings` — dedicated endpoints that own all non-`enabled` plugin settings; `PUT /api/config` now only manages the `enabled` flag per plugin
+- Bundle cache-busting via `BundleMtime` — the host sets a cache-buster on the bundle URL based on the file's last-write timestamp rather than the manifest version, so rebuilt bundles are always picked up without bumping the version string
+- `apiFetch` exposed on `window.__dhSdk` — authenticated `fetch` wrapper that attaches the required `X-Dev-Hub-Token` header; plugins should use this instead of raw `fetch`
+- Counter plugin (`src/plugins/counter-plugin/`) replaces the old example plugin — demonstrates a configurable step setting read live via `useQuery`
+
+### 🔧 Changed
+
+- Plugin settings are now split from host config: `PUT /api/config` merges only the `enabled` flag using `MergePluginEnabledFlags()`; all other setting keys are preserved, preventing settings from reverting when the config modal is saved
+- Plugin bundle endpoint sets `Cache-Control: no-store` so the browser never serves a stale bundle
+- Plugin startup DB read moved before `DashboardDatabase` singleton registration to avoid a LiteDB exclusive file-lock conflict that silently prevented plugins from loading when a plugins folder path was stored in the DB
+- `window.__dhSdk.settings` documented as a bundle-load snapshot only — plugins must use `useQuery([pluginId, 'settings'])` for live values; the host invalidates this query automatically after a settings save
+- Example plugin replaced with the counter plugin; old `plugins/example-plugin/` and `src/plugins/example-plugin/` directories removed
+- Plugin documentation fully updated: `overview.md`, `manifest.md`, `sdk-reference.md`, `frontend.md`, `getting-started.md`, `examples.md`, `troubleshooting.md`, `index.md`
+
+### 🐛 Fixed
+
+- Plugin folder not loading on startup when the path was stored in LiteDB — the startup DB read now happens before the singleton opens the file, avoiding the exclusive lock
+- Plugin settings reverting to wrong values on reopening the settings modal — caused by `PUT /api/config` overwriting all `PluginSettings`; fixed by `MergePluginEnabledFlags()`
+- `ReferenceError: Field is not defined` crash when opening plugin settings — `Field` was removed from the import in `SettingsSectionPlugins.tsx` but was still referenced on the folder path input
+- Plugin settings not applying without a page reload — counter plugin bundle was stale; fixed by running `npm run build` and introducing `BundleMtime`-based cache-busting as a permanent solution
+
+---
+
 ## 0.15 – 2026-03-29
 
 ### ✨ Added
