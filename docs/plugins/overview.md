@@ -20,7 +20,9 @@ plugins/
 
 ## Plugin directory location
 
-The host reads the plugin directory path from application settings. The default path is `plugins/` relative to the application data directory. The example plugin bundled with the repository lives at `plugins/example-plugin/`.
+Configure the plugins folder in **Settings → Plugins → Plugins Folder**. Every subdirectory of that folder that contains a `manifest.json` is treated as a plugin. The default when left empty is `%LOCALAPPDATA%\DevelopmentHub\plugins`.
+
+The reference plugin bundled with the repository lives at `src/plugins/counter-plugin/`.
 
 ## Load sequence
 
@@ -33,6 +35,8 @@ The host reads the plugin directory path from application settings. The default 
 ## What the host provides to frontend plugins
 
 All dependencies are injected via `window.__dhSdk` before the bundle runs. Plugins must **never** bundle React, React Query, Zustand, or React Router — the host provides the same instances it uses itself, ensuring hooks work correctly across the boundary.
+
+`window.__dhSdk.settings` contains a **snapshot** of the plugin's saved settings taken at bundle load time. Do not use it for live settings — use `useQuery([pluginId, 'settings'], ...)` instead (see [SDK API Reference](./sdk-reference.md#plugin-settings)).
 
 See [SDK API Reference](./sdk-reference.md) for the full list.
 

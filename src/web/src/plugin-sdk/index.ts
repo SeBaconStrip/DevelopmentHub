@@ -69,8 +69,12 @@ export interface DhSdk {
   Link: typeof import('react-router-dom').Link;
 
   // ── Host API ──────────────────────────────────────────────────────────────
-  /** Base path for API calls, e.g. `/api`. Use `fetch(apiBase + '/my-endpoint')`. */
+  /** Base path for API calls, e.g. `/api`. Use `apiFetch(apiBase + '/my-endpoint')`. */
   apiBase: '/api';
+  /** Authenticated fetch — always use this instead of fetch() for API calls. */
+  apiFetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+  /** This plugin's saved settings from user config. */
+  settings: Record<string, string>;
 
   // ── UI framework ──────────────────────────────────────────────────────────
   /** Pre-built, theme-aware React components. Use instead of raw CSS classes. */

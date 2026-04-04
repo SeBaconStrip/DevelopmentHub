@@ -22,7 +22,8 @@ Plugins extend DevelopmentHub with new dashboard widgets, pages, and backend API
 | Add a full page with nav link | `plugin.registerRoute()` + manifest `contributes.routes` |
 | Expose backend API endpoints | Implement `IPlugin`, add controllers |
 | Register background services | `IPlugin.ConfigureServices()` |
-| Call host API or external services | `fetch(apiBase + '/...')` or direct HTTP from the backend |
+| Call host API or external services | `apiFetch(apiBase + '/...')` or direct HTTP from the backend |
+| User-configurable settings | `manifest.json settings[]` + `useQuery([pluginId, 'settings'])` |
 
 ## Notes
 

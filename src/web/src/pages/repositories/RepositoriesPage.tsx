@@ -1,6 +1,6 @@
 import { useState, Fragment } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchRepositories, repositoriesApi } from "../../api/repositories";
+import { repositoriesApi } from "../../api/repositories";
 import { useRepositoryScan } from "../../hooks/useRepositoryScan";
 import { configApi } from "../../api/config";
 import type { Repository } from "../../types";
@@ -24,7 +24,7 @@ export default function RepositoriesPage() {
 
   const { data: repos = [], isLoading } = useQuery<Repository[]>({
     queryKey: ["repositories"],
-    queryFn: fetchRepositories,
+    queryFn: repositoriesApi.getAll,
   });
 
   const scanMutation = useRepositoryScan();

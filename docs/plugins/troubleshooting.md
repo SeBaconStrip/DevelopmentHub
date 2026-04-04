@@ -104,8 +104,27 @@ If you set `Private="false"` and `ExcludeAssets="runtime"` on the `DevelopmentHu
 
 The host loads assemblies once at startup. After rebuilding the backend, restart the host application.
 
-For the frontend, the bundle is fetched from the API on each page load, so rebuilding `ui/index.js` and reloading the WebView is sufficient — no host restart needed.
+For the frontend, the bundle is served with `Cache-Control: no-store`. Rebuild `ui/index.js` and reload the WebView — no host restart needed.
 
 ### `manifest.json` changes are not picked up
 
 The manifest is read at startup. Restart the host after any change to `manifest.json`.
+
+### Settings changes in the UI are not reflected in the plugin
+
+If your plugin reads `window.__dhSdk.settings`, it will always show the value from bundle load time. Switch to `useQuery`:
+
+```ts
+const { data: settings = {} } = useQuery<Record<string, string>>({
+  queryKey: [PLUGIN_ID, 'settings'],
+  queryFn: () =>
+    apiFetch(`${apiBase}/plugins/${encodeURIComponent(PLUGIN_ID)}/settings`)
+      .then(r => r.json()),
+});
+```
+
+The host automatically invalidates this query when the user saves a setting, causing the component to re-render with the new value.
+
+### Settings page shows stale values after closing and reopening settings
+
+This is caused by `PUT /api/config` overwriting the plugin's non-`enabled` settings with snapshot data. The host's config endpoint only manages the `enabled` flag per plugin — all other settings are owned by `PUT /api/plugins/{id}/settings`. Ensure you are not sending plugin settings through the config endpoint.

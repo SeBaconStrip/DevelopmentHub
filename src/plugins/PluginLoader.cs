@@ -69,7 +69,15 @@ public class PluginLoader(ILogger<PluginLoader> logger)
             return null;
         }
 
-        return manifest with { PluginDirectory = pluginDir };
+        long bundleMtime = 0;
+        if (manifest.Frontend?.Enabled == true && !string.IsNullOrEmpty(manifest.Frontend.Bundle))
+        {
+            var bundlePath = Path.Combine(pluginDir, manifest.Frontend.Bundle);
+            if (File.Exists(bundlePath))
+                bundleMtime = File.GetLastWriteTimeUtc(bundlePath).Ticks;
+        }
+
+        return manifest with { PluginDirectory = pluginDir, BundleMtime = bundleMtime };
     }
 
     private IPlugin? LoadAssembly(PluginManifest manifest, string dir)

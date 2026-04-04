@@ -1,39 +1,32 @@
 # Examples
 
-## Example 1 — Hello Plugin (bundled example)
+## Example 1 — Counter Plugin (bundled example)
 
-The repository ships a complete example plugin at `plugins/example-plugin/`. It demonstrates:
+The repository ships a complete example plugin at `src/plugins/counter-plugin/`. It demonstrates:
 
-- A dashboard widget with a click counter using `ui.Button`, `ui.Chip`, and `ui.Empty`
-- A full page that calls the plugin's own backend API using `useQuery` and `ui.Input`
-- A .NET backend with a single `GET /api/plugins/hello/greet?name=` endpoint
+- A dashboard widget with a click counter and a configurable step size
+- A plugin setting (`step`) editable in Settings → Plugins → Counter Plugin
+- Live settings read via `useQuery([pluginId, 'settings'])` — no page reload needed
 
 Explore the source:
 
 ```
-plugins/example-plugin/
+src/plugins/counter-plugin/
 ├── manifest.json
 ├── src/
 │   ├── env.d.ts
 │   ├── index.ts
-│   ├── HelloWidget.tsx
-│   └── HelloPage.tsx
-└── backend/
-    ├── ExamplePlugin.Backend.csproj
-    ├── HelloPlugin.cs
-    └── HelloController.cs
+│   └── CounterView.tsx
+└── ui/
+    └── index.js   ← pre-built bundle
 ```
 
 Build it:
 
 ```sh
-# Frontend
-cd plugins/example-plugin
+cd src/plugins/counter-plugin
 npm install
 npm run build
-
-# Backend
-dotnet build plugins/example-plugin/backend/ExamplePlugin.Backend.csproj
 ```
 
 ---
@@ -59,7 +52,7 @@ A widget that fetches and auto-refreshes data from a host API endpoint every 30 
 
 **`src/StatusWidget.tsx`**
 ```tsx
-const { React, useQuery, apiBase, ui } = window.__dhSdk;
+const { React, useQuery, apiFetch, apiBase, ui } = window.__dhSdk;
 const { Chip, Empty, Spinner } = ui;
 
 interface StatusItem { name: string; healthy: boolean; }
@@ -67,7 +60,7 @@ interface StatusItem { name: string; healthy: boolean; }
 export default function StatusWidget() {
   const { data, isLoading } = useQuery<StatusItem[]>({
     queryKey: ['com.yourname.status-widget', 'status'],
-    queryFn: () => fetch(`${apiBase}/status`).then(r => r.json()),
+    queryFn: () => apiFetch(`${apiBase}/status`).then(r => r.json()),
     refetchInterval: 30_000,
   });
 
@@ -99,7 +92,59 @@ plugin.registerWidget('com.yourname.status-widget.status', StatusWidget);
 
 ---
 
-## Example 3 — Plugin-local state with Zustand
+## Example 3 — Reading plugin settings live
+
+A widget that reacts to settings changes without a page reload.
+
+**`manifest.json` (settings section)**
+```json
+"settings": [
+  {
+    "key": "refreshInterval",
+    "label": "Refresh interval (seconds)",
+    "type": "select",
+    "defaultValue": "30",
+    "options": ["10", "30", "60", "300"]
+  }
+]
+```
+
+**`src/ClockWidget.tsx`**
+```tsx
+const { React, useQuery, apiFetch, apiBase } = window.__dhSdk;
+
+const PLUGIN_ID = 'com.yourname.clock-widget';
+
+export default function ClockWidget() {
+  const { data: settings = {} } = useQuery<Record<string, string>>({
+    queryKey: [PLUGIN_ID, 'settings'],
+    queryFn: () =>
+      apiFetch(`${apiBase}/plugins/${encodeURIComponent(PLUGIN_ID)}/settings`)
+        .then(r => r.json()),
+  });
+
+  const intervalMs = parseInt(settings['refreshInterval'] ?? '30', 10) * 1000;
+
+  const { data: serverTime } = useQuery<string>({
+    queryKey: [PLUGIN_ID, 'time'],
+    queryFn: () =>
+      apiFetch(`${apiBase}/plugins/clock-widget/time`).then(r => r.json()),
+    refetchInterval: intervalMs,
+  });
+
+  return (
+    <div style={{ padding: '1rem', fontSize: 24, textAlign: 'center' }}>
+      {serverTime ?? '—'}
+    </div>
+  );
+}
+```
+
+When the user changes the refresh interval in Settings, the host invalidates `[PLUGIN_ID, 'settings']`, your component re-renders, and `refetchInterval` updates to the new value automatically.
+
+---
+
+## Example 4 — Plugin-local state with Zustand
 
 A widget that maintains client-side state across re-renders without calling any API.
 
@@ -156,7 +201,7 @@ export default function TodoWidget() {
 
 ---
 
-## Example 4 — Backend with a service and LiteDB
+## Example 5 — Backend with a service and LiteDB
 
 A plugin that stores data in its own database file, separate from the host.
 
@@ -220,7 +265,7 @@ LiteDB is not part of the host, so it will be copied into `backend-dist/` and lo
 
 ---
 
-## Example 5 — Navigation between plugin pages
+## Example 6 — Navigation between plugin pages
 
 A plugin with two pages and a link between them.
 

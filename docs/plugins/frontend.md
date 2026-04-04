@@ -132,22 +132,45 @@ Key variables:
 
 ## Calling the backend
 
-Use `apiBase` from the SDK as the base for all API calls:
+Always use `apiFetch` instead of `fetch`. It attaches the required `X-Dev-Hub-Token` header that the host checks on every API call.
 
 ```tsx
-const { apiBase, useQuery } = window.__dhSdk;
+const { apiBase, apiFetch, useQuery } = window.__dhSdk;
 
 const { data } = useQuery({
   queryKey: ['my-plugin', 'data'],
-  queryFn: async () => {
-    const res = await fetch(`${apiBase}/plugins/my-plugin/data`);
-    if (!res.ok) throw new Error('Request failed');
-    return res.json();
-  },
+  queryFn: () => apiFetch(`${apiBase}/plugins/my-plugin/data`).then(r => r.json()),
 });
 ```
 
 `apiBase` is always `'/api'`. Including it explicitly future-proofs your plugin in case the path ever changes.
+
+## Reading plugin settings
+
+Settings declared in `manifest.json settings[]` are editable in **Settings → Plugins → *Plugin Name*** and saved immediately on change.
+
+Do not read `window.__dhSdk.settings` for live values — it is a snapshot taken at bundle load time and will not reflect changes made during the session.
+
+Use `useQuery` with the key `[pluginId, 'settings']`:
+
+```tsx
+const { useQuery, apiFetch, apiBase } = window.__dhSdk;
+
+const PLUGIN_ID = 'com.yourname.my-plugin';
+
+const { data: settings = {} } = useQuery<Record<string, string>>({
+  queryKey: [PLUGIN_ID, 'settings'],
+  queryFn: () =>
+    apiFetch(`${apiBase}/plugins/${encodeURIComponent(PLUGIN_ID)}/settings`)
+      .then(r => r.json()),
+});
+
+const myOption = settings['myOption'] ?? 'a';  // falls back to default
+```
+
+When the user saves a setting in the host UI, the host automatically invalidates the `[pluginId, 'settings']` query so your component re-renders with the new value.
+
+> **Query key contract:** always use exactly `[pluginId, 'settings']` — the host's invalidation targets this two-element array.
 
 ## Navigation between plugin pages
 
@@ -175,7 +198,7 @@ During development, use watch mode to rebuild on every save:
 npm run dev
 ```
 
-Then restart the host (or reload the WebView) to pick up the new bundle.
+The host serves the bundle with `Cache-Control: no-store`, so reloading the WebView always fetches the latest build — no host restart needed for frontend changes.
 
 ## Bundle size
 

@@ -5,11 +5,23 @@ import { useNavigate, Link } from 'react-router-dom';
 import { pluginRegistry } from './PluginRegistry';
 import { useUiStore } from '../store/uiStore';
 import * as PluginUi from '../plugin-sdk/ui';
+import { apiFetch } from '../api/client';
+
+export interface PluginSettingDefinition {
+  key: string;
+  label: string;
+  /** "text" | "bool" | "select" */
+  type: string;
+  defaultValue: string;
+  options?: string[];
+}
 
 export interface PluginManifest {
   id: string;
   version: string;
   name: string;
+  description?: string;
+  bundleMtime?: number;
   contributes: {
     widgets: Array<{
       id: string;
@@ -20,6 +32,7 @@ export interface PluginManifest {
     routes: Array<{ path: string; navLabel: string; navOrder: number }>;
   };
   frontend?: { bundle: string; enabled: boolean; sdkVersion: string };
+  settings?: PluginSettingDefinition[];
 }
 
 let _queryClient: QueryClient | null = null;
@@ -30,13 +43,19 @@ export function initPluginLoader(queryClient: QueryClient) {
 
 export async function loadAllPlugins(): Promise<PluginManifest[]> {
   try {
-    const res = await fetch('/api/plugins');
-    if (!res.ok) return [];
-    const manifests: PluginManifest[] = await res.json();
+    const [pluginsRes, configRes] = await Promise.all([
+      apiFetch('/api/plugins/enabled'),
+      apiFetch('/api/config'),
+    ]);
+    if (!pluginsRes.ok) return [];
+    const manifests: PluginManifest[] = await pluginsRes.json();
+    const config = configRes.ok ? await configRes.json() : {};
+    const allPluginSettings: Record<string, Record<string, string>> = config.pluginSettings ?? {};
 
     for (const manifest of manifests) {
       if (manifest.frontend?.enabled) {
-        await loadPluginBundle(manifest).catch((err) =>
+        const pluginSettings = allPluginSettings[manifest.id] ?? {};
+        await loadPluginBundle(manifest, pluginSettings).catch((err) =>
           console.error(`[Plugin ${manifest.id}] Failed to load bundle`, err),
         );
       }
@@ -60,7 +79,7 @@ export async function loadAllPlugins(): Promise<PluginManifest[]> {
   }
 }
 
-async function loadPluginBundle(manifest: PluginManifest): Promise<void> {
+async function loadPluginBundle(manifest: PluginManifest, pluginSettings: Record<string, string>): Promise<void> {
   // Expose the SDK surface before injecting the plugin script.
   // The plugin's ESM bundle reads from window.__dhSdk instead of importing directly.
   (window as any).__dhSdk = {
@@ -77,6 +96,8 @@ async function loadPluginBundle(manifest: PluginManifest): Promise<void> {
     useNavigate,
     Link,
     apiBase: '/api',
+    apiFetch,
+    settings: pluginSettings,
     ui: PluginUi,
     plugin: {
       registerWidget(widgetId: string, component: React.ComponentType) {
@@ -107,10 +128,19 @@ async function loadPluginBundle(manifest: PluginManifest): Promise<void> {
     },
   };
 
+  const cacheBuster = manifest.bundleMtime ?? manifest.version;
+  const bundleUrl = `/api/plugins/${encodeURIComponent(manifest.id)}/ui/bundle.js?v=${encodeURIComponent(cacheBuster)}`;
+
+  // Remove any previously injected script for this plugin so a reload always
+  // re-executes the bundle (important during development / hot reload).
+  document.head.querySelectorAll(`script[data-plugin-id="${manifest.id}"]`)
+    .forEach((el) => el.remove());
+
   await new Promise<void>((resolve, reject) => {
     const script = document.createElement('script');
     script.type = 'module';
-    script.src = `/api/plugins/${encodeURIComponent(manifest.id)}/ui/bundle.js`;
+    script.src = bundleUrl;
+    script.dataset.pluginId = manifest.id;
     script.onload = () => resolve();
     script.onerror = (e) => reject(new Error(`Plugin bundle load failed: ${manifest.id} — ${e}`));
     document.head.appendChild(script);

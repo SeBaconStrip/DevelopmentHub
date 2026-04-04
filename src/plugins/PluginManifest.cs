@@ -12,10 +12,17 @@ public record PluginManifest
     public PluginBackendManifest? Backend { get; init; }
     public PluginFrontendManifest? Frontend { get; init; }
     public PluginContributions Contributes { get; init; } = new();
+    public List<PluginSettingDefinition> Settings { get; init; } = [];
 
     /// <summary>Set by the loader — not part of the JSON file.</summary>
     [JsonIgnore]
     public string PluginDirectory { get; init; } = "";
+
+    /// <summary>
+    /// Last-write UTC ticks of the frontend bundle file, set by the loader.
+    /// Used by the frontend as a cache-buster instead of the manifest version.
+    /// </summary>
+    public long BundleMtime { get; init; }
 }
 
 public record PluginBackendManifest
@@ -29,6 +36,17 @@ public record PluginFrontendManifest
     public string Bundle { get; init; } = "";
     public bool Enabled { get; init; } = true;
     public string SdkVersion { get; init; } = "1";
+}
+
+public record PluginSettingDefinition
+{
+    public string Key { get; init; } = "";
+    public string Label { get; init; } = "";
+    /// <summary>"text" | "bool" | "select"</summary>
+    public string Type { get; init; } = "text";
+    public string DefaultValue { get; init; } = "";
+    /// <summary>Only used when Type == "select".</summary>
+    public List<string> Options { get; init; } = [];
 }
 
 public record PluginContributions

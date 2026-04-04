@@ -23,6 +23,28 @@ Every plugin must contain a `manifest.json` file at the root of its directory.
     "sdkVersion": "1"
   },
 
+  "settings": [
+    {
+      "key": "myOption",
+      "label": "My Option",
+      "type": "select",
+      "defaultValue": "a",
+      "options": ["a", "b", "c"]
+    },
+    {
+      "key": "myText",
+      "label": "My Text",
+      "type": "text",
+      "defaultValue": "hello"
+    },
+    {
+      "key": "myFlag",
+      "label": "Enable feature",
+      "type": "bool",
+      "defaultValue": "false"
+    }
+  ],
+
   "contributes": {
     "widgets": [
       {
@@ -54,6 +76,7 @@ Every plugin must contain a `manifest.json` file at the root of its directory.
 | `minHostVersion` | string | no | Minimum host version required. Not yet enforced but reserved. |
 | `backend` | object | no | Backend assembly configuration. Omit if the plugin has no backend. |
 | `frontend` | object | no | Frontend bundle configuration. Omit if the plugin has no UI. |
+| `settings` | array | no | User-configurable settings shown in Settings → Plugins → *Plugin Name*. |
 | `contributes` | object | no | Widgets and routes the plugin contributes. |
 
 ## `backend`
@@ -72,6 +95,20 @@ The assembly must contain exactly one non-abstract class implementing `IPlugin`.
 | `bundle` | string | — | Path to the compiled ESM bundle, relative to the plugin directory. |
 | `enabled` | bool | `true` | Set to `false` to disable frontend loading. |
 | `sdkVersion` | string | — | Required. Must be `"1"`. Plugins with a different value are skipped. |
+
+## `settings[]`
+
+Declares user-configurable settings for the plugin. Each entry appears as a form field in Settings → Plugins → *Plugin Name*. Settings are saved immediately when changed — no Save button needed.
+
+| Field | Type | Description |
+|---|---|---|
+| `key` | string | Setting identifier. Used as the key in `GET /api/plugins/{id}/settings`. |
+| `label` | string | Display label shown in the settings form. |
+| `type` | string | `"text"`, `"bool"`, or `"select"`. |
+| `defaultValue` | string | Value used when the setting has never been saved. For `bool`, use `"true"` or `"false"`. |
+| `options` | string[] | Required when `type` is `"select"`. List of selectable values. |
+
+Read settings live in your frontend components using `useQuery` — do not rely on `window.__dhSdk.settings`, which is a snapshot taken at bundle load time and does not update when the user changes a setting. See [SDK API Reference — Plugin Settings](./sdk-reference.md#plugin-settings).
 
 ## `contributes.widgets[]`
 

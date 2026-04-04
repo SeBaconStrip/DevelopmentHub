@@ -95,6 +95,8 @@ export interface AppConfig {
   prRefreshIntervalSeconds: number;
   todoSyncProviders: Record<string, Record<string, string>>;
   todoSyncIntervalSeconds: number;
+  pluginsFolderPath: string;
+  pluginSettings: Record<string, Record<string, string>>;
 }
 
 export interface CustomLink {
