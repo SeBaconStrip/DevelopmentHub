@@ -10,9 +10,9 @@ Checklist of improvements before/after making the repository public.
 
 ## Strengthening Portfolio Value
 
-- [ ] Add tests — at least a few critical-path unit tests
-  - Backend: xUnit (workflow engine, plugin loader, API auth)
-  - Frontend: Vitest + React Testing Library
+- [x] Add tests — unit tests for all major services and workflow executors
+  - Backend: xUnit + Moq + FluentAssertions (`src/tests/`)
+  - Frontend: Vitest + React Testing Library (`src/web/src/__tests__/`)
 - [ ] Add GitHub Topics tags to the repository (`dotnet`, `react`, `typescript`, `desktop-app`, `plugin-system`, `wpf`, `webview2`)
 - [ ] Pin the repository on your GitHub profile
 
