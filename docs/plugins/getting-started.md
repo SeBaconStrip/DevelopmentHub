@@ -28,6 +28,14 @@ plugins/
     "enabled": true,
     "sdkVersion": "1"
   },
+  "settings": [
+    {
+      "key": "greeting",
+      "label": "Greeting text",
+      "type": "text",
+      "defaultValue": "Hello"
+    }
+  ],
   "contributes": {
     "widgets": [
       {
@@ -47,6 +55,8 @@ plugins/
   }
 }
 ```
+
+The `settings[]` array is optional. Remove it if your plugin has no user-configurable options.
 
 > **ID convention**: use reverse-domain notation — `com.yourname.plugin-name`. Widget IDs must be prefixed with the plugin ID.
 
@@ -143,17 +153,29 @@ declare global {
 
 **`src/MyWidget.tsx`**
 ```tsx
-const { React, ui } = window.__dhSdk;
+const { React, ui, useQuery, apiFetch, apiBase } = window.__dhSdk;
 const { useState } = React;
 const { Button, Empty } = ui;
 
+const PLUGIN_ID = 'com.yourname.my-plugin';
+
 export default function MyWidget() {
   const [count, setCount] = useState(0);
+
+  // Read settings live — do not use window.__dhSdk.settings (bundle-load snapshot)
+  const { data: settings = {} } = useQuery<Record<string, string>>({
+    queryKey: [PLUGIN_ID, 'settings'],
+    queryFn: () =>
+      apiFetch(`${apiBase}/plugins/${encodeURIComponent(PLUGIN_ID)}/settings`)
+        .then(r => r.json()),
+  });
+  const greeting = settings['greeting'] ?? 'Hello';
+
   return (
     <div style={{ padding: '1rem' }}>
       {count === 0
         ? <Empty>Nothing here yet.</Empty>
-        : <p style={{ color: 'var(--text-body)' }}>Count: {count}</p>
+        : <p style={{ color: 'var(--text-body)' }}>{greeting}! Count: {count}</p>
       }
       <Button variant="primary" onClick={() => setCount(c => c + 1)}>
         Increment

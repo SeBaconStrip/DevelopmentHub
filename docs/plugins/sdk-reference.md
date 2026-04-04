@@ -44,18 +44,18 @@ Backed by the host's shared `QueryClient`. Cache keys are global — be specific
 | `queryClient` | `QueryClient` | Direct access to the query client (invalidate, prefetch, etc.). |
 
 ```tsx
-const { useQuery, useMutation, queryClient, apiBase } = window.__dhSdk;
+const { useQuery, useMutation, queryClient, apiBase, apiFetch } = window.__dhSdk;
 
 // Read
 const { data, isLoading, error } = useQuery({
   queryKey: ['com.yourname.my-plugin', 'items'],
-  queryFn: () => fetch(`${apiBase}/plugins/my-plugin/items`).then(r => r.json()),
+  queryFn: () => apiFetch(`${apiBase}/plugins/my-plugin/items`).then(r => r.json()),
 });
 
 // Write
 const mutation = useMutation({
   mutationFn: (body: unknown) =>
-    fetch(`${apiBase}/plugins/my-plugin/items`, {
+    apiFetch(`${apiBase}/plugins/my-plugin/items`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -113,12 +113,42 @@ navigate('/plugins/my-plugin/detail');
 
 | Property | Type | Description |
 |---|---|---|
-| `apiBase` | `'/api'` | Base path for all API requests. Always prefix your `fetch` calls with this. |
+| `apiBase` | `'/api'` | Base path for all API requests. Always prefix your API calls with this. |
+| `apiFetch` | `(input, init?) => Promise<Response>` | Authenticated `fetch` wrapper. Always use this instead of `fetch` — it attaches the required `X-Dev-Hub-Token` header. |
 
 ```ts
-const { apiBase } = window.__dhSdk;
-const res = await fetch(`${apiBase}/plugins/my-plugin/data`);
+const { apiBase, apiFetch } = window.__dhSdk;
+const res = await apiFetch(`${apiBase}/plugins/my-plugin/data`);
 ```
+
+---
+
+## Plugin settings
+
+Settings declared in `manifest.json settings[]` are shown as a dedicated page in **Settings → Plugins → *Plugin Name*** and saved immediately on change via `PUT /api/plugins/{id}/settings`.
+
+**Do not** read from `window.__dhSdk.settings` for live values — it is a snapshot taken at bundle load time and will not reflect changes made during the session.
+
+**Do** use `useQuery` with the key `[pluginId, 'settings']`:
+
+```ts
+const { useQuery, apiFetch, apiBase } = window.__dhSdk;
+
+const PLUGIN_ID = 'com.yourname.my-plugin';
+
+const { data: settings = {} } = useQuery<Record<string, string>>({
+  queryKey: [PLUGIN_ID, 'settings'],
+  queryFn: () =>
+    apiFetch(`${apiBase}/plugins/${encodeURIComponent(PLUGIN_ID)}/settings`)
+      .then(r => r.json()),
+});
+
+const myOption = settings['myOption'] ?? 'a';  // falls back to default
+```
+
+When the user saves a setting, the host invalidates `[pluginId, 'settings']` automatically and your component re-renders with the new value.
+
+> **Query key contract:** always use `[pluginId, 'settings']` — exactly this two-element array — so the host's invalidation reaches your component.
 
 ---
 
