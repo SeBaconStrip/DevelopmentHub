@@ -31,6 +31,40 @@ A Windows desktop developer dashboard that consolidates your daily tools into on
 
 ## Architecture
 
+```mermaid
+flowchart LR
+    User(["User"])
+
+    subgraph Shell["WPF Shell"]
+        WV2["WebView2\nReact SPA"]
+        Kestrel["ASP.NET Core\nKestrel"]
+        WV2 <-->|"REST · SignalR"| Kestrel
+    end
+
+    subgraph Ext["Extensibility"]
+        WE["Workflow\nEngine"]
+        PL["Plugin\nLoader"]
+    end
+
+    subgraph Services["External"]
+        GIT["Git"]
+        ADO["Azure DevOps"]
+        GH["GitHub"]
+        MSG["Microsoft To Do"]
+    end
+
+    DB[("LiteDB")]
+
+    User --> WV2
+    Kestrel --- WE
+    Kestrel --- PL
+    Kestrel --> DB
+    Kestrel --> GIT
+    Kestrel --> ADO
+    Kestrel --> GH
+    Kestrel --> MSG
+```
+
 ```
 src/
 ├── api/              ASP.NET Core backend (Kestrel, LiteDB, LibGit2Sharp)
@@ -42,7 +76,7 @@ src/
 └── installer/        Inno Setup installer script
 ```
 
-The WPF shell hosts an embedded Kestrel server and a WebView2 control pointed at it. A per-process authentication token is injected into the WebView at startup; all API calls require the `X-Dev-Hub-Token` header. SignalR pushes real-time updates (repository scans, todo syncs) to the frontend without polling.
+The WPF shell starts Kestrel in-process and opens a WebView2 control pointed at it. A per-process authentication token is injected into the WebView at startup; all API calls require the `X-Dev-Hub-Token` header. SignalR pushes real-time updates (repository scans, todo syncs) to the frontend without polling. Plugins are loaded into isolated `AssemblyLoadContext`s so their dependencies cannot conflict with the host.
 
 ---
 
@@ -172,6 +206,7 @@ See [docs/workflow-engine/](docs/workflow-engine/) for the full schema, all step
 | Plugin system | [docs/plugins/](docs/plugins/) |
 | Workflow engine | [docs/workflow-engine/](docs/workflow-engine/) |
 | Frontend architecture | [docs/frontend-architecture.md](docs/frontend-architecture.md) |
+| Contributing | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | Changelog | [CHANGELOG.md](CHANGELOG.md) |
 
 ---

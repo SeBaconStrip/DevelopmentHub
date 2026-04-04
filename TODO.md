@@ -18,5 +18,5 @@ Checklist of improvements before/after making the repository public.
 
 ## Nice to Have
 
-- [ ] Add a Mermaid architecture diagram to `README.md`
-- [ ] Add `CONTRIBUTING.md`
+- [x] Add a Mermaid architecture diagram to `README.md`
+- [x] Add `CONTRIBUTING.md`
