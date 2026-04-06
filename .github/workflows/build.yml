@@ -84,6 +84,13 @@ jobs:
         working-directory: src/web
         run: npm ci
 
+      - name: Run frontend tests
+        working-directory: src/web
+        run: npm test
+
+      - name: Run backend tests
+        run: dotnet test src/tests/DevelopmentHub.Tests.csproj -c Release --logger "trx;LogFileName=results.trx" --collect:"XPlat Code Coverage"
+
       - name: Publish app (builds frontend + .NET)
         working-directory: src/app
         run: dotnet publish -c Release -r win-x64 --self-contained -o ../../publish
