@@ -23,6 +23,9 @@ public sealed class WorkflowDefinition
     /// </summary>
     public IReadOnlyDictionary<string, string> Variables { get; init; } = new Dictionary<string, string>();
 
+    /// <summary>Optional tags for grouping and filtering workflows (e.g. <c>["deploy", "build"]</c>).</summary>
+    public IReadOnlyList<string> Tags { get; init; } = [];
+
     /// <summary>Input definitions whose values are collected from the user before execution.</summary>
     public IReadOnlyList<WorkflowInput> Inputs { get; init; } = [];
 

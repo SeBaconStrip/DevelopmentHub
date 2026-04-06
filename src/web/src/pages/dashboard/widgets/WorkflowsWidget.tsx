@@ -12,6 +12,7 @@ export function WorkflowsWidget({
   onRun,
   onOpenExecution,
   onClearError,
+  onTagClick,
 }: {
   workflows: WorkflowDefinition[];
   executions: WorkflowExecution[];
@@ -21,6 +22,7 @@ export function WorkflowsWidget({
   onRun: (workflow: WorkflowDefinition) => void;
   onOpenExecution: (workflowId: string, executionId: string) => void;
   onClearError: () => void;
+  onTagClick?: (tag: string) => void;
 }) {
   return (
     <>
@@ -52,6 +54,19 @@ export function WorkflowsWidget({
                   </div>
                   {workflow.description && (
                     <span className="item-meta">{workflow.description}</span>
+                  )}
+                  {workflow.tags && workflow.tags.length > 0 && (
+                    <div className="workflow-tags">
+                      {workflow.tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className={`workflow-tag${onTagClick ? " workflow-tag--clickable" : ""}`}
+                          onClick={onTagClick ? () => onTagClick(tag) : undefined}
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
                   )}
                   <span className="item-meta">
                     {workflow.steps.length} step

@@ -110,6 +110,7 @@ export interface WorkflowDefinition {
   name: string;
   description: string;
   runElevated: boolean;
+  tags?: string[];
   inputs: WorkflowInput[];
   steps: WorkflowStep[];
 }

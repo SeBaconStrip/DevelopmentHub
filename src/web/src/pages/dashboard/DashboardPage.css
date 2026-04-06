@@ -3,6 +3,10 @@
   padding: 20px 48px 48px;
 }
 
+.dash-page--scroll-pad {
+  padding-bottom: 120px;
+}
+
 /* ── page toolbar ── */
 .dash-toolbar {
   display: flex;

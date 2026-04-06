@@ -8,6 +8,7 @@
   "name": "Install Package",
   "description": "Downloads the release package from GitHub and installs it.",
   "runElevated": true,
+  "tags": ["deploy", "github"],
   "inputs": [
     {
       "name": "version",
@@ -106,6 +107,29 @@ Compared to per-step elevation:
 The workflow card and input modal show an **elevated** badge so users know a UAC prompt is expected before the workflow starts.
 
 When `runElevated: true` is set on the workflow, individual `runElevated` flags on steps are ignored — the workflow-level elevated helper handles all privileged operations.
+
+---
+
+### `tags`
+
+**Type:** array of strings — **Optional**
+
+Labels used to group and filter workflows in the dashboard. Tags appear as colour-coded chips on workflow cards.
+
+On the full Workflows page, a tag filter bar appears below the search toolbar showing every tag that exists across all loaded workflows. Clicking a tag filters the list to workflows that carry that tag. Clicking it again clears the filter.
+
+```json
+{
+  "tags": ["deploy", "build", "infra"]
+}
+```
+
+Rules:
+
+- Any non-empty string is a valid tag
+- Tags are case-sensitive — `Deploy` and `deploy` are treated as different tags
+- Order does not matter
+- Omitting the field is equivalent to an empty array — no tags
 
 ---
 
