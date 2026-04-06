@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useLayoutEffect } from "react";
+import { useState, useCallback, useRef, useLayoutEffect, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useHeaderActions } from "../../components/AppLayout";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -272,6 +272,20 @@ export default function DashboardPage() {
   const [containerWidth, setContainerWidth] = useState(
     () => _cachedContainerWidth,
   );
+
+  const [hasScrollbar, setHasScrollbar] = useState(false);
+  useEffect(() => {
+    const scrollEl = document.querySelector(".app-scroll") as HTMLElement | null;
+    if (!scrollEl) return;
+    const check = () =>
+      setHasScrollbar(scrollEl.scrollHeight > scrollEl.clientHeight);
+    check();
+    const ro = new ResizeObserver(check);
+    ro.observe(scrollEl);
+    if (containerRef.current) ro.observe(containerRef.current);
+    return () => ro.disconnect();
+  }, [enabled.length]);
+
   useLayoutEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -328,7 +342,7 @@ export default function DashboardPage() {
   );
 
   return (
-    <div className="dash-page">
+    <div className={`dash-page${hasScrollbar ? " dash-page--scroll-pad" : ""}`}>
       {/* edit mode: re-add hidden panels */}
       {isEditMode && disabled.length > 0 && (
         <div className="dash-hidden-panels">

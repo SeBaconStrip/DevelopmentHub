@@ -3,6 +3,22 @@
 All notable changes are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 0.18 – 2026-04-06
+
+### ✨ Added
+
+- Workflow tags — add a `"tags"` array to any workflow JSON file to label and group workflows (e.g. `"tags": ["deploy", "build"]`)
+- Tag chips displayed on each workflow card in both the dashboard widget and the Workflows page
+- Tag filter bar on the Workflows page — click a tag chip to filter the list to matching workflows; click again to clear
+- Clicking a tag chip on a workflow card on the Workflows page activates the corresponding tag filter
+- Dashboard scroll padding — the dashboard page adds extra bottom padding automatically when the content is tall enough to scroll, preventing the last widget from sitting flush against the viewport edge
+
+### 🐛 Fixed
+
+- Workflow tags were silently dropped by the `Normalize` method in `WorkflowService` when reconstructing the `WorkflowDefinition` object — `Tags` is now forwarded correctly
+
+---
+
 ## 0.17 – 2026-04-06
 
 ### ✨ Added

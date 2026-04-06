@@ -405,6 +405,71 @@ Note that none of the steps need `"runElevated": true` individually — the work
 
 ---
 
+## Tagging Workflows
+
+Add a `"tags"` array to group workflows and make them filterable on the Workflows page. Tags appear as coloured chips on each workflow card.
+
+```json
+[
+  {
+    "id": "deploy-api",
+    "name": "Deploy API",
+    "description": "Downloads the latest API release and installs it.",
+    "tags": ["deploy", "api"],
+    "inputs": [
+      { "name": "version", "label": "Version", "type": "text", "defaultValue": "1.0.0" }
+    ],
+    "steps": [
+      {
+        "type": "downloadGithubReleaseAsset",
+        "name": "Download release",
+        "owner": "my-org",
+        "repository": "my-api",
+        "releaseTag": "v{{version}}",
+        "assetName": "setup-{{version}}.exe",
+        "targetPath": "C:\\Temp\\setup-{{version}}.exe",
+        "overwrite": true
+      }
+    ]
+  },
+  {
+    "id": "deploy-frontend",
+    "name": "Deploy Frontend",
+    "description": "Deploys the frontend bundle to the web server.",
+    "tags": ["deploy", "frontend"],
+    "steps": [
+      {
+        "type": "copy",
+        "name": "Copy bundle",
+        "sourcePath": "C:\\Build\\dist",
+        "destinationPath": "C:\\WebServer\\wwwroot",
+        "overwrite": true
+      }
+    ]
+  },
+  {
+    "id": "restart-all-services",
+    "name": "Restart All Services",
+    "description": "Restarts all application services.",
+    "tags": ["infra"],
+    "runElevated": true,
+    "steps": [
+      {
+        "type": "restartWindowsService",
+        "name": "Restart API service",
+        "serviceName": "MyApiService",
+        "waitForRunning": true,
+        "timeoutSeconds": 60
+      }
+    ]
+  }
+]
+```
+
+On the Workflows page, clicking the **deploy** tag chip filters the list to `Deploy API` and `Deploy Frontend`. Clicking **infra** shows only `Restart All Services`. Click the active tag again to clear the filter.
+
+---
+
 ## Bool and Select Inputs
 
 Use `"type": "bool"` for a checkbox and `"type": "select"` for a dropdown. Both are submitted as strings (`"true"`/`"false"` for bool, the selected option for select) and can be used in `{{placeholders}}` just like text inputs.
