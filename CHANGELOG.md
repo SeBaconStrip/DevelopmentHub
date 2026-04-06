@@ -3,6 +3,24 @@
 All notable changes are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 0.17 – 2026-04-06
+
+### ✨ Added
+
+- Unit test suite — `src/tests/` (xUnit, Moq, FluentAssertions) covering `TodoService`, `UserConfigService`, `RepositoryService`, `PullRequestService`, `WorkflowService`, and workflow executors (`CopyExecutor`, `ExtractArchiveExecutor`, `PatchJsonExecutor`); 80 tests total
+- Frontend test suite — `src/web/src/__tests__/` (Vitest, React Testing Library) covering API clients (`client`, `todos`, `repositories`), hooks (`useTodos`, `useRepositoryScan`), and utilities (`repositoryUtils`)
+- CI test steps — backend (`dotnet test`) and frontend (`npm test`) now run on every PR and push before the publish step, blocking the build on failure
+
+### 🔧 Changed
+
+- Architecture diagram in `README.md` replaced with a Mermaid flowchart showing the WPF shell → WebView2 → Kestrel → plugin/workflow/external-service relationships
+- `README.md` updated with `CONTRIBUTING.md` link in the documentation table
+- `CONTRIBUTING.md` added — covers setup, project structure, PR guidelines, and quick guides for adding workflow steps and plugins
+- `LICENSE` (MIT) added
+- `TODO.md` added to track remaining public-release improvements
+
+---
+
 ## 0.16 – 2026-04-04
 
 ### ✨ Added
