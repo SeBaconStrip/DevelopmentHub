@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import { useTodos } from '../../hooks/useTodos';
@@ -51,6 +51,7 @@ describe('useTodos', () => {
   it('createTodo calls todosApi.create with title and linkUrl', async () => {
     vi.mocked(todosApi.create).mockResolvedValue({
       id: '1', title: 'New', completed: false, createdAt: '', isSynced: false,
+      linkUrl: null, completedAt: null,
     });
 
     const { result } = renderHook(() => useTodos(), { wrapper: makeWrapper() });
@@ -65,6 +66,7 @@ describe('useTodos', () => {
   it('toggleTodo calls todosApi.setCompleted with id and completed flag', async () => {
     vi.mocked(todosApi.setCompleted).mockResolvedValue({
       id: '1', title: 'Task', completed: true, createdAt: '', isSynced: false,
+      linkUrl: null, completedAt: null,
     });
 
     const { result } = renderHook(() => useTodos(), { wrapper: makeWrapper() });
