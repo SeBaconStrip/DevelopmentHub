@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DevelopmentHub.Workflow", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DevelopmentHub.Plugins", "src\plugins\DevelopmentHub.Plugins.csproj", "{1D4C5EFE-78E1-49B6-B7B0-3CD7AF588297}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DevelopmentHub.Tests", "src\tests\DevelopmentHub.Tests.csproj", "{C8E4B7F2-3D16-4A2B-9E8F-1A5C3D7E0F42}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -69,6 +71,18 @@ Global
 		{1D4C5EFE-78E1-49B6-B7B0-3CD7AF588297}.Release|x64.Build.0 = Release|Any CPU
 		{1D4C5EFE-78E1-49B6-B7B0-3CD7AF588297}.Release|x86.ActiveCfg = Release|Any CPU
 		{1D4C5EFE-78E1-49B6-B7B0-3CD7AF588297}.Release|x86.Build.0 = Release|Any CPU
+		{C8E4B7F2-3D16-4A2B-9E8F-1A5C3D7E0F42}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C8E4B7F2-3D16-4A2B-9E8F-1A5C3D7E0F42}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C8E4B7F2-3D16-4A2B-9E8F-1A5C3D7E0F42}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{C8E4B7F2-3D16-4A2B-9E8F-1A5C3D7E0F42}.Debug|x64.Build.0 = Debug|Any CPU
+		{C8E4B7F2-3D16-4A2B-9E8F-1A5C3D7E0F42}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{C8E4B7F2-3D16-4A2B-9E8F-1A5C3D7E0F42}.Debug|x86.Build.0 = Debug|Any CPU
+		{C8E4B7F2-3D16-4A2B-9E8F-1A5C3D7E0F42}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C8E4B7F2-3D16-4A2B-9E8F-1A5C3D7E0F42}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C8E4B7F2-3D16-4A2B-9E8F-1A5C3D7E0F42}.Release|x64.ActiveCfg = Release|Any CPU
+		{C8E4B7F2-3D16-4A2B-9E8F-1A5C3D7E0F42}.Release|x64.Build.0 = Release|Any CPU
+		{C8E4B7F2-3D16-4A2B-9E8F-1A5C3D7E0F42}.Release|x86.ActiveCfg = Release|Any CPU
+		{C8E4B7F2-3D16-4A2B-9E8F-1A5C3D7E0F42}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
