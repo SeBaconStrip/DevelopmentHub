@@ -388,6 +388,7 @@ public class WorkflowService(
             Name = d.Name.Trim(),
             Description = d.Description.Trim(),
             RunElevated = d.RunElevated,
+            Tags = d.Tags,
             Variables = d.Variables,
             Inputs = d.Inputs.Select(i => i with
             {

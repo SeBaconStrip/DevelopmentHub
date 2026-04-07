@@ -14,6 +14,7 @@ type Filter = "all" | "idle" | "running" | "succeeded" | "failed";
 export default function WorkflowsPage() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
   const { data: workflows = [], isLoading, refetch: refetchWorkflows, isFetching: isFetchingWorkflows } = useQuery<WorkflowDefinition[]>({
     queryKey: ["workflows"],
@@ -52,8 +53,11 @@ export default function WorkflowsPage() {
     {} as Record<string, number>,
   );
 
+  const allTags = [...new Set(workflows.flatMap((w) => w.tags ?? []))].sort();
+
   const filtered = workflows
     .filter((w) => filter === "all" || getStatus(w) === filter)
+    .filter((w) => !selectedTag || (w.tags ?? []).includes(selectedTag))
     .filter(
       (w) =>
         !search ||
@@ -91,6 +95,19 @@ export default function WorkflowsPage() {
             ↻ Refresh
           </button>
         </FilterToolbar>
+        {allTags.length > 0 && (
+          <div className="workflows-tag-filter">
+            {allTags.map((tag) => (
+              <button
+                key={tag}
+                className={`workflows-tag-btn${selectedTag === tag ? " workflows-tag-btn--active" : ""}`}
+                onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
+              >
+                {tag}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {isLoading ? (
@@ -105,6 +122,7 @@ export default function WorkflowsPage() {
             workflowRunError={workflowRunError}
             onClearError={() => setWorkflowRunError(null)}
             onRun={(workflow) => setWorkflowInputModal(workflow)}
+            onTagClick={(tag) => setSelectedTag(selectedTag === tag ? null : tag)}
             onOpenExecution={(workflowId, executionId) => {
               const workflow = workflows.find((w) => w.id === workflowId);
               if (!workflow) return;
