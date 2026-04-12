@@ -11,6 +11,7 @@ export function RepositoriesWidget({
   repos,
   openers,
   openError,
+  isScanning,
   onClearOpenError,
   onOpen,
   onToggleFav,
@@ -18,11 +19,13 @@ export function RepositoriesWidget({
   repos: Repository[];
   openers: RepositoryOpener[];
   openError: string | null;
+  isScanning?: boolean;
   onClearOpenError: () => void;
   onOpen: (id: string, openerId?: string) => void;
   onToggleFav: (id: string) => void;
 }) {
-  if (repos.length === 0) return <Empty text="No repositories found" />;
+  if (repos.length === 0 && !isScanning) return <Empty text="No repositories found" />;
+  if (repos.length === 0 && isScanning) return <Empty text="Scanning repositories…" />;
   return (
     <>
       <ErrorBar message={openError} onDismiss={onClearOpenError} />
