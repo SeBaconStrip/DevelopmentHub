@@ -3,7 +3,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { AppConfig, PullRequestProvider, RepositoryOpener } from "../types";
 import { configApi } from "../api/config";
 import { apiFetch } from "../api/client";
-import { useRepositoryScan } from "../hooks/useRepositoryScan";
 import { SettingsSectionGeneral } from "./settings/SettingsSectionGeneral";
 import { SettingsSectionRepositories } from "./settings/SettingsSectionRepositories";
 import { SettingsSectionPullRequests } from "./settings/SettingsSectionPullRequests";
@@ -104,14 +103,15 @@ export function DashboardSettingsModal({ onClose }: Props) {
     queryFn: () => apiFetch("/api/plugins").then(r => r.json()),
   });
 
-  const scan = useRepositoryScan();
-
   const save = useMutation({
     mutationFn: configApi.save,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["config"] });
       queryClient.invalidateQueries({ queryKey: ["workflows"] });
-      scan.mutate();
+      // Immediately refresh the repo list from the DB (orphans already removed by the server).
+      // The full scan result (newly discovered repos) will arrive via SignalR once complete.
+      queryClient.invalidateQueries({ queryKey: ["repositories"] });
+      onClose();
     },
   });
 
@@ -337,18 +337,11 @@ export function DashboardSettingsModal({ onClose }: Props) {
           <button
             className="btn-primary"
             onClick={() => form && save.mutate(form)}
-            disabled={save.isPending || scan.isPending || !form}
+            disabled={save.isPending || !form}
           >
-            {save.isPending
-              ? "Saving…"
-              : scan.isPending
-                ? "Scanning…"
-                : "💾 Save"}
+            {save.isPending ? "Saving…" : "💾 Save"}
           </button>
-          {scan.isSuccess && (
-            <span className="settings-save-ok">✓ Saved &amp; scanned</span>
-          )}
-          {(save.isError || scan.isError) && (
+          {save.isError && (
             <span className="settings-save-err">✗ Failed</span>
           )}
           <button className="btn-close" onClick={onClose}>

@@ -47,18 +47,18 @@ describe('useRepositoryScan', () => {
     expect(repositoriesApi.scan).toHaveBeenCalledOnce();
   });
 
-  it('updates repositories query data on success', async () => {
-    const repos = [{ id: 'r1', name: 'Repo', path: '/path' }];
-    vi.mocked(repositoriesApi.scan).mockResolvedValue(repos as any);
+  it('invalidates repositories query on success', async () => {
+    vi.mocked(repositoriesApi.scan).mockResolvedValue(undefined as any);
 
     const { wrapper, queryClient } = makeWrapper();
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
     const { result } = renderHook(() => useRepositoryScan(), { wrapper });
 
     await act(async () => {
       await result.current.mutateAsync();
     });
 
-    const cached = queryClient.getQueryData(['repositories']);
-    expect(cached).toEqual(repos);
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['repositories'] });
   });
 });

@@ -15,8 +15,11 @@ export const repositoriesApi = {
   getAll: (): Promise<Repository[]> =>
     apiFetch(`${BASE}/repositories`).then(r => handleResponse(r)),
 
-  scan: (): Promise<Repository[]> =>
-    apiFetch(`${BASE}/repositories/scan`, { method: 'POST' }).then(r => handleResponse(r)),
+  scan: (): Promise<void> =>
+    apiFetch(`${BASE}/repositories/scan`, { method: 'POST' }).then(r => {
+      if (!r.ok) return r.text().then(t => { throw new Error(t || `HTTP ${r.status}`); });
+      // 202 Accepted — scan is running in background; updates arrive via SignalR
+    }),
 
   toggleFavorite: (id: string): Promise<Repository> =>
     apiFetch(`${BASE}/repositories/${id}/favorite`, { method: 'PATCH' }).then(r => handleResponse(r)),

@@ -76,7 +76,7 @@ export default function DashboardPage() {
   const handleRepositoriesUpdated = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["repositories"] });
   }, [queryClient]);
-  useRepositoryHub(handleRepositoriesUpdated);
+  const { isScanning } = useRepositoryHub(handleRepositoriesUpdated);
 
   const handleTodosUpdated = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["todos"] });
@@ -162,6 +162,7 @@ export default function DashboardPage() {
           repos={repos}
           openers={config?.repositoryOpeners ?? []}
           openError={openError}
+          isScanning={isScanning}
           onClearOpenError={() => setOpenError(null)}
           onOpen={(id, openerId) => {
             setOpenError(null);
@@ -175,10 +176,10 @@ export default function DashboardPage() {
         <button
           className="panel-action-btn"
           onClick={() => scanRepos.mutate()}
-          disabled={scanRepos.isPending}
+          disabled={isScanning}
           title="Repositories neu scannen"
         >
-          ↻
+          {isScanning ? <span className="scan-spinner" /> : "↻"}
         </button>
       ),
     },
