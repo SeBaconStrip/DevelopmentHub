@@ -16,6 +16,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### 🐛 Fixed
 
 - Workflow tags were silently dropped by the `Normalize` method in `WorkflowService` when reconstructing the `WorkflowDefinition` object — `Tags` is now forwarded correctly
+- Adding a new repository root path no longer requires F5 to see the updated list — the frontend now subscribes to a new `ScanStarted` SignalR event and shows a spinner on the refresh button while the scan is running; `RepositoriesUpdated` clears the spinner and reloads the list as before
+- Repositories page was not connected to SignalR — it now subscribes to `RepositoriesUpdated` so the list refreshes automatically after a scan without a page reload
+- Config save now immediately invalidates the `repositories` query so orphan removal (deleted root paths) is reflected at once, without waiting for the full scan to complete
+- Redundant `POST /api/repositories/scan` call from the settings modal removed — the backend already triggers a scan internally on every config save
+
+### 🔧 Changed
+
+- Refresh button on both the Repositories dashboard widget and the Repositories page becomes a spinner while a scan is in progress, replacing the separate scan-banner approach
+- `.scan-spinner` added as a shared global CSS utility in `index.css`, available across all pages without per-component CSS imports
 
 ---
 
@@ -41,7 +50,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### ✨ Added
 
-- Per-plugin settings pages — each plugin with declared `settings[]` gets a dedicated sub-page under **Settings → Plugins → *Plugin Name***; settings save immediately on change without a Save button
+- Per-plugin settings pages — each plugin with declared `settings[]` gets a dedicated sub-page under **Settings → Plugins → _Plugin Name_**; settings save immediately on change without a Save button
 - `GET /api/plugins/{id}/settings` and `PUT /api/plugins/{id}/settings` — dedicated endpoints that own all non-`enabled` plugin settings; `PUT /api/config` now only manages the `enabled` flag per plugin
 - Bundle cache-busting via `BundleMtime` — the host sets a cache-buster on the bundle URL based on the file's last-write timestamp rather than the manifest version, so rebuilt bundles are always picked up without bumping the version string
 - `apiFetch` exposed on `window.__dhSdk` — authenticated `fetch` wrapper that attaches the required `X-Dev-Hub-Token` header; plugins should use this instead of raw `fetch`

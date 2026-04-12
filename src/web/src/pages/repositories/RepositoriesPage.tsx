@@ -1,7 +1,8 @@
-import { useState, Fragment } from "react";
+import { useState, Fragment, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { repositoriesApi } from "../../api/repositories";
 import { useRepositoryScan } from "../../hooks/useRepositoryScan";
+import { useRepositoryHub } from "../../hooks/useRepositoryHub";
 import { configApi } from "../../api/config";
 import type { Repository } from "../../types";
 import explorerIconUrl from "../../assets/icons/windows-explorer.svg";
@@ -28,6 +29,11 @@ export default function RepositoriesPage() {
   });
 
   const scanMutation = useRepositoryScan();
+
+  const handleRepositoriesUpdated = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["repositories"] });
+  }, [queryClient]);
+  const { isScanning } = useRepositoryHub(handleRepositoriesUpdated);
 
   const { data: config } = useQuery({ queryKey: ["config"], queryFn: configApi.get });
   const openers = config?.repositoryOpeners ?? [];
@@ -127,9 +133,9 @@ export default function RepositoriesPage() {
           <button
             className="btn-primary"
             onClick={() => scanMutation.mutate()}
-            disabled={scanMutation.isPending}
+            disabled={isScanning}
           >
-            {scanMutation.isPending ? "Scanning…" : "↻ Scan"}
+            {isScanning ? <><span className="scan-spinner" /> Scanning…</> : "↻ Scan"}
           </button>
         </FilterToolbar>
 

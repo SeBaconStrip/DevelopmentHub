@@ -55,7 +55,34 @@ public class RepositoryService(
             cfg.EntryPointScanDepth,
             entryPointExtensions);
 
+        // Resolve remote origin URLs in parallel (pure disk I/O via LibGit2Sharp, no network).
+        // Each call opens its own Repository instance so there are no thread-safety concerns.
+        var originUrlPairs = await Task.WhenAll(
+            discovered.Select(async r => (r.Path, Url: await Task.Run(() => gitService.GetOriginUrl(r.Path)))));
+        var originUrls = originUrlPairs.ToDictionary(
+            x => x.Path, x => x.Url,
+            StringComparer.OrdinalIgnoreCase);
+
+        var hostReachable = new System.Collections.Concurrent.ConcurrentDictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+
+        var uniqueEndpoints = originUrls.Values
+            .Where(u => u != null)
+            .Select(u => { GitService.TryParseRemoteHostPort(u!, out var h, out var p); return (Host: h, Port: p); })
+            .Where(e => !string.IsNullOrEmpty(e.Host))
+            .DistinctBy(e => $"{e.Host}:{e.Port}")
+            .ToList();
+
+        await Task.WhenAll(uniqueEndpoints.Select(async e =>
+        {
+            var reachable = await gitService.IsHostReachableAsync(e.Host, e.Port, cancellationToken);
+            hostReachable[$"{e.Host}:{e.Port}"] = reachable;
+            if (!reachable)
+                logger.LogInformation("Host unreachable, skipping fetch for repos on {Host}:{Port}", e.Host, e.Port);
+        }));
+
         // Fetch repositories independently so one failure cannot abort the whole scan.
+        // Limit concurrency to avoid spawning hundreds of git processes on large workspaces.
+        using var fetchSemaphore = new SemaphoreSlim(8);
         var fetchTasks = discovered.Select(async repo =>
         {
             if (repo.ScanIssueCode == RepositoryScanIssueCodes.DubiousOwnership)
@@ -64,6 +91,20 @@ public class RepositoryService(
                 return;
             }
 
+            // Skip fetch if the remote host is known to be unreachable.
+            var url = originUrls.GetValueOrDefault(repo.Path);
+            if (url != null && GitService.TryParseRemoteHostPort(url, out var host, out var port))
+            {
+                var key = $"{host}:{port}";
+                if (hostReachable.TryGetValue(key, out var reachable) && !reachable)
+                {
+                    repo.ScanIssueCode = RepositoryScanIssueCodes.HostUnreachable;
+                    repo.ScanIssueMessage = $"Remote host '{host}' is not reachable.";
+                    return;
+                }
+            }
+
+            await fetchSemaphore.WaitAsync(cancellationToken);
             try
             {
                 var fetch = await gitService.FetchAsync(repo.Path, cancellationToken);
@@ -83,6 +124,10 @@ public class RepositoryService(
                 logger.LogWarning(ex, "Repository fetch failed unexpectedly for {Path}", repo.Path);
                 repo.ScanIssueCode = RepositoryScanIssueCodes.GitCommandFailed;
                 repo.ScanIssueMessage = ex.Message;
+            }
+            finally
+            {
+                fetchSemaphore.Release();
             }
         }).ToList();
 

@@ -10,6 +10,8 @@ export function getScanIssueLabel(issueCode: string): string {
       return "Remote missing or no access";
     case "FetchTimeout":
       return "Fetch timed out";
+    case "HostUnreachable":
+      return "Host unreachable";
     default:
       return "Scan warning";
   }
