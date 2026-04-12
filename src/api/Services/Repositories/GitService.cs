@@ -11,6 +11,8 @@ public interface IGitService
     Task<RepositoryFetchResult> FetchAsync(string repoPath, CancellationToken cancellationToken);
     Task<(string? Branch, int AheadBy, int BehindBy)> GetBranchStatusAsync(string repoPath);
     Task<(bool Success, string Output)> SyncRepositoryAsync(string repoPath, CancellationToken cancellationToken);
+    string? GetOriginUrl(string repoPath);
+    Task<bool> IsHostReachableAsync(string host, int port, CancellationToken cancellationToken);
 }
 
 public static class RepositoryScanIssueCodes
@@ -22,6 +24,7 @@ public static class RepositoryScanIssueCodes
     public const string FetchTimeout = "FetchTimeout";
     public const string GitCommandFailed = "GitCommandFailed";
     public const string GitFailedToStart = "GitFailedToStart";
+    public const string HostUnreachable = "HostUnreachable";
 }
 
 public sealed class RepositoryFetchResult
@@ -177,7 +180,7 @@ public class GitService(ILogger<GitService> logger) : IGitService
             };
         }
 
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
         var (success, output, wasCanceled, failedToStart) = await RunGitCommandAsync(repoPath, ["fetch", "--prune"], linked.Token);
         if (success)
@@ -203,7 +206,7 @@ public class GitService(ILogger<GitService> logger) : IGitService
             {
                 Success = false,
                 IssueCode = RepositoryScanIssueCodes.FetchTimeout,
-                Message = "git fetch timed out after 15 seconds."
+                Message = "git fetch timed out after 10 seconds."
             };
         }
 
@@ -265,6 +268,93 @@ public class GitService(ILogger<GitService> logger) : IGitService
         output.AppendLine(pullOut);
 
         return (pullSuccess, output.ToString());
+    }
+
+    public string? GetOriginUrl(string repoPath)
+    {
+        try
+        {
+            using var repo = new Repository(repoPath);
+            return repo.Network.Remotes["origin"]?.Url;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    public async Task<bool> IsHostReachableAsync(string host, int port, CancellationToken cancellationToken)
+    {
+        // Instant pre-check: if no network adapter reports connectivity at all, don't bother with DNS/TCP.
+        if (!System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable())
+            return false;
+
+        try
+        {
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            cts.CancelAfter(TimeSpan.FromSeconds(2));
+
+            // Resolve DNS separately first so we can connect to a concrete IP and avoid
+            // DNS hangs from blocking the TCP connect step beyond our timeout.
+            System.Net.IPAddress[] addresses;
+            try
+            {
+                addresses = await System.Net.Dns.GetHostAddressesAsync(host, cts.Token);
+            }
+            catch
+            {
+                return false; // DNS failed or timed out → host unreachable
+            }
+
+            if (addresses.Length == 0) return false;
+
+            using var socket = new System.Net.Sockets.Socket(
+                addresses[0].AddressFamily,
+                System.Net.Sockets.SocketType.Stream,
+                System.Net.Sockets.ProtocolType.Tcp);
+
+            await socket.ConnectAsync(new System.Net.IPEndPoint(addresses[0], port), cts.Token);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Parses the host and port from a git remote URL.
+    /// Supports HTTPS (https://host/...) and SSH (git@host:... or ssh://git@host/...).
+    /// Returns false for local paths.
+    /// </summary>
+    public static bool TryParseRemoteHostPort(string remoteUrl, out string host, out int port)
+    {
+        host = string.Empty;
+        port = 443;
+
+        if (string.IsNullOrWhiteSpace(remoteUrl))
+            return false;
+
+        // HTTPS: https://github.com/org/repo.git
+        if (Uri.TryCreate(remoteUrl, UriKind.Absolute, out var uri) &&
+            (uri.Scheme == "https" || uri.Scheme == "http" || uri.Scheme == "ssh"))
+        {
+            host = uri.Host;
+            port = uri.IsDefaultPort ? (uri.Scheme == "ssh" ? 22 : (uri.Scheme == "http" ? 80 : 443)) : uri.Port;
+            return !string.IsNullOrEmpty(host);
+        }
+
+        // SCP-style SSH: git@github.com:org/repo.git
+        var atIdx = remoteUrl.IndexOf('@');
+        var colonIdx = remoteUrl.IndexOf(':');
+        if (atIdx >= 0 && colonIdx > atIdx)
+        {
+            host = remoteUrl[(atIdx + 1)..colonIdx];
+            port = 22;
+            return !string.IsNullOrEmpty(host) && !host.Contains('/');
+        }
+
+        return false;
     }
 
     [DllImport("kernel32.dll")] private static extern uint SetErrorMode(uint uMode);

@@ -5,6 +5,10 @@ export function useRepositoryScan() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: repositoriesApi.scan,
-    onSuccess: (data) => queryClient.setQueryData(["repositories"], data),
+    onSuccess: () => {
+      // Scan accepted — actual results will arrive via SignalR RepositoriesUpdated.
+      // Invalidate so React Query refetches once the event fires.
+      queryClient.invalidateQueries({ queryKey: ["repositories"] });
+    },
   });
 }

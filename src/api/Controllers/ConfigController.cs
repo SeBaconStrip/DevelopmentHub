@@ -1,3 +1,4 @@
+using DevelopmentHub.Api.BackgroundServices;
 using DevelopmentHub.Api.Configuration;
 using DevelopmentHub.Api.Models.Dao;
 using DevelopmentHub.Api.Models.Dtos;
@@ -11,6 +12,7 @@ namespace DevelopmentHub.Api.Controllers;
 public class ConfigController(
     IUserConfigService userConfigService,
     IRepositoryService repositoryService,
+    RepositoryScannerService scannerService,
     ILogger<ConfigController> logger) : ControllerBase
 {
     [HttpGet]
@@ -109,6 +111,10 @@ public class ConfigController(
 
             if (!string.IsNullOrWhiteSpace(dto.HotkeyBinding))
                 HotkeyChangedNotifier.Notify(dto.HotkeyBinding);
+
+            // Kick off a background re-scan so the dashboard updates via SignalR
+            // without blocking the save response.
+            scannerService.TriggerScan();
 
             logger.LogInformation("Configuration saved to LiteDB.");
             return Ok(new { message = "Configuration saved." });

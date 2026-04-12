@@ -22,6 +22,10 @@ describe('getScanIssueLabel', () => {
     expect(getScanIssueLabel('FetchTimeout')).toBe('Fetch timed out');
   });
 
+  it('returns correct label for HostUnreachable', () => {
+    expect(getScanIssueLabel('HostUnreachable')).toBe('Host unreachable');
+  });
+
   it('returns fallback label for unknown issue code', () => {
     expect(getScanIssueLabel('SomeUnknownCode')).toBe('Scan warning');
   });

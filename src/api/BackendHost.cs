@@ -148,7 +148,9 @@ public static class BackendHost
         }
 
         // ── Background Services ───────────────────────────────────────────────
-        builder.Services.AddHostedService<RepositoryScannerService>();
+        // Register as singleton so controllers can inject it for TriggerScan().
+        builder.Services.AddSingleton<RepositoryScannerService>();
+        builder.Services.AddHostedService(sp => sp.GetRequiredService<RepositoryScannerService>());
 
         // ── SignalR ───────────────────────────────────────────────────────────
         builder.Services.AddSignalR();

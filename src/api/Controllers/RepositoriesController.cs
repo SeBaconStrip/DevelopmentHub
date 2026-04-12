@@ -1,3 +1,4 @@
+using DevelopmentHub.Api.BackgroundServices;
 using DevelopmentHub.Api.Models.Dtos;
 using DevelopmentHub.Api.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -6,7 +7,9 @@ namespace DevelopmentHub.Api.Controllers;
 
 [ApiController]
 [Route("api/repositories")]
-public class RepositoriesController(IRepositoryService repositoryService) : ControllerBase
+public class RepositoriesController(
+    IRepositoryService repositoryService,
+    RepositoryScannerService scannerService) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<List<RepositoryDto>>> GetAll()
@@ -15,10 +18,12 @@ public class RepositoriesController(IRepositoryService repositoryService) : Cont
     }
 
     [HttpPost("scan")]
-    public async Task<ActionResult<List<RepositoryDto>>> Scan(CancellationToken cancellationToken)
+    public IActionResult Scan()
     {
-        var result = await repositoryService.ScanAsync(cancellationToken);
-        return Ok(result);
+        // Trigger the background scan and return immediately.
+        // The dashboard will update via SignalR when the scan completes.
+        scannerService.TriggerScan();
+        return Accepted();
     }
 
     [HttpPatch("{id}/favorite")]
