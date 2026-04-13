@@ -671,6 +671,17 @@
   font-family: monospace;
 }
 
+.plugin-load-error {
+  margin-top: 8px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--error, #f38ba8) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--error, #f38ba8) 40%, transparent);
+  color: var(--error, #f38ba8);
+  font-size: 11px;
+  word-break: break-all;
+}
+
 .plugin-settings-fields {
   margin-top: 10px;
   padding-top: 10px;
