@@ -20,6 +20,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Repositories page was not connected to SignalR — it now subscribes to `RepositoriesUpdated` so the list refreshes automatically after a scan without a page reload
 - Config save now immediately invalidates the `repositories` query so orphan removal (deleted root paths) is reflected at once, without waiting for the full scan to complete
 - Redundant `POST /api/repositories/scan` call from the settings modal removed — the backend already triggers a scan internally on every config save
+- DevTools per F12 öffnen — auch in der Production-Version öffnet F12 das WebView2-DevTools-Fenster; `AreDevToolsEnabled` ist jetzt immer aktiviert
+- Plugin-Ladefehler in den Einstellungen sichtbar — lädt ein Plugin-Bundle nicht (Netzwerkfehler, Laufzeitfehler im Bundle), erscheint unter dem entsprechenden Plugin-Eintrag ein roter Hinweistext mit der Fehlermeldung; `getPluginLoadErrors()` in `PluginLoader.ts` exportiert eine readonly Map (pluginId → Fehlermeldung)
 
 ### 🔧 Changed
 

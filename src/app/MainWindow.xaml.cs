@@ -225,9 +225,16 @@ return IntPtr.Zero;
         WebView.ZoomFactor = 1.0;
 
         WebView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = _isDev;
-        WebView.CoreWebView2.Settings.AreDevToolsEnabled = _isDev;
+        WebView.CoreWebView2.Settings.AreDevToolsEnabled = true; // F12 öffnet DevTools auch in Production
 
         WebView.CoreWebView2.WebMessageReceived += OnWebMessageReceived;
+
+        // F12 öffnet DevTools auch in der Production-Version
+        WebView.KeyDown += (_, e) =>
+        {
+            if (e.Key == System.Windows.Input.Key.F12)
+                WebView.CoreWebView2.OpenDevToolsWindow();
+        };
 
         // Inject the per-process API token into every document before any scripts run.
         // The React app reads window.__devHubToken and includes it in all API requests.
