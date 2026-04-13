@@ -41,6 +41,13 @@ export function initPluginLoader(queryClient: QueryClient) {
   _queryClient = queryClient;
 }
 
+// Tracks plugins that failed to load (pluginId → error message)
+const _pluginLoadErrors = new Map<string, string>();
+
+export function getPluginLoadErrors(): ReadonlyMap<string, string> {
+  return _pluginLoadErrors;
+}
+
 export async function loadAllPlugins(): Promise<PluginManifest[]> {
   try {
     const [pluginsRes, configRes] = await Promise.all([
@@ -52,12 +59,15 @@ export async function loadAllPlugins(): Promise<PluginManifest[]> {
     const config = configRes.ok ? await configRes.json() : {};
     const allPluginSettings: Record<string, Record<string, string>> = config.pluginSettings ?? {};
 
+    _pluginLoadErrors.clear();
     for (const manifest of manifests) {
       if (manifest.frontend?.enabled) {
         const pluginSettings = allPluginSettings[manifest.id] ?? {};
-        await loadPluginBundle(manifest, pluginSettings).catch((err) =>
-          console.error(`[Plugin ${manifest.id}] Failed to load bundle`, err),
-        );
+        await loadPluginBundle(manifest, pluginSettings).catch((err) => {
+          const message = err instanceof Error ? err.message : String(err);
+          console.error(`[Plugin ${manifest.id}] Failed to load bundle`, err);
+          _pluginLoadErrors.set(manifest.id, message);
+        });
       }
     }
 

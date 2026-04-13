@@ -3,6 +3,7 @@ import { configApi } from "../../api/config";
 import { apiFetch } from "../../api/client";
 import type { AppConfig } from "../../types";
 import type { PluginManifest } from "../../plugins/PluginLoader";
+import { getPluginLoadErrors } from "../../plugins/PluginLoader";
 import { Section, Field } from "./SettingsHelpers";
 
 interface PluginsPageProps {
@@ -20,6 +21,8 @@ export function SettingsSectionPlugins({
     queryKey: ["plugins"],
     queryFn: () => apiFetch("/api/plugins").then((r) => r.json()),
   });
+
+  const pluginLoadErrors = getPluginLoadErrors();
 
   const browsePluginsFolder = async () => {
     const path = await configApi.pickFolder();
@@ -101,38 +104,46 @@ export function SettingsSectionPlugins({
         {!isLoading && manifests.length === 0 && (
           <p className="empty-msg">No plugins found in the plugins folder.</p>
         )}
-        {manifests.map((manifest) => (
-          <div key={manifest.id} className="plugin-settings-entry">
-            <div className="plugin-settings-header">
-              <div className="plugin-settings-info">
-                <span className="plugin-settings-name">
-                  {manifest.name || manifest.id}
-                </span>
-                {manifest.description && (
-                  <span className="plugin-settings-desc">
-                    {manifest.description}
+        {manifests.map((manifest) => {
+          const loadError = pluginLoadErrors.get(manifest.id);
+          return (
+            <div key={manifest.id} className="plugin-settings-entry">
+              <div className="plugin-settings-header">
+                <div className="plugin-settings-info">
+                  <span className="plugin-settings-name">
+                    {manifest.name || manifest.id}
                   </span>
-                )}
-                <span className="plugin-settings-version">
-                  v{manifest.version}
-                </span>
+                  {manifest.description && (
+                    <span className="plugin-settings-desc">
+                      {manifest.description}
+                    </span>
+                  )}
+                  <span className="plugin-settings-version">
+                    v{manifest.version}
+                  </span>
+                </div>
+                <button
+                  className={`toggle-btn${isPluginEnabled(manifest.id) ? " toggle-btn--on" : ""}`}
+                  onClick={() => togglePlugin(manifest.id)}
+                  title={
+                    isPluginEnabled(manifest.id)
+                      ? "Disable plugin"
+                      : "Enable plugin"
+                  }
+                >
+                  <span
+                    className={`toggle-knob${isPluginEnabled(manifest.id) ? " toggle-knob--on" : ""}`}
+                  />
+                </button>
               </div>
-              <button
-                className={`toggle-btn${isPluginEnabled(manifest.id) ? " toggle-btn--on" : ""}`}
-                onClick={() => togglePlugin(manifest.id)}
-                title={
-                  isPluginEnabled(manifest.id)
-                    ? "Disable plugin"
-                    : "Enable plugin"
-                }
-              >
-                <span
-                  className={`toggle-knob${isPluginEnabled(manifest.id) ? " toggle-knob--on" : ""}`}
-                />
-              </button>
+              {loadError && (
+                <div className="plugin-load-error" title={loadError}>
+                  ⚠ Frontend konnte nicht geladen werden: {loadError}
+                </div>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </Section>
     </>
   );
