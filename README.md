@@ -1,35 +1,196 @@
-# DevelopmentHub
+# DevelopmentHub 🧑‍💻
+
+> Stop alt-tabbing. One hotkey. Everything.
 
 [![Build & Release](https://github.com/SeBaconStrip/DevelopmentHub/actions/workflows/build.yml/badge.svg)](https://github.com/SeBaconStrip/DevelopmentHub/actions/workflows/build.yml)
+[![Latest Release](https://img.shields.io/github/v/release/SeBaconStrip/DevelopmentHub?label=download&color=0078d4&logo=windows)](https://github.com/SeBaconStrip/DevelopmentHub/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-![Platform: Windows](https://img.shields.io/badge/platform-Windows-blue)
+![Platform: Windows](https://img.shields.io/badge/platform-Windows%2010%2F11-0078d4)
 ![.NET 9](https://img.shields.io/badge/.NET-9.0-512bd4)
 ![React 19](https://img.shields.io/badge/React-19-61dafb)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178c6)
 
-A Windows desktop developer dashboard that consolidates your daily tools into one keyboard-accessible window. Monitor repositories, review pull requests, manage todos, run automation workflows, and extend everything with a first-class plugin system — all without leaving your keyboard.
+<!-- TODO: Add hero screenshot — save as docs/screenshots/dashboard.png -->
+<!-- ![DevelopmentHub Dashboard](docs/screenshots/dashboard.png) -->
+
+A single frameless window, always a keystroke away (`Ctrl+Shift+D`). Repos, PRs, todos, automation workflows, and plugins — no browser tabs, no alt-tab spiral.
 
 ---
 
-## Features
+## What's in the box
 
-**Repositories** — Scan local folders for Git repos. See branch, ahead/behind status, and open any repo in VS Code, Visual Studio, or a custom tool with one click. Multi-select repos to open a shared `.code-workspace`. Tag and filter repos. Inline warnings for fetch failures, invalid paths, or permission issues.
-
-**Pull Requests** — Merged feed from Azure DevOps and GitHub. Filter by All / Mine / Reviewer / Draft. Click a PR to open it in your browser via the companion Edge extension, which reuses an existing tab rather than opening a new one.
-
-**Todos** — Local todo list with bidirectional sync to Microsoft To Do (Microsoft Graph). Create, complete, restore, and delete tasks. Background sync keeps both sides consistent; a manual "Sync Now" button is available.
-
-**Workflow Engine** — File-based automation engine. Define workflows in JSON and run them from the dashboard with optional user inputs. Steps cover: shell scripts, file downloads (GitHub/Azure DevOps authenticated), ZIP extraction, JSON patching, running executables, and restarting Windows services. Workflows support UAC elevation, static variables, built-in path variables, sub-workflow calls, and real-time execution logs.
-
-**Quick Links** — Pinned URLs and Explorer folders. One click to open.
-
-**Plugin System** — First-class extensibility. Plugins contribute dashboard widgets and full pages without modifying the host. The backend loads plugins into isolated `AssemblyLoadContext`s; the frontend injects a typed SDK (`window.__dhSdk`) with React, TanStack Query, Zustand, React Router, and a pre-built themed UI component set.
-
-**Quality-of-life** — Global hotkey to show/hide the window, hide-to-tray, frameless window with VS Code dark theme, drag-and-drop resizable dashboard panels, SignalR real-time updates.
+| | Feature | What it does |
+|:---:|---|---|
+| 🗂️ | **Repositories** | Scan local folders, see branch & ahead/behind, open in VS Code / Visual Studio / custom |
+| 🔀 | **Pull Requests** | Unified Azure DevOps + GitHub feed — filter by Mine / Reviewer / Draft |
+| ✅ | **Todos** | Local list with bidirectional Microsoft To Do sync |
+| ⚙️ | **Workflows** | JSON-defined automation: scripts, downloads, services, UAC elevation |
+| 🔗 | **Quick Links** | Pinned URLs and Explorer folders — one click |
+| 🧩 | **Plugins** | Add widgets and full pages without touching the host |
 
 ---
 
-## Architecture
+## 🗂️ Repositories
+
+All your repos. One place. Instant.
+
+<!-- TODO: Add screenshot — save as docs/screenshots/repositories.png -->
+<!-- ![Repositories](docs/screenshots/repositories.png) -->
+
+- **Scan** configured root folders — finds every Git repo automatically
+- **See** branch name, ahead/behind status, and tags at a glance
+- **Open** any repo in VS Code, Visual Studio, or a custom tool with one click
+- **Multi-select** to open a shared `.code-workspace` across related repos
+- **Filter and tag** to cut through large repo sets fast
+- Inline warnings for fetch failures, invalid paths, or permission issues
+- Real-time scan progress via SignalR — the list refreshes without F5
+
+---
+
+## 🔀 Pull Requests
+
+Azure DevOps and GitHub. One feed. No browser juggling.
+
+<!-- TODO: Add screenshot — save as docs/screenshots/pull-requests.png -->
+<!-- ![Pull Requests](docs/screenshots/pull-requests.png) -->
+
+- Merged feed from both providers
+- Filter by **All / Mine / Reviewer / Draft**
+- Click a PR → opens in your browser via the companion **Edge extension** that reuses an existing tab instead of opening a new one
+
+---
+
+## ✅ Todos
+
+Your todo list. Everywhere.
+
+- **Local-first** — works offline, instant writes
+- **Microsoft To Do sync** — bidirectional via Microsoft Graph
+- Create, complete, restore, delete
+- Background sync keeps both sides consistent — or hit **Sync Now** to force it
+
+---
+
+## ⚙️ Workflows
+
+Automate the boring stuff. Without leaving the dashboard.
+
+<!-- TODO: Add screenshot — save as docs/screenshots/workflows.png -->
+<!-- ![Workflows](docs/screenshots/workflows.png) -->
+
+Define workflows in JSON, run them with one click. Tag them for quick filtering.
+
+| Step type | What it does |
+|---|---|
+| `shellScript` | Run any shell command |
+| `downloadFile` | Fetch from GitHub or Azure DevOps (authenticated) |
+| `extractArchive` | Unzip to a target path |
+| `patchJson` | Modify JSON config files in-place |
+| `runExecutable` | Launch a process |
+| `restartWindowsService` | Stop/start a Windows service |
+| `callWorkflow` | Compose sub-workflows |
+
+UAC elevation, static variables, built-in path variables, and real-time execution logs included.
+
+```json
+{
+  "name": "Restart API Service",
+  "runElevated": true,
+  "tags": ["deploy"],
+  "steps": [
+    { "type": "restartWindowsService", "serviceName": "MyApiService" }
+  ]
+}
+```
+
+See [docs/workflow-engine/](docs/workflow-engine/) for the full schema, all step types, and examples.
+
+---
+
+## 🔗 Quick Links
+
+Pinned URLs and Explorer folders. One click. Done.
+
+---
+
+## 🧩 Plugin System
+
+Build anything on top. Ship it as a `.dll` + `bundle.js`.
+
+Plugins contribute dashboard widgets and full pages without modifying the host. Each runs in an isolated `AssemblyLoadContext` — zero dependency conflicts.
+
+**Install the SDKs:**
+```bash
+# .NET backend SDK
+dotnet add package DevelopmentHub.Plugins
+
+# TypeScript frontend types
+npm install --save-dev @developmenthub/plugin-sdk
+```
+
+**Register a page from your frontend bundle:**
+```typescript
+window.__dhSdk.plugin.registerPage({
+  id: 'my-page',
+  label: 'My Page',
+  icon: 'fa-solid fa-star',
+  component: MyPage,
+});
+```
+
+See [docs/plugins/](docs/plugins/) for the full guide, manifest reference, SDK API, and the worked counter-plugin example in `src/plugins/counter-plugin/`.
+
+---
+
+## ⚡ Get Started
+
+### Install
+
+**[→ Download the latest installer](https://github.com/SeBaconStrip/DevelopmentHub/releases/latest)**
+
+Requires Windows 10/11. WebView2 Runtime ships with Windows 11; [download it separately](https://developer.microsoft.com/microsoft-edge/webview2/) on Windows 10.
+
+### Development
+
+```bash
+# 1. Install frontend dependencies
+cd src/web && npm ci
+
+# 2. Start the dev server (hot reload on port 5173)
+npm run dev
+
+# 3. In a separate terminal, run the backend
+cd src/app && dotnet run
+```
+
+The WPF window opens and loads the React dev server. Frontend changes update instantly — no restart needed.
+
+### Production Build
+
+```bash
+cd src/app && dotnet publish -c Release -r win-x64 --self-contained -o ../../publish
+```
+
+Runs `npm run build` automatically and bundles the React output into the executable.
+
+---
+
+## 🔧 Configuration
+
+Open **Settings** (gear icon) on first run:
+
+| Setting | What you need |
+|---|---|
+| **Repositories → Folders** | Root directories to scan for Git repos |
+| **Azure DevOps** | Org, project, user email, PAT (`Code: Read`, `Pull Request: Read`) |
+| **GitHub** | PAT (`repo: read`, `user: read`) |
+| **Microsoft To Do** | Azure AD app client ID (device-code auth flow) |
+
+All settings are stored in `appsettings.local.json` (gitignored) and LiteDB.
+
+---
+
+## 🏗️ Architecture
 
 ```mermaid
 flowchart LR
@@ -67,23 +228,23 @@ flowchart LR
 
 ```
 src/
-├── api/              ASP.NET Core backend (Kestrel, LiteDB, LibGit2Sharp)
-├── app/              WPF host shell (WebView2 embeds the React frontend)
-├── web/              React 19 + TypeScript + TailwindCSS SPA
-├── plugins/          Plugin SDK — DevelopmentHub.Plugins NuGet + @developmenthub/plugin-sdk npm
-├── workflow/         Workflow execution engine
-├── browser-extension/  Microsoft Edge extension (tab reuse for PR links)
-└── installer/        Inno Setup installer script
+├── api/               ASP.NET Core backend (Kestrel, LiteDB, LibGit2Sharp)
+├── app/               WPF host shell (WebView2 embeds the React frontend)
+├── web/               React 19 + TypeScript + TailwindCSS SPA
+├── plugins/           Plugin SDK — DevelopmentHub.Plugins NuGet + @developmenthub/plugin-sdk npm
+├── workflow/          Workflow execution engine
+├── browser-extension/ Microsoft Edge extension (tab reuse for PR links)
+└── installer/         Inno Setup installer script
 ```
 
-The WPF shell starts Kestrel in-process and opens a WebView2 control pointed at it. A per-process authentication token is injected into the WebView at startup; all API calls require the `X-Dev-Hub-Token` header. SignalR pushes real-time updates (repository scans, todo syncs) to the frontend without polling. Plugins are loaded into isolated `AssemblyLoadContext`s so their dependencies cannot conflict with the host.
+The WPF shell starts Kestrel in-process and opens a WebView2 control pointed at it. A per-process token is injected at startup — all API calls require the `X-Dev-Hub-Token` header. SignalR pushes real-time updates without polling. Plugins load into isolated `AssemblyLoadContext`s so their dependencies can't conflict with the host.
 
 ---
 
-## Tech Stack
+## 🛠️ Tech Stack
 
 | Layer | Technology |
-|-------|-----------|
+|---|---|
 | Desktop shell | WPF + WebView2 (.NET 9) |
 | Backend | ASP.NET Core 9, Kestrel |
 | Database | LiteDB (embedded, no server) |
@@ -96,113 +257,10 @@ The WPF shell starts Kestrel in-process and opens a WebView2 control pointed at 
 
 ---
 
-## Prerequisites
-
-- Windows 10/11
-- [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9)
-- [Node.js 20+](https://nodejs.org/)
-- [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) (included with Windows 11; install separately on Windows 10)
-
----
-
-## Getting Started
-
-### Development
-
-```bash
-# 1. Install frontend dependencies
-cd src/web
-npm ci
-
-# 2. Run the frontend dev server (hot reload on port 5173 by default)
-npm run dev
-
-# 3. In a separate terminal, run the backend in Development mode
-cd src/app
-dotnet run
-```
-
-The WPF window opens and loads the React dev server. Changes to frontend files update instantly.
-
-### Production Build
-
-```bash
-# Build frontend, then publish the self-contained Windows executable
-cd src/app
-dotnet publish -c Release -r win-x64 --self-contained -o ../../publish
-```
-
-The publish step automatically runs `npm run build` and copies the `dist/` output into `wwwroot/` inside the executable's directory.
-
-### Installer
-
-The CI pipeline builds an Inno Setup installer (`DevelopmentHub-Setup-*.exe`) on every push to `main`. Download the latest from [Releases](../../releases).
-
----
-
-## Configuration
-
-On first run, open **Settings** (gear icon) and configure:
-
-- **Repositories → Folders** — root directories to scan for Git repos
-- **Integrations → Azure DevOps** — organization, project, user email, PAT (`Code: Read`, `Pull Request: Read`)
-- **Integrations → GitHub** — PAT (`repo: read`, `user: read`)
-- **Todos → Microsoft To Do** — Azure AD app registration client ID for device-code auth
-
-All settings are stored in `appsettings.local.json` (gitignored) and LiteDB.
-
----
-
-## Plugin Development
-
-Plugins can add dashboard widgets and full pages without touching the host code.
-
-**Minimal plugin structure:**
-```
-my-plugin/
-├── manifest.json          Plugin metadata and contribution declarations
-├── MyPlugin.dll           Backend (implements IPlugin, optional)
-└── bundle.js              Frontend (calls window.__dhSdk.plugin.register*, optional)
-```
-
-Install the SDKs:
-```bash
-# .NET backend SDK
-dotnet add package DevelopmentHub.Plugins
-
-# TypeScript frontend types
-npm install --save-dev @developmenthub/plugin-sdk
-```
-
-See [docs/plugins/](docs/plugins/) for the full guide, manifest reference, SDK API, and a worked example (the counter plugin in `src/plugins/counter-plugin/`).
-
----
-
-## Workflow Engine
-
-Workflows are JSON files in a configured folder. Example — restart a Windows service:
-
-```json
-{
-  "name": "Restart API Service",
-  "runElevated": true,
-  "steps": [
-    {
-      "type": "restartWindowsService",
-      "serviceName": "MyApiService"
-    }
-  ]
-}
-```
-
-See [docs/workflow-engine/](docs/workflow-engine/) for the full schema, all step types, variables, sub-workflows, elevation, and examples.
-
----
-
-## Documentation
+## 📚 Docs
 
 | Topic | Link |
-|-------|------|
+|---|---|
 | Plugin system | [docs/plugins/](docs/plugins/) |
 | Workflow engine | [docs/workflow-engine/](docs/workflow-engine/) |
 | Frontend architecture | [docs/frontend-architecture.md](docs/frontend-architecture.md) |
