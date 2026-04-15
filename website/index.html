@@ -1,0 +1,410 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DevelopmentHub — Stop alt-tabbing.</title>
+  <meta name="description" content="A Windows developer dashboard that consolidates Git repos, pull requests, todos, and automation workflows into one keyboard-accessible window." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+
+</head>
+<body>
+
+<div id="spotlight"></div>
+
+<!-- ── Nav ── -->
+<nav>
+  <div class="inner">
+    <a class="nav-brand" href="#">Development<span>Hub</span></a>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#workflows">Workflows</a>
+      <a href="#plugins">Plugins</a>
+      <a href="https://github.com/SeBaconStrip/DevelopmentHub" target="_blank">GitHub</a>
+      <a href="https://github.com/SeBaconStrip/DevelopmentHub/releases/latest" class="nav-cta" target="_blank">Download</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ── Hero ── -->
+<section id="hero">
+  <div class="container">
+    <div class="hero-eyebrow reveal">
+      <span class="dot"></span>
+      Windows 10 / 11 &nbsp;·&nbsp; .NET 9 &nbsp;·&nbsp; MIT License
+    </div>
+    <h1 class="reveal">DevelopmentHub</h1>
+    <p class="tagline reveal">Stop alt-tabbing. <strong>One hotkey.</strong> Everything you need as a developer — repos, PRs, todos, automations, and plugins in one frameless window.</p>
+    <div class="hero-actions reveal">
+      <a href="https://github.com/SeBaconStrip/DevelopmentHub/releases/latest" class="btn btn-primary" target="_blank">
+        ⬇ Download for Windows
+      </a>
+      <a href="https://github.com/SeBaconStrip/DevelopmentHub" class="btn btn-ghost" target="_blank">
+        View on GitHub
+      </a>
+    </div>
+    <div class="hotkey-hint reveal">
+      <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd>&nbsp; to show · hide · always there
+    </div>
+
+    <div class="hero-screenshot reveal">
+      <img src="images/dashboard.png" alt="DevelopmentHub dashboard" class="hero-img" />
+    </div>
+  </div>
+</section>
+
+<!-- ── Marquee ── -->
+<div class="marquee-wrap">
+  <div class="marquee-track">
+    <span>Unified PR feed</span>
+    <span>Global hotkey</span>
+    <span>Plugin SDK</span>
+    <span>JSON workflows</span>
+    <span>Real-time SignalR</span>
+    <span>Azure DevOps + GitHub</span>
+    <span>Microsoft To Do sync</span>
+    <span>UAC elevation</span>
+    <span>AssemblyLoadContext isolation</span>
+    <span>Inno Setup installer</span>
+    <span>Unified PR feed</span>
+    <span>Global hotkey</span>
+    <span>Plugin SDK</span>
+    <span>JSON workflows</span>
+    <span>Real-time SignalR</span>
+    <span>Azure DevOps + GitHub</span>
+    <span>Microsoft To Do sync</span>
+    <span>UAC elevation</span>
+    <span>AssemblyLoadContext isolation</span>
+    <span>Inno Setup installer</span>
+  </div>
+</div>
+
+<!-- ── Features ── -->
+<section id="features">
+  <div class="container">
+    <p class="section-label reveal">Features</p>
+    <h2 class="section-title reveal">Everything in one window</h2>
+    <p class="section-sub reveal">Six integrated tools. No context switching. No browser tabs you'll forget to close.</p>
+
+    <div class="feature-grid">
+      <div class="feature-card reveal">
+        <span class="feature-icon">🗂️</span>
+        <h3>Repositories</h3>
+        <p>Scan local folders for Git repos. See branch, ahead/behind status, and tags at a glance. Open in VS Code, Visual Studio, or any custom tool — multi-select for workspaces.</p>
+        <span class="feature-tag">LibGit2Sharp</span>
+      </div>
+      <div class="feature-card reveal">
+        <span class="feature-icon">🔀</span>
+        <h3>Pull Requests</h3>
+        <p>Unified feed from Azure DevOps <em>and</em> GitHub. Filter by All / Mine / Reviewer / Draft. Click to open in the browser — the Edge extension reuses an existing tab instead of opening a new one.</p>
+        <span class="feature-tag">Azure DevOps · GitHub</span>
+      </div>
+      <div class="feature-card reveal">
+        <span class="feature-icon">✅</span>
+        <h3>Todos</h3>
+        <p>Local-first todo list with bidirectional sync to Microsoft To Do via Microsoft Graph. Create, complete, restore, delete. Background sync or manual Sync Now.</p>
+        <span class="feature-tag">Microsoft Graph</span>
+      </div>
+      <div class="feature-card reveal">
+        <span class="feature-icon">⚙️</span>
+        <h3>Workflow Engine</h3>
+        <p>Define automation in JSON. Run scripts, download authenticated artifacts, patch configs, restart services — all with UAC elevation support and real-time logs.</p>
+        <span class="feature-tag">JSON · UAC · Sub-workflows</span>
+      </div>
+      <div class="feature-card reveal">
+        <span class="feature-icon">🔗</span>
+        <h3>Quick Links</h3>
+        <p>Pinned URLs and Explorer folders. One click to open the internal dashboard, your Azure board, or a local project folder — without hunting through your browser bookmarks.</p>
+        <span class="feature-tag">URLs · Explorer</span>
+      </div>
+      <div class="feature-card reveal">
+        <span class="feature-icon">🧩</span>
+        <h3>Plugin System</h3>
+        <p>Add dashboard widgets and full pages without touching the host. Plugins load into isolated AssemblyLoadContexts — no dependency conflicts. Ship a <code style="font-family:JetBrains Mono,monospace;font-size:12px;color:var(--cyan)">.dll</code> + <code style="font-family:JetBrains Mono,monospace;font-size:12px;color:var(--cyan)">bundle.js</code>.</p>
+        <span class="feature-tag">NuGet · npm</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Screenshots ── -->
+<section id="screenshots">
+  <div class="container">
+    <p class="section-label reveal">In action</p>
+    <h2 class="section-title reveal">See it for yourself</h2>
+    <p class="section-sub reveal">Screenshots coming soon. Download and try it — or contribute one via a PR.</p>
+
+    <div class="screenshot-grid">
+      <div class="screenshot-item reveal">
+        <img src="images/repositories.png" alt="Repositories page" class="screenshot-img" />
+        <div class="screenshot-caption">
+          <strong>Repositories</strong> — branch status, tags, open in editor
+        </div>
+      </div>
+      <div class="screenshot-item reveal">
+        <img src="images/pull-requests.png" alt="Pull Requests page" class="screenshot-img" />
+        <div class="screenshot-caption">
+          <strong>Pull Requests</strong> — Azure DevOps + GitHub unified
+        </div>
+      </div>
+      <div class="screenshot-item reveal">
+        <img src="images/workflows.png" alt="Workflows page" class="screenshot-img" />
+        <div class="screenshot-caption">
+          <strong>Workflows</strong> — run automation with real-time logs
+        </div>
+      </div>
+      <div class="screenshot-item reveal">
+        <img src="images/dashboard.png" alt="Dashboard" class="screenshot-img" />
+        <div class="screenshot-caption">
+          <strong>Dashboard</strong> — drag-and-drop resizable widgets
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Workflow Engine ── -->
+<section id="workflows">
+  <div class="container">
+    <p class="section-label reveal">Workflow Engine</p>
+    <h2 class="section-title reveal">Automate the boring stuff</h2>
+    <p class="section-sub reveal">Define workflows in JSON. Run them from the dashboard. No code, no CI pipeline needed.</p>
+
+    <div class="code-showcase">
+      <div class="code-panel reveal">
+        <div class="code-panel-header">
+          <div class="dot-row"><span class="dot-red"></span><span class="dot-amber"></span><span class="dot-green"></span></div>
+          <span class="filename">deploy-api.json</span>
+        </div>
+        <pre><code>{
+  <span class="t-key">"name"</span>: <span class="t-str">"Deploy API"</span>,
+  <span class="t-key">"runElevated"</span>: <span class="t-bool">true</span>,
+  <span class="t-key">"tags"</span>: [<span class="t-str">"deploy"</span>, <span class="t-str">"api"</span>],
+  <span class="t-key">"steps"</span>: [
+    {
+      <span class="t-key">"type"</span>: <span class="t-str">"downloadFile"</span>,
+      <span class="t-key">"source"</span>: <span class="t-str">"github"</span>,
+      <span class="t-key">"url"</span>: <span class="t-str">"...release artifact..."</span>,
+      <span class="t-key">"destination"</span>: <span class="t-str">"%appdata%\\MyApp"</span>
+    },
+    {
+      <span class="t-key">"type"</span>: <span class="t-str">"extractArchive"</span>,
+      <span class="t-key">"source"</span>: <span class="t-str">"%appdata%\\MyApp\\app.zip"</span>,
+      <span class="t-key">"destination"</span>: <span class="t-str">"%appdata%\\MyApp"</span>
+    },
+    {
+      <span class="t-key">"type"</span>: <span class="t-str">"restartWindowsService"</span>,
+      <span class="t-key">"serviceName"</span>: <span class="t-str">"MyApiService"</span>
+    }
+  ]
+}</code></pre>
+      </div>
+      <div class="code-panel-info reveal">
+        <h3>From JSON to done</h3>
+        <p>Chain any combination of steps. Add a tag, hit Run. DevelopmentHub handles UAC prompts, variable substitution, and streams logs in real time.</p>
+        <ul class="feature-list">
+          <li>Shell scripts &amp; executables</li>
+          <li>Authenticated GitHub / Azure DevOps downloads</li>
+          <li>ZIP extraction + JSON patching</li>
+          <li>Windows service restarts</li>
+          <li>UAC elevation — no manual runas</li>
+          <li>Sub-workflow composition</li>
+          <li>Static &amp; built-in path variables</li>
+          <li>Real-time execution log stream</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Plugin System ── -->
+<section id="plugins">
+  <div class="container">
+    <p class="section-label reveal">Plugin System</p>
+    <h2 class="section-title reveal">Build anything on top</h2>
+    <p class="section-sub reveal">Add widgets and full pages without forking the host. Ship as a .dll + bundle.js.</p>
+
+    <div class="code-showcase" style="margin-top:48px">
+      <div class="code-panel-info reveal">
+        <h3>First-class extensibility</h3>
+        <p>Plugins run in isolated <code style="font-family:JetBrains Mono,monospace;font-size:12px;color:var(--cyan)">AssemblyLoadContext</code>s on the backend and receive a typed SDK on the frontend — React, TanStack Query, Zustand, React Router, and a pre-built themed UI component set.</p>
+        <ul class="feature-list" style="margin-bottom:20px">
+          <li>Declare widgets &amp; routes in <code style="font-family:JetBrains Mono,monospace;font-size:12px;color:var(--cyan)">manifest.json</code></li>
+          <li>Backend: implement <code style="font-family:JetBrains Mono,monospace;font-size:12px;color:var(--cyan)">IPlugin</code>, add REST endpoints</li>
+          <li>Frontend: call <code style="font-family:JetBrains Mono,monospace;font-size:12px;color:var(--cyan)">window.__dhSdk</code> to register</li>
+          <li>No host code changes ever needed</li>
+          <li>Per-plugin settings pages — built in</li>
+          <li>Load error surfaced in Settings UI</li>
+        </ul>
+        <a href="https://github.com/SeBaconStrip/DevelopmentHub/tree/main/docs/plugins" class="btn btn-ghost" style="font-size:14px;padding:9px 18px" target="_blank">Read the plugin guide →</a>
+      </div>
+      <div class="code-panel reveal">
+        <div class="code-panel-header">
+          <div class="dot-row"><span class="dot-red"></span><span class="dot-amber"></span><span class="dot-green"></span></div>
+          <span class="filename">bundle.js</span>
+        </div>
+        <pre><code><span class="t-com">// Runs in the host WebView2 context</span>
+<span class="t-key">const</span> { plugin, components } = window.__dhSdk;
+
+<span class="t-com">// Register a sidebar page</span>
+<span class="t-fn">plugin.registerPage</span>({
+  <span class="t-key">id</span>:        <span class="t-str">'my-plugin'</span>,
+  <span class="t-key">label</span>:     <span class="t-str">'My Plugin'</span>,
+  <span class="t-key">icon</span>:      <span class="t-str">'fa-solid fa-star'</span>,
+  <span class="t-key">component</span>: MyPage,
+});
+
+<span class="t-com">// Register a dashboard widget</span>
+<span class="t-fn">plugin.registerWidget</span>({
+  <span class="t-key">id</span>:        <span class="t-str">'my-widget'</span>,
+  <span class="t-key">label</span>:     <span class="t-str">'My Widget'</span>,
+  <span class="t-key">minW</span>: <span class="t-num">2</span>, <span class="t-key">minH</span>: <span class="t-num">2</span>,
+  <span class="t-key">component</span>: MyWidget,
+});</code></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Tech Stack ── -->
+<section id="tech">
+  <div class="container">
+    <p class="section-label reveal">Tech Stack</p>
+    <h2 class="section-title reveal">Built on solid ground</h2>
+    <p class="section-sub reveal">Modern .NET and React, packaged into a single Windows executable.</p>
+
+    <div class="tech-grid">
+      <div class="tech-card reveal">
+        <span class="tech-emoji">🪟</span>
+        <span class="tech-name">WPF + WebView2</span>
+        <span class="tech-detail">Desktop shell</span>
+      </div>
+      <div class="tech-card reveal">
+        <span class="tech-emoji">🔷</span>
+        <span class="tech-name">.NET 9</span>
+        <span class="tech-detail">ASP.NET Core · Kestrel</span>
+      </div>
+      <div class="tech-card reveal">
+        <span class="tech-emoji">⚛️</span>
+        <span class="tech-name">React 19</span>
+        <span class="tech-detail">+ TypeScript 5.9</span>
+      </div>
+      <div class="tech-card reveal">
+        <span class="tech-emoji">⚡</span>
+        <span class="tech-name">Vite 7</span>
+        <span class="tech-detail">Frontend build</span>
+      </div>
+      <div class="tech-card reveal">
+        <span class="tech-emoji">🎨</span>
+        <span class="tech-name">TailwindCSS 4</span>
+        <span class="tech-detail">Styling</span>
+      </div>
+      <div class="tech-card reveal">
+        <span class="tech-emoji">🐻</span>
+        <span class="tech-name">Zustand 5</span>
+        <span class="tech-detail">UI state</span>
+      </div>
+      <div class="tech-card reveal">
+        <span class="tech-emoji">🔄</span>
+        <span class="tech-name">SignalR</span>
+        <span class="tech-detail">Real-time push</span>
+      </div>
+      <div class="tech-card reveal">
+        <span class="tech-emoji">🗄️</span>
+        <span class="tech-name">LiteDB</span>
+        <span class="tech-detail">Embedded DB · no server</span>
+      </div>
+      <div class="tech-card reveal">
+        <span class="tech-emoji">🚀</span>
+        <span class="tech-name">GitHub Actions</span>
+        <span class="tech-detail">CI/CD · Inno Setup</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Download ── -->
+<section id="download">
+  <div class="container">
+    <p class="section-label reveal">Get Started</p>
+    <h2 class="section-title reveal">Ready to stop alt-tabbing?</h2>
+    <p class="section-sub reveal">Download the installer, run it, press the hotkey. That's it.</p>
+
+    <div class="download-box reveal">
+      <div class="install-row">
+        <span class="install-label">Windows</span>
+        <span class="install-cmd" id="install-cmd">DevelopmentHub-Setup-latest.exe</span>
+        <button class="copy-btn" onclick="copyInstall()" id="copy-btn">Copy</button>
+      </div>
+      <a href="https://github.com/SeBaconStrip/DevelopmentHub/releases/latest" class="btn btn-primary" target="_blank">
+        ⬇ Download latest release
+      </a>
+      <p class="req-note">
+        Requires Windows 10/11 &nbsp;·&nbsp; .NET 9 SDK &nbsp;·&nbsp; <a href="https://developer.microsoft.com/microsoft-edge/webview2/" target="_blank">WebView2 Runtime</a>
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ── Footer ── -->
+<footer>
+  <div class="inner">
+    <a class="footer-brand" href="#">Development<span>Hub</span></a>
+    <div class="links">
+      <a href="https://github.com/SeBaconStrip/DevelopmentHub" target="_blank">GitHub</a>
+      <a href="https://github.com/SeBaconStrip/DevelopmentHub/releases" target="_blank">Releases</a>
+      <a href="https://github.com/SeBaconStrip/DevelopmentHub/tree/main/docs" target="_blank">Docs</a>
+      <a href="https://github.com/SeBaconStrip/DevelopmentHub/blob/main/LICENSE" target="_blank">MIT License</a>
+    </div>
+    <span class="footer-copy">Built by colin grossen</span>
+  </div>
+</footer>
+
+<script>
+  // ── Cursor spotlight ──
+  const spotlight = document.getElementById('spotlight');
+  document.addEventListener('mousemove', e => {
+    spotlight.style.setProperty('--x', e.clientX + 'px');
+    spotlight.style.setProperty('--y', e.clientY + 'px');
+  });
+
+  // ── Scroll reveal ──
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('visible');
+        observer.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.12 });
+
+  document.querySelectorAll('.reveal').forEach((el, i) => {
+    el.style.transitionDelay = (i % 6) * 60 + 'ms';
+    observer.observe(el);
+  });
+
+  // ── Copy to clipboard ──
+  function copyInstall() {
+    const url = 'https://github.com/SeBaconStrip/DevelopmentHub/releases/latest';
+    navigator.clipboard.writeText(url).then(() => {
+      const btn = document.getElementById('copy-btn');
+      const orig = btn.textContent;
+      btn.textContent = '✓ Copied';
+      btn.style.color = 'var(--cyan)';
+      setTimeout(() => {
+        btn.textContent = orig;
+        btn.style.color = '';
+      }, 2000);
+    });
+  }
+
+  // ── Stagger feature cards ──
+  document.querySelectorAll('.feature-card').forEach((card, i) => {
+    card.style.transitionDelay = i * 60 + 'ms';
+  });
+</script>
+</body>
+</html>
