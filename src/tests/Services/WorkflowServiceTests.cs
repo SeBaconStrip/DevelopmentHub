@@ -249,4 +249,80 @@ public sealed class WorkflowServiceTests : IDisposable
         capturedInputs["region"].Should().Be("us-east-1",
             because: "variable not overridden by user is preserved");
     }
+
+    [Fact]
+    public async Task RunAsync_ResolvesInputs_WithCamelCaseName()
+    {
+        // Regression: camelCase input names (e.g. "applicationPath") must be
+        // preserved and resolved identically to lowercase names.
+        var capturedInputs = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var mockExecutor = new Mock<IWorkflowStepExecutor>();
+        mockExecutor.Setup(e => e.StepType).Returns("copy");
+        mockExecutor.Setup(e => e.ExecuteAsync(It.IsAny<WorkflowStep>(), It.IsAny<StepContext>(), It.IsAny<CancellationToken>()))
+            .Callback<WorkflowStep, StepContext, CancellationToken>((_, ctx, _) =>
+            {
+                foreach (var (k, v) in ctx.Inputs)
+                    capturedInputs[k] = v;
+            })
+            .Returns(Task.CompletedTask);
+
+        WriteWorkflow("camelcase-inputs.json", """
+            {
+              "id": "camelcase-wf",
+              "name": "CamelCase Inputs",
+              "inputs": [{ "name": "applicationPath", "defaultValue": "C:\\default\\app.exe" }],
+              "steps": [{ "type": "copy", "sourcePath": "a", "destinationPath": "b" }]
+            }
+            """);
+
+        var sut = BuildService([mockExecutor.Object]);
+
+        await sut.RunAsync("camelcase-wf", new Api.Models.Dtos.RunWorkflowRequestDto
+        {
+            Inputs = new Dictionary<string, string> { ["applicationPath"] = @"C:\my-app\installer.exe" },
+            SkippedSteps = []
+        }, CancellationToken.None);
+
+        await Task.Delay(200);
+
+        capturedInputs["applicationPath"].Should().Be(@"C:\my-app\installer.exe",
+            because: "camelCase input name must be resolved from user-provided value");
+    }
+
+    [Fact]
+    public async Task RunAsync_ResolvesInputs_FallsBackToDefault_WhenCamelCaseInputNotProvided()
+    {
+        var capturedInputs = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var mockExecutor = new Mock<IWorkflowStepExecutor>();
+        mockExecutor.Setup(e => e.StepType).Returns("copy");
+        mockExecutor.Setup(e => e.ExecuteAsync(It.IsAny<WorkflowStep>(), It.IsAny<StepContext>(), It.IsAny<CancellationToken>()))
+            .Callback<WorkflowStep, StepContext, CancellationToken>((_, ctx, _) =>
+            {
+                foreach (var (k, v) in ctx.Inputs)
+                    capturedInputs[k] = v;
+            })
+            .Returns(Task.CompletedTask);
+
+        WriteWorkflow("camelcase-defaults.json", """
+            {
+              "id": "camelcase-defaults-wf",
+              "name": "CamelCase Defaults",
+              "inputs": [{ "name": "applicationPath", "defaultValue": "C:\\default\\app.exe" }],
+              "steps": [{ "type": "copy", "sourcePath": "a", "destinationPath": "b" }]
+            }
+            """);
+
+        var sut = BuildService([mockExecutor.Object]);
+
+        await sut.RunAsync("camelcase-defaults-wf", new Api.Models.Dtos.RunWorkflowRequestDto
+        {
+            Inputs = new Dictionary<string, string>(),   // nothing provided
+            SkippedSteps = []
+        }, CancellationToken.None);
+
+        await Task.Delay(200);
+
+        capturedInputs["applicationPath"].Should().Be(@"C:\default\app.exe",
+            because: "camelCase input falls back to its defaultValue when not supplied");
+    }
 }

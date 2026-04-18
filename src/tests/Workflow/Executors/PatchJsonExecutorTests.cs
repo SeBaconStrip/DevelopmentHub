@@ -129,6 +129,32 @@ public sealed class PatchJsonExecutorTests : IDisposable
         ReadJson(file)["version"]!.GetValue<string>().Should().Be("3.0.0");
     }
 
+    [Fact]
+    public async Task ExecuteAsync_RendersPlaceholder_WhenInputAndJsonPathShareTheSameName()
+    {
+        // Regression: input named "Path" + operation path "$.Path" + value template "{{Path}}"
+        // must use the INPUT VALUE, not the default, when the non-default option is selected.
+        var file = WriteJson("appsettings.json", new { Path = "old", flag = false });
+        var step = new PatchJsonStep
+        {
+            FilePath = file,
+            Operations =
+            [
+                new JsonPatchOperation { Op = "set", Path = "$.flag", Value = JsonValue.Create(true) },
+                new JsonPatchOperation { Op = "set", Path = "$.Path", Value = JsonValue.Create(@"abcd\{{Path}}\") },
+            ]
+        };
+
+        // Simulate user selecting the non-default option "ReleaseF039" (default is "ReleaseF").
+        var inputs = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["Path"] = "ReleaseF039" };
+        await _sut.ExecuteAsync(step, MakeContext(inputs), CancellationToken.None);
+
+        var result = ReadJson(file);
+        result["flag"]!.GetValue<bool>().Should().BeTrue();
+        result["Path"]!.GetValue<string>().Should().Be(@"abcd\ReleaseF039\",
+            because: "the user-selected value 'ReleaseF039' must replace {{Path}}, not the default 'ReleaseF'");
+    }
+
     // ── Backup ────────────────────────────────────────────────────────────────
 
     [Fact]
