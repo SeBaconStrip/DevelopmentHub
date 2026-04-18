@@ -397,7 +397,7 @@ export default function DashboardPage() {
             {enabled.map((w) => {
               const cfg = isBuiltin(w.id) ? widgetMap[w.id] : null;
               return (
-                <div key={w.id} className="panel-wrapper">
+                <div key={w.id} className="panel-wrapper" data-widget-id={w.id}>
                   <Panel
                     icon={w.icon}
                     title={w.label}
