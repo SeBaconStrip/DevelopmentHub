@@ -10,10 +10,9 @@
 ![React 19](https://img.shields.io/badge/React-19-61dafb)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178c6)
 
-<!-- TODO: Add hero screenshot — save as docs/screenshots/dashboard.png -->
-<!-- ![DevelopmentHub Dashboard](docs/screenshots/dashboard.png) -->
+![DevelopmentHub Dashboard](website/images/dashboard.png)
 
-A single frameless window, always a keystroke away (`Ctrl+Shift+D`). Repos, PRs, todos, automation workflows, and plugins — no browser tabs, no alt-tab spiral.
+A single frameless window, always a keystroke away. Repos, PRs, todos, automation workflows, and plugins — no browser tabs, no alt-tab spiral.
 
 ---
 
@@ -34,8 +33,7 @@ A single frameless window, always a keystroke away (`Ctrl+Shift+D`). Repos, PRs,
 
 All your repos. One place. Instant.
 
-<!-- TODO: Add screenshot — save as docs/screenshots/repositories.png -->
-<!-- ![Repositories](docs/screenshots/repositories.png) -->
+![Repositories](website/images/repositories.png)
 
 - **Scan** configured root folders — finds every Git repo automatically
 - **See** branch name, ahead/behind status, and tags at a glance
@@ -51,8 +49,7 @@ All your repos. One place. Instant.
 
 Azure DevOps and GitHub. One feed. No browser juggling.
 
-<!-- TODO: Add screenshot — save as docs/screenshots/pull-requests.png -->
-<!-- ![Pull Requests](docs/screenshots/pull-requests.png) -->
+![Pull Requests](website/images/pull-requests.png)
 
 - Merged feed from both providers
 - Filter by **All / Mine / Reviewer / Draft**
@@ -75,8 +72,7 @@ Your todo list. Everywhere.
 
 Automate the boring stuff. Without leaving the dashboard.
 
-<!-- TODO: Add screenshot — save as docs/screenshots/workflows.png -->
-<!-- ![Workflows](docs/screenshots/workflows.png) -->
+![Workflows](website/images/workflows.png)
 
 Define workflows in JSON, run them with one click. Tag them for quick filtering.
 
