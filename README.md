@@ -61,6 +61,8 @@ Azure DevOps and GitHub. One feed. No browser juggling.
 
 Your todo list. Everywhere.
 
+![Todos](website/images/todos.png)
+
 - **Local-first** — works offline, instant writes
 - **Microsoft To Do sync** — bidirectional via Microsoft Graph
 - Create, complete, restore, delete
@@ -106,6 +108,8 @@ See [docs/workflow-engine/](docs/workflow-engine/) for the full schema, all step
 ## 🔗 Quick Links
 
 Pinned URLs and Explorer folders. One click. Done.
+
+![Quick Links](website/images/quick-links.png)
 
 ---
 
