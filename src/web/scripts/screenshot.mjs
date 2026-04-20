@@ -28,6 +28,7 @@ const WIDGETS = [
   { id: 'repositories', name: 'repositories' },
   { id: 'pullRequests',  name: 'pull-requests' },
   { id: 'workflows',    name: 'workflows' },
+  { id: 'todos',        name: 'todos' },
   { id: 'quickLinks',   name: 'quick-links' },
 ];
 
