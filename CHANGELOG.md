@@ -27,6 +27,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Refresh button on both the Repositories dashboard widget and the Repositories page becomes a spinner while a scan is in progress, replacing the separate scan-banner approach
 - `.scan-spinner` added as a shared global CSS utility in `index.css`, available across all pages without per-component CSS imports
+- `README.md` — Todos and Quick Links sections now include widget screenshots; `screenshot.mjs` extended to capture the Todos widget alongside the existing four
 
 ---
 
