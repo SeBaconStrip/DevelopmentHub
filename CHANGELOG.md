@@ -3,6 +3,18 @@
 All notable changes are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 1.0 – 2026-04-30
+
+### ✨ Added
+
+- Public release — repository is now open source
+
+### 🔧 Changed
+
+- npm dependencies updated (`npm audit fix`) — 0 vulnerabilities
+
+---
+
 ## 0.18 – 2026-04-06
 
 ### ✨ Added
