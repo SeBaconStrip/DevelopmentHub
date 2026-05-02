@@ -187,7 +187,7 @@ catch {
 
     /// <summary>
     /// Converts a <see cref="JsonNode"/> value for use in the patched document.
-    /// String values have <c>{{input}}</c> template placeholders rendered; all other types are cloned as-is.
+    /// String values have <c>{{input}}</c> template placeholders rendered; arrays and objects are recursed into so nested strings are also rendered.
     /// </summary>
     private static JsonNode? CreateNode(JsonNode? value, IReadOnlyDictionary<string, string> inputs)
     {
@@ -195,6 +195,20 @@ catch {
             return null;
         if (value is JsonValue jsonValue && jsonValue.TryGetValue<string>(out var str))
             return JsonValue.Create(WorkflowHelpers.Render(str, inputs));
+        if (value is JsonArray jsonArray)
+        {
+            var newArray = new JsonArray();
+            foreach (var item in jsonArray)
+                newArray.Add(CreateNode(item, inputs));
+            return newArray;
+        }
+        if (value is JsonObject jsonObject)
+        {
+            var newObject = new JsonObject();
+            foreach (var prop in jsonObject)
+                newObject[prop.Key] = CreateNode(prop.Value, inputs);
+            return newObject;
+        }
         return JsonNode.Parse(value.ToJsonString());
     }
 
