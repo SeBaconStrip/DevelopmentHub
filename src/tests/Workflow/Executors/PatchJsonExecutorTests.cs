@@ -155,6 +155,41 @@ public sealed class PatchJsonExecutorTests : IDisposable
             because: "the user-selected value 'ReleaseF039' must replace {{Path}}, not the default 'ReleaseF'");
     }
 
+    [Fact]
+    public async Task ExecuteAsync_RendersPlaceholders_InArrayStringElements()
+    {
+        var file = WriteJson("appsettings.json", new { ConfigFiles = Array.Empty<string>() });
+        var arrayValue = JsonNode.Parse("""["C:\\Projects\\{{Branch}}\\FileA.cfg","C:\\Projects\\{{Branch}}\\FileB.cfg"]""")!;
+        var step = new PatchJsonStep
+        {
+            FilePath = file,
+            Operations = [new JsonPatchOperation { Op = "set", Path = "$.ConfigFiles", Value = arrayValue }]
+        };
+
+        await _sut.ExecuteAsync(step, MakeContext(new Dictionary<string, string> { ["Branch"] = "App.ReleaseA" }), CancellationToken.None);
+
+        var result = ReadJson(file)["ConfigFiles"]!.AsArray();
+        result.Should().HaveCount(2);
+        result[0]!.GetValue<string>().Should().Be(@"C:\Projects\App.ReleaseA\FileA.cfg");
+        result[1]!.GetValue<string>().Should().Be(@"C:\Projects\App.ReleaseA\FileB.cfg");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_RendersPlaceholders_InNestedObjectStringValues()
+    {
+        var file = WriteJson("appsettings.json", new { Settings = new { Path = "old" } });
+        var objectValue = JsonNode.Parse("""{"Path":"C:\\Projects\\{{Branch}}\\bin"}""")!;
+        var step = new PatchJsonStep
+        {
+            FilePath = file,
+            Operations = [new JsonPatchOperation { Op = "set", Path = "$.Settings", Value = objectValue }]
+        };
+
+        await _sut.ExecuteAsync(step, MakeContext(new Dictionary<string, string> { ["Branch"] = "App.ReleaseA" }), CancellationToken.None);
+
+        ReadJson(file)["Settings"]!["Path"]!.GetValue<string>().Should().Be(@"C:\Projects\App.ReleaseA\bin");
+    }
+
     // ── Backup ────────────────────────────────────────────────────────────────
 
     [Fact]

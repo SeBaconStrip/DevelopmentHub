@@ -79,3 +79,4 @@ frontend/.vite/
 publish/
 src/installer/output/*
 .dotnet/
+.claude/
