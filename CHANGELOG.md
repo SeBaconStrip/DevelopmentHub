@@ -3,7 +3,7 @@
 All notable changes are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## 1.0 – 2026-04-30
+## 1.0 – 2026-05-02
 
 ### ✨ Added
 
@@ -12,6 +12,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### 🔧 Changed
 
 - npm dependencies updated (`npm audit fix`) — 0 vulnerabilities
+
+### 🐛 Fixed
+
+- `PatchJsonExecutor` — `{{placeholder}}` rendering now recurses into array elements and nested object string values; previously only top-level string values were rendered, leaving placeholders unexpanded in `set` operations that supply an array or object as the value
+- `PatchJsonExecutor` — when an input name matches a JSON path property name (e.g. input `Path` + path `$.Path` + value `{{Path}}`), the user-provided input value is now used correctly; previously the template could resolve to the wrong value
 
 ---
 
