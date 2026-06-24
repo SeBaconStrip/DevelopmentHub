@@ -34,12 +34,24 @@ export function FilterToolbar({
   return (
     <div className={`filter-toolbar${className ? ` ${className}` : ""}`}>
       <div className="filter-toolbar__left">
-        <input
-          className="filter-toolbar__search"
-          placeholder={searchPlaceholder}
-          value={search}
-          onChange={(e) => onSearchChange(e.target.value)}
-        />
+        <div className="filter-toolbar__search-wrap">
+          <input
+            className="filter-toolbar__search"
+            placeholder={searchPlaceholder}
+            value={search}
+            onChange={(e) => onSearchChange(e.target.value)}
+          />
+          {search && (
+            <button
+              type="button"
+              className="filter-toolbar__search-clear"
+              onClick={() => onSearchChange("")}
+              aria-label="Clear search"
+            >
+              ✕
+            </button>
+          )}
+        </div>
         <div className="filter-toolbar__filters">
           {filters.map((f) => (
             <button
