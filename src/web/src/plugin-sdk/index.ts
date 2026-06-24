@@ -23,6 +23,11 @@ export interface PluginUi {
   Card: React.ComponentType<React.HTMLAttributes<HTMLDivElement>>;
   /** Themed text input, stretches to container width. */
   Input: React.ComponentType<React.InputHTMLAttributes<HTMLInputElement>>;
+  /** Search input with inline ✕ clear button. Requires controlled `value` + `onChange`.
+   *  Pass `onClear` to handle clearing without a synthetic event; pass `wrapperClassName` to style the outer div. */
+  SearchInput: React.ComponentType<
+    React.InputHTMLAttributes<HTMLInputElement> & { wrapperClassName?: string; onClear?: () => void }
+  >;
   /** Small inline badge/chip. Pass `color` to override background. */
   Chip: React.ComponentType<React.HTMLAttributes<HTMLSpanElement> & { color?: string }>;
   /** Centered muted placeholder for empty lists or states. */
