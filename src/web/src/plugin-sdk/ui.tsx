@@ -32,6 +32,32 @@ export function Input({ className, ...props }: React.InputHTMLAttributes<HTMLInp
   return <input className={['dh-input', className].filter(Boolean).join(' ')} {...props} />;
 }
 
+export function SearchInput({
+  value,
+  onChange,
+  className,
+  ...props
+}: React.InputHTMLAttributes<HTMLInputElement>) {
+  const handleClear = () =>
+    onChange?.({ target: { value: '' } } as React.ChangeEvent<HTMLInputElement>);
+
+  return (
+    <div className={['dh-search-wrap', className].filter(Boolean).join(' ')}>
+      <input
+        className="dh-input dh-search-input"
+        value={value}
+        onChange={onChange}
+        {...props}
+      />
+      {value && (
+        <button className="dh-search-clear" onClick={handleClear} aria-label="Clear search">
+          ✕
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function Chip({
   color,
   style,

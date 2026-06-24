@@ -1,17 +1,18 @@
 # Changelog
 
 All notable changes are documented here.
-Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## 1.0 – 2026-05-02
 
 ### ✨ Added
 
 - Public release — repository is now open source
+- `SearchInput` component in the plugin SDK (`window.__dhSdk.ui.SearchInput`) — themed search input with an inline ✕ clear button; requires controlled `value` + `onChange` props
 
 ### 🔧 Changed
 
 - npm dependencies updated (`npm audit fix`) — 0 vulnerabilities
+- All `FilterToolbar` search inputs now show an inline ✕ clear button on the right when the field is non-empty
 
 ### 🐛 Fixed
 
