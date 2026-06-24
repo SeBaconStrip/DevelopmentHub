@@ -43,6 +43,7 @@ export function FilterToolbar({
           />
           {search && (
             <button
+              type="button"
               className="filter-toolbar__search-clear"
               onClick={() => onSearchChange("")}
               aria-label="Clear search"
