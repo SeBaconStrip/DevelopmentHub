@@ -74,6 +74,37 @@
 }
 .dh-input:focus { border-color: var(--color-primary); }
 
+.dh-search-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 100%;
+}
+
+.dh-search-input {
+  padding-right: 32px;
+}
+
+.dh-search-clear {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 12px;
+  padding: 2px 4px;
+  line-height: 1;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.dh-search-clear:hover {
+  color: var(--text-body);
+  background: var(--surface-muted);
+}
+
 /* ── Chip / Badge ────────────────────────────────────────────────────────── */
 
 .dh-chip {

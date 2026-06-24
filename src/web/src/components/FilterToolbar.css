@@ -19,15 +19,41 @@
   gap: 12px;
 }
 
+.filter-toolbar__search-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
 .filter-toolbar__search {
   width: 280px;
   border: 1px solid var(--input-border);
   border-radius: 8px;
-  padding: 7px 12px;
+  padding: 7px 32px 7px 12px;
   font-size: 13px;
   background: var(--input-bg);
   color: var(--text-primary);
   font-family: inherit;
+}
+
+.filter-toolbar__search-clear {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 12px;
+  padding: 2px 4px;
+  line-height: 1;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.filter-toolbar__search-clear:hover {
+  color: var(--text-primary);
+  background: var(--surface-muted);
 }
 
 .filter-toolbar__filters {
