@@ -16,6 +16,7 @@ All notable changes are documented here.
 
 ### 🐛 Fixed
 
+- Repositories page sort order now matches the dashboard widget — favorites first, then by usage score descending; previously the page sorted alphabetically by name within each group, diverging from the backend and widget order
 - `PatchJsonExecutor` — `{{placeholder}}` rendering now recurses into array elements and nested object string values; previously only top-level string values were rendered, leaving placeholders unexpanded in `set` operations that supply an array or object as the value
 - `PatchJsonExecutor` — when an input name matches a JSON path property name (e.g. input `Path` + path `$.Path` + value `{{Path}}`), the user-provided input value is now used correctly; previously the template could resolve to the wrong value
 
