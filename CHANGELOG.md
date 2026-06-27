@@ -2,6 +2,11 @@
 
 All notable changes are documented here.
 
+> **Note:** Starting with v1.1.0, this file is managed automatically by
+> [release-please](https://github.com/googleapis/release-please) and generated
+> from [Conventional Commits](https://www.conventionalcommits.org/).
+> The history below (v0.1 – v1.0) was written manually before that migration.
+
 ## 1.0 – 2026-05-02
 
 ### ✨ Added

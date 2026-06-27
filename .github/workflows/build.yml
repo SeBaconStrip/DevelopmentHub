@@ -1,12 +1,11 @@
 name: Build & Release
 
 on:
-  push:
-    branches:
-      - main
   pull_request:
     branches:
       - main
+  release:
+    types: [published]
 
 jobs:
   build:
@@ -17,46 +16,17 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          fetch-tags: true
 
-      - name: Fetch all tags
+      - name: Determine version
+        id: version
         shell: bash
         run: |
-          git fetch --tags --force
-          echo "Available tags:"
-          git tag --list | sort -V
-
-      - name: Calculate version
-        id: calc
-        shell: bash
-        run: |
-          # Read major.minor from VERSION file
-          MAJOR_MINOR=$(cat version.txt | tr -d '[:space:]')
-          echo "Major.Minor: $MAJOR_MINOR"
-
-          # Find all tags matching major.minor.* and get the highest patch
-          # Strip optional -ci suffix so both release and ci tags are considered
-          LAST_PATCH=$(git tag --list "${MAJOR_MINOR}.*" \
-            | sed "s/^${MAJOR_MINOR}\.//" \
-            | sed 's/-ci$//' \
-            | { grep -E '^[0-9]+$' || true; } \
-            | sort -n \
-            | tail -1)
-
-          if [ -z "$LAST_PATCH" ]; then
-            # No existing tag for this major.minor → start at 0
-            PATCH=0
+          if [ "${{ github.event_name }}" = "release" ]; then
+            VERSION="${{ github.event.release.tag_name }}"
+            VERSION="${VERSION#v}"
           else
-            PATCH=$((LAST_PATCH + 1))
+            VERSION="$(jq -r '.["."]' .release-please-manifest.json)-ci"
           fi
-
-          VERSION="${MAJOR_MINOR}.${PATCH}"
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            VERSION="${VERSION}-ci"
-          fi
-          echo "Calculated version: $VERSION"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Setup Node.js
@@ -70,15 +40,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "9.0.x"
-
-      - name: Create Git tag
-        shell: bash
-        run: |
-          VERSION="${{ steps.calc.outputs.version }}"
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag "$VERSION"
-          git push origin "$VERSION"
 
       - name: Install frontend dependencies
         working-directory: src/web
@@ -98,7 +59,7 @@ jobs:
       - name: Update Edge extension version
         shell: pwsh
         run: |
-          $version = "${{ steps.calc.outputs.version }}"
+          $version = "${{ steps.version.outputs.version }}"
           $manifestPath = "src/browser-extension/manifest.json"
           $manifest = Get-Content $manifestPath -Raw | ConvertFrom-Json
           $manifest.version = $version
@@ -107,7 +68,7 @@ jobs:
       - name: Package Edge extension
         shell: pwsh
         run: |
-          $version = "${{ steps.calc.outputs.version }}"
+          $version = "${{ steps.version.outputs.version }}"
           $staging = "edge-extension-dist"
           $zipPath = "artifacts/DevelopmentHub-Edge-Extension-$version.zip"
 
@@ -125,13 +86,13 @@ jobs:
         run: |
           dotnet pack src/plugins/DevelopmentHub.Plugins.csproj \
             -c Release \
-            -p:Version=${{ steps.calc.outputs.version }} \
+            -p:Version=${{ steps.version.outputs.version }} \
             -o artifacts/nuget
 
       - name: Pack plugin SDK (npm)
         shell: pwsh
         run: |
-          $version = "${{ steps.calc.outputs.version }}"
+          $version = "${{ steps.version.outputs.version }}"
           $pkgPath = "src/web/src/plugin-sdk/package.json"
           $pkg = Get-Content $pkgPath -Raw | ConvertFrom-Json
           $pkg.version = $version
@@ -145,7 +106,7 @@ jobs:
       - name: Update installer version
         shell: pwsh
         run: |
-          $ver = "${{ steps.calc.outputs.version }}"
+          $ver = "${{ steps.version.outputs.version }}"
           (Get-Content src\installer\DevelopmentHub.iss) `
             -replace '#define MyAppVersion ".*"', "#define MyAppVersion `"$ver`"" |
             Set-Content src\installer\DevelopmentHub.iss
@@ -156,44 +117,26 @@ jobs:
           $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
           & $iscc src\installer\DevelopmentHub.iss
 
-      - name: Upload installer artifact (PR only)
+      - name: Upload artifacts (PR only)
         if: github.event_name == 'pull_request'
         uses: actions/upload-artifact@v4
         with:
-          name: DevelopmentHub-Setup-${{ steps.calc.outputs.version }}
-          path: src/installer/output/DevelopmentHub-Setup-*.exe
-          retention-days: 1
-
-      - name: Upload Edge extension artifact (PR only)
-        if: github.event_name == 'pull_request'
-        uses: actions/upload-artifact@v4
-        with:
-          name: DevelopmentHub-Edge-Extension-${{ steps.calc.outputs.version }}
-          path: artifacts/DevelopmentHub-Edge-Extension-*.zip
-          retention-days: 1
-
-      - name: Upload plugin SDK artifacts (PR only)
-        if: github.event_name == 'pull_request'
-        uses: actions/upload-artifact@v4
-        with:
-          name: DevelopmentHub-PluginSDK-${{ steps.calc.outputs.version }}
+          name: DevelopmentHub-${{ steps.version.outputs.version }}
           path: |
-            artifacts/nuget/*.nupkg
-            artifacts/npm/*.tgz
-          retention-days: 1
-
-      - name: Create GitHub Release
-        if: github.event_name == 'push'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ steps.calc.outputs.version }}
-          name: DevelopmentHub v${{ steps.calc.outputs.version }}
-          prerelease: false
-          generate_release_notes: true
-          files: |
             src/installer/output/DevelopmentHub-Setup-*.exe
             artifacts/DevelopmentHub-Edge-Extension-*.zip
             artifacts/nuget/*.nupkg
             artifacts/npm/*.tgz
+          retention-days: 1
+
+      - name: Upload release assets
+        if: github.event_name == 'release'
+        shell: bash
+        run: |
+          gh release upload "${{ github.event.release.tag_name }}" \
+            src/installer/output/DevelopmentHub-Setup-*.exe \
+            artifacts/DevelopmentHub-Edge-Extension-*.zip \
+            artifacts/nuget/*.nupkg \
+            artifacts/npm/*.tgz
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
