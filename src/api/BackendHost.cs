@@ -128,6 +128,7 @@ public static class BackendHost
         builder.Services.AddSingleton<IWorkflowService, WorkflowService>();
         builder.Services.AddSingleton<ApiTokenService>();
         builder.Services.AddSingleton<IAppVersionService, AppVersionService>();
+        builder.Services.AddScoped<IWindowsServiceService, WindowsServiceService>();
 
         // ── Plugins ───────────────────────────────────────────────────────────
         var pluginsPath = startupUserConfig?.PluginsFolderPath ?? string.Empty;

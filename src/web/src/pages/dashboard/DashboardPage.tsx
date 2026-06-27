@@ -12,6 +12,7 @@ import { configApi } from "../../api/config";
 import { fetchPullRequests } from "../../api/pullRequests";
 import { todosApi } from "../../api/todos";
 import { workflowsApi } from "../../api/workflows";
+import { windowsServicesApi } from "../../api/windowsServices";
 import { useTodos } from "../../hooks/useTodos";
 import { useTodoSyncHub } from "../../hooks/useTodoSyncHub";
 import { useRepositoryScan } from "../../hooks/useRepositoryScan";
@@ -30,6 +31,7 @@ import type {
   TodoItem,
   WorkflowDefinition,
   WorkflowExecution,
+  WindowsServiceInfo,
 } from "../../types";
 
 import { Panel } from "./components/Panel";
@@ -38,6 +40,7 @@ import { PullRequestsWidget } from "./widgets/PullRequestsWidget";
 import { QuickLinksWidget } from "./widgets/QuickLinksWidget";
 import { TodosWidget } from "./widgets/TodosWidget";
 import { WorkflowsWidget } from "./widgets/WorkflowsWidget";
+import { WindowsServicesWidget } from "./widgets/WindowsServicesWidget";
 import { WorkflowInputModal } from "./widgets/WorkflowInputModal";
 import { WorkflowExecutionModal } from "./widgets/WorkflowExecutionModal";
 
@@ -123,6 +126,30 @@ export default function DashboardPage() {
     queryKey: ["workflows"],
     queryFn: workflowsApi.list,
   });
+
+  const { data: windowsServices = [] } = useQuery<WindowsServiceInfo[]>({
+    queryKey: ["windows-services"],
+    queryFn: windowsServicesApi.getStatuses,
+    refetchInterval: 15_000,
+  });
+
+  const [windowsServiceError, setWindowsServiceError] = useState<string | null>(null);
+  const [pendingWindowsService, setPendingWindowsService] = useState<string | null>(null);
+
+  async function handleWindowsServiceAction(name: string, action: "start" | "stop" | "restart") {
+    setWindowsServiceError(null);
+    setPendingWindowsService(name);
+    try {
+      if (action === "start") await windowsServicesApi.start(name);
+      else if (action === "stop") await windowsServicesApi.stop(name);
+      else await windowsServicesApi.restart(name);
+      queryClient.invalidateQueries({ queryKey: ["windows-services"] });
+    } catch (err) {
+      setWindowsServiceError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setPendingWindowsService(null);
+    }
+  }
 
   const {
     createTodo,
@@ -219,6 +246,30 @@ export default function DashboardPage() {
         />
       ),
       badge: todos.filter((todo) => !todo.completed).length,
+    },
+    windowsServices: {
+      onTitleClick: () => navigate("/windows-services"),
+      body: (
+        <WindowsServicesWidget
+          services={windowsServices}
+          pendingService={pendingWindowsService}
+          error={windowsServiceError}
+          onClearError={() => setWindowsServiceError(null)}
+          onStart={(name) => handleWindowsServiceAction(name, "start")}
+          onStop={(name) => handleWindowsServiceAction(name, "stop")}
+          onRestart={(name) => handleWindowsServiceAction(name, "restart")}
+        />
+      ),
+      badge: windowsServices.filter((s) => s.status === "Running").length,
+      headerActions: (
+        <button
+          className="panel-action-btn"
+          onClick={() => queryClient.invalidateQueries({ queryKey: ["windows-services"] })}
+          title="Refresh"
+        >
+          ↻
+        </button>
+      ),
     },
     workflows: {
       onTitleClick: () => navigate("/workflows"),

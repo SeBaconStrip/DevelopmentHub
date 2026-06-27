@@ -122,6 +122,12 @@ export function AppLayout({
           >
             Quick Links
           </NavLink>
+          <NavLink
+            to="/windows-services"
+            className={({ isActive }) => "app-nav-link" + (isActive ? " app-nav-link--active" : "")}
+          >
+            Services
+          </NavLink>
           {pluginNavLinks.map((link) => (
             <NavLink
               key={link.path}

@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import type { LayoutItem } from '../types';
 
 export type WidgetId = string;
-export const BUILTIN_WIDGET_IDS = ['repositories', 'pullRequests', 'quickLinks', 'todos', 'workflows'] as const;
+export const BUILTIN_WIDGET_IDS = ['repositories', 'pullRequests', 'quickLinks', 'todos', 'workflows', 'windowsServices'] as const;
 export type BuiltinWidgetId = typeof BUILTIN_WIDGET_IDS[number];
 export type ThemeId = 'violet' | 'dark' | 'vscode' | 'ocean' | 'orange' | 'nature';
 
@@ -12,25 +12,28 @@ export type BreakpointLayouts = Record<string, LayoutItem[]>;
 
 export const DEFAULT_LAYOUTS: BreakpointLayouts = {
   lg: [
-    { i: 'repositories', x: 0, y: 0,  w: 8, h: 10 },
-    { i: 'pullRequests',  x: 8, y: 0,  w: 4, h: 10 },
-    { i: 'quickLinks',   x: 8, y: 10, w: 4, h: 6  },
-    { i: 'todos',        x: 0, y: 10, w: 4, h: 6  },
-    { i: 'workflows',    x: 4, y: 10, w: 4, h: 6  },
+    { i: 'repositories',   x: 0, y: 0,  w: 8, h: 10 },
+    { i: 'pullRequests',   x: 8, y: 0,  w: 4, h: 10 },
+    { i: 'quickLinks',     x: 8, y: 10, w: 4, h: 6  },
+    { i: 'todos',          x: 0, y: 10, w: 4, h: 6  },
+    { i: 'workflows',      x: 4, y: 10, w: 4, h: 6  },
+    { i: 'windowsServices', x: 0, y: 16, w: 6, h: 7  },
   ],
   md: [
-    { i: 'repositories', x: 0, y: 0,  w: 6, h: 10 },
-    { i: 'pullRequests',  x: 6, y: 0,  w: 4, h: 10 },
-    { i: 'quickLinks',   x: 0, y: 10, w: 5, h: 6  },
-    { i: 'todos',        x: 5, y: 10, w: 5, h: 6  },
-    { i: 'workflows',    x: 0, y: 16, w: 10, h: 6 },
+    { i: 'repositories',   x: 0, y: 0,  w: 6, h: 10 },
+    { i: 'pullRequests',   x: 6, y: 0,  w: 4, h: 10 },
+    { i: 'quickLinks',     x: 0, y: 10, w: 5, h: 6  },
+    { i: 'todos',          x: 5, y: 10, w: 5, h: 6  },
+    { i: 'workflows',      x: 0, y: 16, w: 10, h: 6 },
+    { i: 'windowsServices', x: 0, y: 22, w: 10, h: 7 },
   ],
   sm: [
-    { i: 'repositories', x: 0, y: 0,  w: 6, h: 8 },
-    { i: 'pullRequests',  x: 0, y: 8,  w: 6, h: 8 },
-    { i: 'quickLinks',   x: 0, y: 16, w: 6, h: 6 },
-    { i: 'todos',        x: 0, y: 22, w: 6, h: 6 },
-    { i: 'workflows',    x: 0, y: 28, w: 6, h: 6 },
+    { i: 'repositories',   x: 0, y: 0,  w: 6, h: 8 },
+    { i: 'pullRequests',   x: 0, y: 8,  w: 6, h: 8 },
+    { i: 'quickLinks',     x: 0, y: 16, w: 6, h: 6 },
+    { i: 'todos',          x: 0, y: 22, w: 6, h: 6 },
+    { i: 'workflows',      x: 0, y: 28, w: 6, h: 6 },
+    { i: 'windowsServices', x: 0, y: 34, w: 6, h: 7 },
   ],
 };
 
@@ -64,6 +67,7 @@ const defaultWidgets: DashboardWidget[] = [
   { id: 'quickLinks', label: 'Quick Links', icon: '\uD83D\uDD17', enabled: true },
   { id: 'todos', label: 'Todos', icon: '\u2705', enabled: true },
   { id: 'workflows', label: 'Workflows', icon: '\u2699', enabled: true },
+  { id: 'windowsServices', label: 'Windows Services', icon: '\u26a1', enabled: true },
 ];
 
 const THEME_IDS: ThemeId[] = ['violet', 'dark', 'vscode', 'ocean', 'orange', 'nature'];

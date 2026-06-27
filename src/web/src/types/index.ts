@@ -97,6 +97,7 @@ export interface AppConfig {
   todoSyncIntervalSeconds: number;
   pluginsFolderPath: string;
   pluginSettings: Record<string, Record<string, string>>;
+  windowsServicePatterns: string[];
 }
 
 export interface CustomLink {
@@ -189,5 +190,27 @@ export interface WorkflowLogLine {
   text: string;
   stream: string;
   timestamp: string;
+}
+
+export type WindowsServiceStatus =
+  | 'Running'
+  | 'Stopped'
+  | 'Paused'
+  | 'StartPending'
+  | 'StopPending'
+  | 'ContinuePending'
+  | 'PausePending';
+
+export interface WindowsServiceInfo {
+  name: string;
+  displayName: string;
+  status: WindowsServiceStatus;
+  canStart: boolean;
+  canStop: boolean;
+}
+
+export interface WindowsServiceSummary {
+  name: string;
+  displayName: string;
 }
 

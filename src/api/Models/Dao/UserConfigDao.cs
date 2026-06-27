@@ -30,6 +30,9 @@ public class UserConfigDao
     /// <summary>Configurable plugins directory (overrides AppSettings.PluginsPath).</summary>
     public string PluginsFolderPath { get; set; } = string.Empty;
 
+    /// <summary>Service name patterns to monitor (exact names or wildcards, e.g. "W3SVC", "*SQL*").</summary>
+    public List<string> WindowsServicePatterns { get; set; } = [];
+
     /// <summary>
     /// Per-plugin settings. Outer key = pluginId.
     /// Inner dict: "enabled" ("true"/"false") + plugin-declared setting keys.

@@ -53,7 +53,8 @@ public class ConfigController(
             TodoSyncProviders = RedactProviderSecrets(cfg.TodoSyncProviders),
             TodoSyncIntervalSeconds = cfg.TodoSyncIntervalSeconds,
             PluginsFolderPath = cfg.PluginsFolderPath,
-            PluginSettings = cfg.PluginSettings
+            PluginSettings = cfg.PluginSettings,
+            WindowsServicePatterns = cfg.WindowsServicePatterns ?? []
         });
     }
 
@@ -105,6 +106,11 @@ public class ConfigController(
             // Only sync the "enabled" flag from the form — all other per-plugin keys
             // are managed by PUT /api/plugins/{id}/settings and must not be overwritten.
             current.PluginSettings = MergePluginEnabledFlags(current.PluginSettings, dto.PluginSettings);
+            current.WindowsServicePatterns = (dto.WindowsServicePatterns ?? [])
+                .Where(p => !string.IsNullOrWhiteSpace(p))
+                .Select(p => p.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
 
             await userConfigService.SaveAsync(current);
             await repositoryService.RemoveOrphanedAsync(current.RepositoryRoots);
