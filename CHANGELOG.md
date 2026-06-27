@@ -1,35 +1,41 @@
 # Changelog
 
-All notable changes are documented here.
+All notable changes are documented here. Starting with v1.1.0 this file is
+managed automatically by [release-please](https://github.com/googleapis/release-please)
+from [Conventional Commits](https://www.conventionalcommits.org/).
 
-> **Note:** Starting with v1.1.0, this file is managed automatically by
-> [release-please](https://github.com/googleapis/release-please) and generated
-> from [Conventional Commits](https://www.conventionalcommits.org/).
-> The history below (v0.1 – v1.0) was written manually before that migration.
+<!-- release-please inserts new version sections above this comment -->
 
-## 1.0 – 2026-05-02
+---
 
-### ✨ Added
+> **Historical changelog** — entries below were written manually before
+> release-please was adopted (v0.1.0 – v1.0.0).
+
+---
+
+## [1.0.0] (2026-05-02)
+
+### Features
 
 - Public release — repository is now open source
 - `SearchInput` component in the plugin SDK (`window.__dhSdk.ui.SearchInput`) — themed search input with an inline ✕ clear button; requires controlled `value` + `onChange` props
 
-### 🔧 Changed
-
-- npm dependencies updated (`npm audit fix`) — 0 vulnerabilities
-- All `FilterToolbar` search inputs now show an inline ✕ clear button on the right when the field is non-empty
-
-### 🐛 Fixed
+### Bug Fixes
 
 - Repositories page sort order now matches the dashboard widget — favorites first, then by usage score descending; previously the page sorted alphabetically by name within each group, diverging from the backend and widget order
 - `PatchJsonExecutor` — `{{placeholder}}` rendering now recurses into array elements and nested object string values; previously only top-level string values were rendered, leaving placeholders unexpanded in `set` operations that supply an array or object as the value
 - `PatchJsonExecutor` — when an input name matches a JSON path property name (e.g. input `Path` + path `$.Path` + value `{{Path}}`), the user-provided input value is now used correctly; previously the template could resolve to the wrong value
 
+### Miscellaneous Chores
+
+- npm dependencies updated (`npm audit fix`) — 0 vulnerabilities
+- All `FilterToolbar` search inputs now show an inline ✕ clear button on the right when the field is non-empty
+
 ---
 
-## 0.18 – 2026-04-06
+## [0.18.0] (2026-04-06)
 
-### ✨ Added
+### Features
 
 - Workflow tags — add a `"tags"` array to any workflow JSON file to label and group workflows (e.g. `"tags": ["deploy", "build"]`)
 - Tag chips displayed on each workflow card in both the dashboard widget and the Workflows page
@@ -37,7 +43,7 @@ All notable changes are documented here.
 - Clicking a tag chip on a workflow card on the Workflows page activates the corresponding tag filter
 - Dashboard scroll padding — the dashboard page adds extra bottom padding automatically when the content is tall enough to scroll, preventing the last widget from sitting flush against the viewport edge
 
-### 🐛 Fixed
+### Bug Fixes
 
 - Workflow tags were silently dropped by the `Normalize` method in `WorkflowService` when reconstructing the `WorkflowDefinition` object — `Tags` is now forwarded correctly
 - Adding a new repository root path no longer requires F5 to see the updated list — the frontend now subscribes to a new `ScanStarted` SignalR event and shows a spinner on the refresh button while the scan is running; `RepositoriesUpdated` clears the spinner and reloads the list as before
@@ -47,7 +53,7 @@ All notable changes are documented here.
 - DevTools per F12 öffnen — auch in der Production-Version öffnet F12 das WebView2-DevTools-Fenster; `AreDevToolsEnabled` ist jetzt immer aktiviert
 - Plugin-Ladefehler in den Einstellungen sichtbar — lädt ein Plugin-Bundle nicht (Netzwerkfehler, Laufzeitfehler im Bundle), erscheint unter dem entsprechenden Plugin-Eintrag ein roter Hinweistext mit der Fehlermeldung; `getPluginLoadErrors()` in `PluginLoader.ts` exportiert eine readonly Map (pluginId → Fehlermeldung)
 
-### 🔧 Changed
+### Miscellaneous Chores
 
 - Refresh button on both the Repositories dashboard widget and the Repositories page becomes a spinner while a scan is in progress, replacing the separate scan-banner approach
 - `.scan-spinner` added as a shared global CSS utility in `index.css`, available across all pages without per-component CSS imports
@@ -55,27 +61,26 @@ All notable changes are documented here.
 
 ---
 
-## 0.17 – 2026-04-06
+## [0.17.0] (2026-04-06)
 
-### ✨ Added
+### Features
 
 - Unit test suite — `src/tests/` (xUnit, Moq, FluentAssertions) covering `TodoService`, `UserConfigService`, `RepositoryService`, `PullRequestService`, `WorkflowService`, and workflow executors (`CopyExecutor`, `ExtractArchiveExecutor`, `PatchJsonExecutor`); 80 tests total
 - Frontend test suite — `src/web/src/__tests__/` (Vitest, React Testing Library) covering API clients (`client`, `todos`, `repositories`), hooks (`useTodos`, `useRepositoryScan`), and utilities (`repositoryUtils`)
 - CI test steps — backend (`dotnet test`) and frontend (`npm test`) now run on every PR and push before the publish step, blocking the build on failure
 
-### 🔧 Changed
+### Miscellaneous Chores
 
 - Architecture diagram in `README.md` replaced with a Mermaid flowchart showing the WPF shell → WebView2 → Kestrel → plugin/workflow/external-service relationships
 - `README.md` updated with `CONTRIBUTING.md` link in the documentation table
 - `CONTRIBUTING.md` added — covers setup, project structure, PR guidelines, and quick guides for adding workflow steps and plugins
 - `LICENSE` (MIT) added
-- `TODO.md` added to track remaining public-release improvements
 
 ---
 
-## 0.16 – 2026-04-04
+## [0.16.0] (2026-04-04)
 
-### ✨ Added
+### Features
 
 - Per-plugin settings pages — each plugin with declared `settings[]` gets a dedicated sub-page under **Settings → Plugins → _Plugin Name_**; settings save immediately on change without a Save button
 - `GET /api/plugins/{id}/settings` and `PUT /api/plugins/{id}/settings` — dedicated endpoints that own all non-`enabled` plugin settings; `PUT /api/config` now only manages the `enabled` flag per plugin
@@ -83,7 +88,14 @@ All notable changes are documented here.
 - `apiFetch` exposed on `window.__dhSdk` — authenticated `fetch` wrapper that attaches the required `X-Dev-Hub-Token` header; plugins should use this instead of raw `fetch`
 - Counter plugin (`src/plugins/counter-plugin/`) replaces the old example plugin — demonstrates a configurable step setting read live via `useQuery`
 
-### 🔧 Changed
+### Bug Fixes
+
+- Plugin folder not loading on startup when the path was stored in LiteDB — the startup DB read now happens before the singleton opens the file, avoiding the exclusive lock
+- Plugin settings reverting to wrong values on reopening the settings modal — caused by `PUT /api/config` overwriting all `PluginSettings`; fixed by `MergePluginEnabledFlags()`
+- `ReferenceError: Field is not defined` crash when opening plugin settings — `Field` was removed from the import in `SettingsSectionPlugins.tsx` but was still referenced on the folder path input
+- Plugin settings not applying without a page reload — counter plugin bundle was stale; fixed by running `npm run build` and introducing `BundleMtime`-based cache-busting as a permanent solution
+
+### Miscellaneous Chores
 
 - Plugin settings are now split from host config: `PUT /api/config` merges only the `enabled` flag using `MergePluginEnabledFlags()`; all other setting keys are preserved, preventing settings from reverting when the config modal is saved
 - Plugin bundle endpoint sets `Cache-Control: no-store` so the browser never serves a stale bundle
@@ -92,18 +104,11 @@ All notable changes are documented here.
 - Example plugin replaced with the counter plugin; old `plugins/example-plugin/` and `src/plugins/example-plugin/` directories removed
 - Plugin documentation fully updated: `overview.md`, `manifest.md`, `sdk-reference.md`, `frontend.md`, `getting-started.md`, `examples.md`, `troubleshooting.md`, `index.md`
 
-### 🐛 Fixed
-
-- Plugin folder not loading on startup when the path was stored in LiteDB — the startup DB read now happens before the singleton opens the file, avoiding the exclusive lock
-- Plugin settings reverting to wrong values on reopening the settings modal — caused by `PUT /api/config` overwriting all `PluginSettings`; fixed by `MergePluginEnabledFlags()`
-- `ReferenceError: Field is not defined` crash when opening plugin settings — `Field` was removed from the import in `SettingsSectionPlugins.tsx` but was still referenced on the folder path input
-- Plugin settings not applying without a page reload — counter plugin bundle was stale; fixed by running `npm run build` and introducing `BundleMtime`-based cache-busting as a permanent solution
-
 ---
 
-## 0.15 – 2026-03-29
+## [0.15.0] (2026-03-29)
 
-### ✨ Added
+### Features
 
 - Workflow-level elevation — set `runElevated: true` on the workflow to issue a single UAC prompt at startup; all steps that require admin rights run through a shared elevated helper process for the duration of the workflow with no further prompts
 - Elevated helper communicates with the main process over a TCP loopback connection (non-elevated process is the server on a random OS-assigned port) — avoids named-pipe access restrictions between elevation levels
@@ -113,13 +118,7 @@ All notable changes are documented here.
 - `variables` block — declare static key-value pairs inside the workflow definition; available as `{{placeholders}}` in all step fields without prompting the user
 - Built-in variables `workflowDir` and `workflowFile` — automatically injected into every workflow from the location of its JSON file; useful for referencing scripts or config files stored alongside the workflow
 
-### 🔧 Changed
-
-- Variable resolution follows a four-tier priority chain: declared `variables` → built-in variables → input defaults → user-provided input values
-- Workflow-level `runElevated` supersedes per-step `runElevated` flags — when the workflow-level worker is active, individual step flags are ignored and all privileged operations route through the shared helper
-- Removed `requiresConfirmation` — the field had no meaningful use case and has been removed from the schema, backend, and frontend
-
-### 🐛 Fixed
+### Bug Fixes
 
 - `GET /api/icon-extractor`: path is now resolved to an absolute path before use, neutralising directory traversal sequences; requests for file types outside `.exe`, `.dll`, `.ico`, and `.com` are rejected
 - `RepositoryService.OpenAsync`: caller-supplied `EntryPointPath` is validated to be within the repository directory before being passed to the launcher; scanned entry points remain trusted
@@ -127,11 +126,17 @@ All notable changes are documented here.
 - All exception `Message` values that were previously returned to clients in API error responses are replaced with generic messages; full exceptions continue to be logged server-side
 - `RestartWindowsServiceExecutor`: the validated service name is now assigned to a `$ServiceName` PowerShell variable once at script startup; all cmdlets reference the variable rather than re-interpolating user data into command text
 
+### Miscellaneous Chores
+
+- Variable resolution follows a four-tier priority chain: declared `variables` → built-in variables → input defaults → user-provided input values
+- Workflow-level `runElevated` supersedes per-step `runElevated` flags — when the workflow-level worker is active, individual step flags are ignored and all privileged operations route through the shared helper
+- Removed `requiresConfirmation` — the field had no meaningful use case and has been removed from the schema, backend, and frontend
+
 ---
 
-## 0.14 – 2026-03-29
+## [0.14.0] (2026-03-29)
 
-### ✨ Added
+### Features
 
 - Microsoft To Do sync — bidirectional todo synchronisation via Microsoft Graph API; connect with an Azure AD app registration (device code flow, no redirect server required)
 - Background sync service runs on a configurable interval (default 300 s, minimum 30 s); interval is re-read from config each cycle without a restart
@@ -139,15 +144,15 @@ All notable changes are documented here.
 - Todo sync settings section — connect/disconnect, list picker, manual "Sync Now" button, and sync interval control
 - Soft-delete: todos cleared or deleted locally are hidden immediately and removed from the remote provider on the next sync cycle, preventing re-pull
 
-### 🔧 Changed
+### Miscellaneous Chores
 
 - Conflict resolution uses last-write-wins (`LocalUpdatedAt` vs `RemoteLastModifiedAt`); falls back to field-level comparison when the provider timestamp does not update on status changes
 
 ---
 
-## 0.13 – 2026-03-27
+## [0.13.0] (2026-03-27)
 
-### ✨ Added
+### Features
 
 - Workflow `callWorkflow` step — invoke another workflow inline as a sub-workflow; its steps run as part of the parent execution with no separate execution record
 - Sub-workflow inputs are passed explicitly via an `inputs` map on the step; values support `{{placeholder}}` substitution from the parent workflow
@@ -159,13 +164,19 @@ All notable changes are documented here.
 
 ---
 
-## 0.12 – 2026-03-24
+## [0.12.0] (2026-03-24)
 
-### ✨ Added
+### Features
 
 - WebView2 bridge typed via `interface Window` declaration — `window.chrome?.webview?.postMessage` is now fully type-safe, `as any` cast removed
 
-### 🔧 Changed
+### Bug Fixes
+
+- Unused TypeScript imports (`WidgetId`, `UseMutationResult`) caused strict-mode build errors in CI — removed
+- Dead `pullRequestsApi.getOpen()` export removed from `pullRequests.ts` — only `fetchPullRequests` was ever used
+- Unused `ScriptDto`, `ExecutionDto`, and `ExecutionDetailDto` types deleted — were never referenced
+
+### Code Refactoring
 
 - Frontend shared components extracted: `ErrorBar`, `FilterToolbar` (with consolidated CSS replacing five per-page copies), `Modal`, `OpenerIcon`, and `TagEditor` moved to `src/components/`
 - `DashboardSettingsModal` decomposed from 1 155 lines to 306 — each settings tab is now a dedicated component under `src/components/settings/`
@@ -178,17 +189,11 @@ All notable changes are documented here.
 - Source tree reorganized: `ext/` → `src/browser-extension/`, `installer/` → `src/installer/`, `plugins/example-plugin/` → `src/plugins/example-plugin/`
 - Solution folder wrappers removed — the four projects now appear directly under the solution root in Solution Explorer instead of each being nested inside a named folder
 
-### 🐛 Fixed
-
-- Unused TypeScript imports (`WidgetId`, `UseMutationResult`) caused strict-mode build errors in CI — removed
-- Dead `pullRequestsApi.getOpen()` export removed from `pullRequests.ts` — only `fetchPullRequests` was ever used
-- Unused `ScriptDto`, `ExecutionDto`, and `ExecutionDetailDto` types deleted — were never referenced
-
 ---
 
-## 0.11 – 2026-03-24
+## [0.11.0] (2026-03-24)
 
-### ✨ Added
+### Features
 
 - Plugin system — third-party plugins can extend DevelopmentHub with custom dashboard widgets and full pages without modifying the host application
 - `manifest.json` per plugin declares the plugin id, version, minimum host version, backend assembly, frontend bundle, widget contributions, and route contributions
@@ -204,27 +209,9 @@ All notable changes are documented here.
 
 ---
 
-## 0.11 – 2026-03-24
+## [0.10.0] (2026-03-23)
 
-### ✨ Added
-
-- Plugin system — third-party plugins can extend DevelopmentHub with custom dashboard widgets and full pages without modifying the host application
-- `manifest.json` per plugin declares the plugin id, version, minimum host version, backend assembly, frontend bundle, widget contributions, and route contributions
-- Backend plugin interface (`IPlugin`) — plugins implement `ConfigureServices` and `Configure` to register ASP.NET Core services and endpoints; each plugin is loaded in an isolated `AssemblyLoadContext` to prevent assembly conflicts
-- `PluginLoader` scans a configured plugins directory, reads each `manifest.json`, loads the backend assembly if present, and registers all `IPlugin` implementations
-- `PluginRegistry` tracks loaded plugins and exposes their manifests to the host API
-- Frontend plugin loading — the host injects a `__dhSdk` object on `window` exposing React, TanStack Query, Zustand, React Router, the host API base path, and a set of pre-built themed UI components; each plugin's JS bundle is loaded dynamically and calls `__dhSdk.plugin.registerWidget` / `registerRoute` to contribute its UI
-- Themed UI component set available to plugins: `Button`, `Card`, `Input`, `Chip`, `Empty`, `PageRoot`, `Spinner`
-- `@developmenthub/plugin-sdk` npm package — TypeScript type definitions for the entire `DhSdk` interface; install as a dev dependency in any plugin project for full type safety
-- `DevelopmentHub.Plugins` NuGet package — ships `IPlugin`, `PluginManifest`, and related contracts; reference with `ExcludeAssets="runtime"` so the host assembly is not copied into the plugin output
-- Both SDK packages published as CI artifacts on every PR and attached to GitHub Releases on main push
-- Example plugin (`src/plugins/example-plugin/`) demonstrating a backend controller, a dashboard widget, and a full page built against both SDKs
-
----
-
-## 0.10 – 2026-03-23
-
-### ✨ Added
+### Features
 
 - Repository tags — custom labels can be added and removed per repository; stored in LiteDB via `PATCH /api/repositories/{id}/tags`
 - Tag column in the Repositories page with an inline editor: click `+` to type a tag, Enter/Blur to save, `×` to remove
@@ -237,16 +224,7 @@ All notable changes are documented here.
 - Native file-open dialog for browsing executable and icon files (`GET /api/file-picker`), separate from the existing folder picker
 - Visual Studio instance reuse — when opening a `.sln` file, the app scans the Windows Running Object Table for a running VS instance that already has the solution loaded and activates it instead of opening a new window; falls back to a fresh launch when none is found
 
-### 🔧 Changed
-
-- Open With icons in the Repositories page are now always rendered in fixed positions (hidden via `visibility: hidden` when not applicable) so all icons stay vertically aligned across every row
-- Text selection disabled globally via `user-select: none` on `body`; re-enabled for `input`, `textarea`, and `contenteditable` elements
-- Settings modal widened to 1020 px so opener rows fit without wrapping
-- Opener icon buttons and the Explorer icon rendered in a single unified grid cell in the Repositories dashboard widget, giving all icons identical spacing and size (20 px) across every row
-- `item-open-icon` buttons given a fixed 28 × 28 px footprint so icon buttons are consistently sized regardless of icon type
-- Activating a maximised Visual Studio window no longer restores it to normal size — `ShowWindowAsync` is only called when the window is actually minimised
-
-### 🐛 Fixed
+### Bug Fixes
 
 - `RepositoryOpeners` was missing from `ConfigDto`, so opener settings were silently discarded on every save and never returned to the frontend — openers are now fully round-tripped through the API
 - `IconPath` field was absent from `RepositoryOpenerDto`, preventing it from being persisted or served
@@ -257,11 +235,20 @@ All notable changes are documented here.
 - git startup failure (e.g. `0xc0000142` DLL init error, often triggered without network) showed a raw Windows system dialog — the OS error popup is now suppressed via `SetErrorMode` and the failure is reported as a clean `GitFailedToStart` issue on the repository
 - After installing a new version, the WebView2 could serve a cached `index.html` requiring a manual F5 reload — `Cache-Control: no-cache` is now set on all HTML responses so the frontend is always fetched fresh
 
+### Miscellaneous Chores
+
+- Open With icons in the Repositories page are now always rendered in fixed positions (hidden via `visibility: hidden` when not applicable) so all icons stay vertically aligned across every row
+- Text selection disabled globally via `user-select: none` on `body`; re-enabled for `input`, `textarea`, and `contenteditable` elements
+- Settings modal widened to 1020 px so opener rows fit without wrapping
+- Opener icon buttons and the Explorer icon rendered in a single unified grid cell in the Repositories dashboard widget, giving all icons identical spacing and size (20 px) across every row
+- `item-open-icon` buttons given a fixed 28 × 28 px footprint so icon buttons are consistently sized regardless of icon type
+- Activating a maximised Visual Studio window no longer restores it to normal size — `ShowWindowAsync` is only called when the window is actually minimised
+
 ---
 
-## 0.9 – 2026-03-21
+## [0.9.0] (2026-03-21)
 
-### ✨ Added
+### Features
 
 - Frameless window with custom title bar — minimize, maximize/restore, and close buttons integrated into the dashboard header
 - Double-click header to toggle maximize/restore; dragging from maximized automatically restores and begins moving the window
@@ -277,7 +264,13 @@ All notable changes are documented here.
 - Integrations settings page — GitHub and Azure DevOps credentials moved out of Pull Requests into their own dedicated page
 - Tooltip info icons on all Integrations fields showing field descriptions, required PAT scopes, and which features use each credential
 
-### 🔧 Changed
+### Bug Fixes
+
+- PR widget branch/author/repository columns now truncate with ellipsis instead of overflowing
+- Repository widget branch column now truncates with ellipsis
+- Settings sidebar active item border no longer gets clipped
+
+### Miscellaneous Chores
 
 - Dashboard frontend split into individual widget components (`PullRequestsWidget`, `RepositoriesWidget`, `QuickLinksWidget`, `TodosWidget`, `WorkflowsWidget`)
 - All widgets are now responsive via CSS container queries — columns collapse based on the panel width, not the viewport
@@ -290,19 +283,12 @@ All notable changes are documented here.
 - Resize handles in edit mode replaced with visible accent-colored pills and corner square; default arrow icon suppressed
 - Focus ring removed from nav links and window control buttons
 - Minimize button SVG aligned to match the height of the maximize and close buttons
-- Patch version in CI now counted via `git tag -l` with full tag fetch (`fetch-depth: 0`) instead of the GitHub releases API, fixing always-zero patch numbers
-
-### 🐛 Fixed
-
-- PR widget branch/author/repository columns now truncate with ellipsis instead of overflowing
-- Repository widget branch column now truncates with ellipsis
-- Settings sidebar active item border no longer gets clipped
 
 ---
 
-## 0.8 – 2026-03-17
+## [0.8.0] (2026-03-17)
 
-### ✨ Added
+### Features
 
 - Workflow `copy` step to copy files and folders as part of workflow execution
 - Workflow contracts wired on both backend and frontend (`CopyStep`, `CopyExecutor`, shared API step typing)
@@ -319,7 +305,7 @@ All notable changes are documented here.
 - Optional per-step elevation for Windows service restarts (UAC prompt only for the specific action)
 - Structured documentation under `docs/workflow-engine/`
 
-### 🐛 Fixed
+### Bug Fixes
 
 - Duplicate `JsonDerivedType` registration in workflow step deserialization removed
 - One failing repository no longer aborts the full scan with HTTP 500
@@ -327,48 +313,48 @@ All notable changes are documented here.
 
 ---
 
-## 0.7 – 2026-03-16
+## [0.7.0] (2026-03-16)
 
-### ✨ Added
+### Features
 
 - Todo widget with create, edit, complete, restore, delete, and clear-completed actions
 - Inline links in todos — write text and a URL in a single field, the widget extracts and opens the link directly
 
-### 🔧 Changed
+### Bug Fixes
+
+- Global hotkey toggle reliably brings the window to the foreground, hides when already focused, and restores maximized windows correctly
+
+### Miscellaneous Chores
 
 - Dashboard panel editing allows dragging from the full widget area; resize affordances simplified; minimum width of the quick links panel reduced
 - Focus and panel control styling updated to follow the active theme across grips, close buttons, quick links, and resize borders
 - Todo widget collapsed Done section and cleaner action layout with Font Awesome Free icons
 - Explorer launching reuses an already open Explorer window for the same folder when possible
 
-### 🐛 Fixed
-
-- Global hotkey toggle reliably brings the window to the foreground, hides when already focused, and restores maximized windows correctly
-
 ---
 
-## 0.6 – 2026-03-16
+## [0.6.0] (2026-03-16)
 
-### ✨ Added
+### Features
 
 - Microsoft Edge tab-reuse extension prototype and WebSocket bridge so PR links reuse existing browser tabs
 - Edge extension packaged in CI with manifest version synchronized to the application release version
 
-### 🔧 Changed
+### Bug Fixes
+
+- Dark theme provider icon contrast restored in the pull request widget
+
+### Miscellaneous Chores
 
 - Extension resilience improved with reconnect handling, heartbeats, wake-up alarms, and stale-client filtering
 - Pull request and repository widgets share the same surface styling as quick links
 - VS Code workspace tasks simplified and aligned with the desktop app-based development flow
 
-### 🐛 Fixed
-
-- Dark theme provider icon contrast restored in the pull request widget
-
 ---
 
-## 0.5 – 2026-03-15
+## [0.5.0] (2026-03-15)
 
-### ✨ Added
+### Features
 
 - Pull requests can now be loaded from Azure DevOps and GitHub simultaneously in one merged list
 - Provider icons in the pull request list so GitHub and Azure DevOps entries are visually distinguishable
@@ -376,7 +362,7 @@ All notable changes are documented here.
 - Lightweight backend-to-extension bridge so DevelopmentHub can hand PR URLs to the Edge extension locally
 - GitHub Actions workflow packages the Edge extension as a versioned ZIP artifact attached to releases
 
-### 🔧 Changed
+### Code Refactoring
 
 - Pull request integrations refactored to adapter-based providers instead of Azure DevOps-only logic
 - Pull request settings reworked to a provider-based configuration model
@@ -384,47 +370,47 @@ All notable changes are documented here.
 
 ---
 
-## 0.4 – 2026-03-12
+## [0.4.0] (2026-03-12)
 
-### ✨ Added
+### Features
 
 - Configurable PR refresh interval stored in LiteDB (replaces hardcoded 120 s)
 
-### 🔧 Changed
-
-- Settings modal refactored to sidebar-style navigation with per-panel config pages
-- Frontend repository list updates instantly via SignalR push when a background scan completes
-
-### 🐛 Fixed
+### Bug Fixes
 
 - Repository scan now removes deleted repos from the list; background scan interval re-read on each cycle
 - VS Code now opens `.code-workspace` instead of the folder; Visual Studio uses shell association instead of `devenv.exe`
 
+### Code Refactoring
+
+- Settings modal refactored to sidebar-style navigation with per-panel config pages
+- Frontend repository list updates instantly via SignalR push when a background scan completes
+
 ---
 
-## 0.3 – 2026-03-10
+## [0.3.0] (2026-03-10)
 
-### 🔧 Changed
-
-- Migrated from MongoDB to LiteDB; UI config moved to browser cache
-
-### 🐛 Fixed
+### Bug Fixes
 
 - Repository refresh button
 
+### Code Refactoring
+
+- Migrated from MongoDB to LiteDB; UI config moved to browser cache
+
 ---
 
-## 0.2 – 2026-03-09
+## [0.2.0] (2026-03-09)
 
-### ✨ Added
+### Features
 
 - Theming support with five built-in themes: Violet, Dark, Ocean, Orange, Nature
 
 ---
 
-## 0.1 – initial release
+## [0.1.0] (initial release)
 
-### ✨ Added
+### Features
 
 - Repository list with VS Code, Visual Studio, and Explorer buttons
 - Current branch, ahead/behind display, favorites, and usage-based sorting
