@@ -64,6 +64,8 @@ BREAKING CHANGE: workflow files must be updated to the v2 schema.
 
 Release-please runs on every push to `main` and opens or updates a Release PR that bumps the version in `.release-please-manifest.json` and prepends a changelog entry. Merging that PR causes release-please to create and publish the GitHub Release, which triggers the build workflow to attach artifacts.
 
+`version.txt` in the repo root is maintained automatically by release-please — do not edit it manually.
+
 ## Making Changes
 
 1. Fork the repository and create a branch from `main`.
