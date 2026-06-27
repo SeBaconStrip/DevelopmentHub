@@ -39,12 +39,38 @@ The WPF window opens and loads the React dev server. Frontend changes update ins
 | `src/installer/` | Inno Setup installer script |
 | `docs/` | Documentation — plugin system, workflow engine, frontend architecture |
 
+## Commit Message Convention
+
+This project uses [Conventional Commits](https://www.conventionalcommits.org/) to automate versioning and changelog generation via [release-please](https://github.com/googleapis/release-please).
+
+| Prefix | When to use | Version bump |
+|--------|-------------|--------------|
+| `feat:` | New user-facing feature | minor (`1.0.0` → `1.1.0`) |
+| `fix:` | Bug fix | patch (`1.0.0` → `1.0.1`) |
+| `perf:` | Performance improvement | patch |
+| `refactor:` | Internal restructure, no behaviour change | patch |
+| `docs:` | Documentation only | none (hidden in changelog) |
+| `chore:` | Maintenance, dependency bumps | none (hidden in changelog) |
+| `test:` | Test additions or changes | none (hidden in changelog) |
+| `ci:` | CI/CD changes | none (hidden in changelog) |
+
+For a **breaking change**, append `!` after the type or add `BREAKING CHANGE:` in the commit footer — this triggers a major bump (`1.0.0` → `2.0.0`).
+
+```
+feat!: remove support for legacy workflow format
+
+BREAKING CHANGE: workflow files must be updated to the v2 schema.
+```
+
+Release-please runs on every push to `main` and opens or updates a Release PR that bumps the version in `.release-please-manifest.json` and prepends a changelog entry. Merging that PR causes release-please to create and publish the GitHub Release, which triggers the build workflow to attach artifacts.
+
 ## Making Changes
 
 1. Fork the repository and create a branch from `main`.
 2. Keep changes focused — one feature or fix per pull request.
-3. Test your changes manually before opening a PR.
-4. Write a clear PR description explaining what changed and why.
+3. Use the Conventional Commits format for all commit messages (see above).
+4. Test your changes manually before opening a PR.
+5. Write a clear PR description explaining what changed and why.
 
 The CI pipeline runs on every PR and produces a build artifact (`DevelopmentHub-Setup-*.exe`) you can use to verify the installer.
 
