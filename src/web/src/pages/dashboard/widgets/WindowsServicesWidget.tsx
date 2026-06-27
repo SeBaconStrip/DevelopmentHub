@@ -1,15 +1,16 @@
 import type { WindowsServiceInfo } from "../../../types";
 import { Empty } from "./shared";
+import { ErrorBar } from "../../../components/ErrorBar";
 import "./WindowsServicesWidget.css";
 
-function StatusDot({ status }: { status: string }) {
+function StatusBadge({ status }: { status: string }) {
   const cls =
     status === "Running"
-      ? "wsw-dot--running"
+      ? "wsw-badge--running"
       : status === "Stopped"
-        ? "wsw-dot--stopped"
-        : "wsw-dot--pending";
-  return <span className={`wsw-dot ${cls}`} title={status} />;
+        ? "wsw-badge--stopped"
+        : "wsw-badge--pending";
+  return <span className={`wsw-badge ${cls}`}>{status}</span>;
 }
 
 export function WindowsServicesWidget({
@@ -35,47 +36,38 @@ export function WindowsServicesWidget({
 
   return (
     <div className="wsw-root">
-      {error && (
-        <div className="wsw-error">
-          <span className="wsw-error-text">{error}</span>
-          <button className="wsw-error-dismiss" onClick={onClearError}>✕</button>
-        </div>
-      )}
+      <ErrorBar message={error} onDismiss={onClearError} />
       <div className="wsw-list">
         {services.map((svc) => {
           const busy = pendingService === svc.name;
           return (
-            <div key={svc.name} className="wsw-item">
-              <StatusDot status={svc.status} />
-              <div className="wsw-info">
-                <span className="wsw-display-name">{svc.displayName}</span>
-                <span className="wsw-service-name">{svc.name}</span>
+            <div key={svc.name} className="workflow-card wsw-card">
+              <div className="workflow-copy">
+                <div className="workflow-title-row">
+                  <span className="item-name">{svc.displayName}</span>
+                  <StatusBadge status={svc.status} />
+                </div>
+                <span className="item-meta">{svc.name}</span>
               </div>
               <div className="wsw-btns">
                 <button
-                  className="wsw-btn"
+                  className="btn-ghost wsw-btn"
                   onClick={() => onStart(svc.name)}
                   disabled={busy || !svc.canStart}
                   title="Start"
-                >
-                  ▶
-                </button>
+                >▶</button>
                 <button
-                  className="wsw-btn"
+                  className="btn-ghost wsw-btn"
                   onClick={() => onStop(svc.name)}
                   disabled={busy || !svc.canStop}
                   title="Stop"
-                >
-                  ■
-                </button>
+                >■</button>
                 <button
-                  className="wsw-btn"
+                  className="btn-ghost wsw-btn"
                   onClick={() => onRestart(svc.name)}
                   disabled={busy}
                   title="Restart"
-                >
-                  {busy ? <span className="wsw-spinner" /> : "↺"}
-                </button>
+                >{busy ? <span className="wsw-spinner" /> : "↺"}</button>
               </div>
             </div>
           );

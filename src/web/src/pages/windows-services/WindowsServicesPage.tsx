@@ -2,21 +2,27 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { windowsServicesApi } from "../../api/windowsServices";
 import { configApi } from "../../api/config";
+import { ErrorBar } from "../../components/ErrorBar";
+import { FilterToolbar } from "../../components/FilterToolbar";
 import type { WindowsServiceInfo } from "../../types";
 import "./WindowsServicesPage.css";
+
+type StatusFilter = "all" | "running" | "stopped" | "other";
 
 function StatusBadge({ status }: { status: string }) {
   const cls =
     status === "Running"
-      ? "svc-status--running"
+      ? "svc-badge--running"
       : status === "Stopped"
-        ? "svc-status--stopped"
-        : "svc-status--pending";
-  return <span className={`svc-status ${cls}`}>{status}</span>;
+        ? "svc-badge--stopped"
+        : "svc-badge--pending";
+  return <span className={`svc-badge ${cls}`}>{status}</span>;
 }
 
 export default function WindowsServicesPage() {
   const queryClient = useQueryClient();
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [actionError, setActionError] = useState<string | null>(null);
   const [pendingService, setPendingService] = useState<string | null>(null);
 
@@ -45,91 +51,109 @@ export default function WindowsServicesPage() {
     }
   }
 
+  const runningCount = services.filter((s) => s.status === "Running").length;
+  const stoppedCount = services.filter((s) => s.status === "Stopped").length;
+  const otherCount  = services.filter((s) => s.status !== "Running" && s.status !== "Stopped").length;
+
+  const statusFilters = [
+    { value: "all",     label: `All (${services.length})` },
+    { value: "running", label: `Running${runningCount > 0 ? ` (${runningCount})` : ""}` },
+    { value: "stopped", label: `Stopped${stoppedCount > 0 ? ` (${stoppedCount})` : ""}` },
+    ...(otherCount > 0 ? [{ value: "other", label: `Other (${otherCount})` }] : []),
+  ];
+
+  const filtered = services
+    .filter((s) => {
+      if (statusFilter === "running") return s.status === "Running";
+      if (statusFilter === "stopped") return s.status === "Stopped";
+      if (statusFilter === "other") return s.status !== "Running" && s.status !== "Stopped";
+      return true;
+    })
+    .filter((s) =>
+      !search ||
+      s.displayName.toLowerCase().includes(search.toLowerCase()) ||
+      s.name.toLowerCase().includes(search.toLowerCase()),
+    );
+
   return (
     <div className="svc-page">
       <div className="svc-card">
-        <div className="svc-services-header">
-          <div>
-            <h2 className="svc-section-title">Windows Services</h2>
-            {patterns.length > 0 && (
-              <p className="svc-section-desc">
-                {patterns.length} pattern{patterns.length !== 1 ? "s" : ""} configured ·{" "}
-                configure in <strong>⚙ Settings → Services</strong>
-              </p>
-            )}
-          </div>
+        <FilterToolbar
+          search={search}
+          onSearchChange={setSearch}
+          filter={statusFilter}
+          onFilterChange={(f) => setStatusFilter(f as StatusFilter)}
+          filters={statusFilters}
+          searchPlaceholder="Search by name…"
+          shownCount={filtered.length}
+          totalCount={services.length}
+        >
           <button
-            className="btn-ghost svc-refresh-btn"
+            className="btn-ghost"
             onClick={() => queryClient.invalidateQueries({ queryKey: ["windows-services"] })}
             disabled={isFetching}
             title="Refresh"
           >
-            {isFetching ? <span className="svc-spinner" /> : "↻"}
+            {isFetching ? <span className="svc-spinner" /> : "↻ Refresh"}
           </button>
-        </div>
+        </FilterToolbar>
 
-        {actionError && (
-          <div className="svc-error">
-            <span>{actionError}</span>
-            <button className="svc-error-dismiss" onClick={() => setActionError(null)}>✕</button>
-          </div>
-        )}
-
-        {patterns.length === 0 ? (
-          <div className="svc-empty">
-            No service patterns configured. Open <strong>⚙ Settings → Services</strong> to add service names or patterns.
-          </div>
-        ) : isLoading ? (
-          <div className="svc-empty">Loading…</div>
-        ) : services.length === 0 ? (
-          <div className="svc-empty">No services matched the configured patterns.</div>
-        ) : (
-          <div className="svc-table">
-            <div className="svc-table-head">
-              <span>Display Name</span>
-              <span>Name</span>
-              <span>Status</span>
-              <span>Actions</span>
-            </div>
-            {services.map((svc) => {
-              const busy = pendingService === svc.name;
-              return (
-                <div key={svc.name} className="svc-table-row">
-                  <span className="svc-display-name">{svc.displayName}</span>
-                  <span className="svc-name">{svc.name}</span>
-                  <StatusBadge status={svc.status} />
-                  <div className="svc-actions">
-                    <button
-                      className="btn-ghost svc-action-btn"
-                      onClick={() => runAction(svc.name, "start")}
-                      disabled={busy || !svc.canStart}
-                      title="Start"
-                    >
-                      ▶
-                    </button>
-                    <button
-                      className="btn-ghost svc-action-btn"
-                      onClick={() => runAction(svc.name, "stop")}
-                      disabled={busy || !svc.canStop}
-                      title="Stop"
-                    >
-                      ■
-                    </button>
-                    <button
-                      className="btn-ghost svc-action-btn"
-                      onClick={() => runAction(svc.name, "restart")}
-                      disabled={busy}
-                      title="Restart"
-                    >
-                      {busy ? <span className="svc-spinner" /> : "↺"}
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+        <ErrorBar message={actionError} onDismiss={() => setActionError(null)} />
       </div>
+
+      {patterns.length === 0 ? (
+        <p className="svc-empty">
+          No service patterns configured. Open <strong>⚙ Settings → Services</strong> to add service names or patterns.
+        </p>
+      ) : isLoading ? (
+        <p className="svc-empty">Loading…</p>
+      ) : filtered.length === 0 ? (
+        <p className="svc-empty">No services match.</p>
+      ) : (
+        <div className="svc-table">
+          <div className="svc-th svc-col-display">Display Name</div>
+          <div className="svc-th svc-col-name">Service Name</div>
+          <div className="svc-th svc-col-status">Status</div>
+          <div className="svc-th svc-col-actions">Actions</div>
+
+          {filtered.map((svc) => {
+            const busy = pendingService === svc.name;
+            return (
+              <>
+                <div key={`${svc.name}-display`} className="svc-td svc-col-display">
+                  <span className="item-name">{svc.displayName}</span>
+                </div>
+                <div key={`${svc.name}-svcname`} className="svc-td svc-col-name">
+                  <span className="svc-service-name">{svc.name}</span>
+                </div>
+                <div key={`${svc.name}-status`} className="svc-td svc-col-status">
+                  <StatusBadge status={svc.status} />
+                </div>
+                <div key={`${svc.name}-actions`} className="svc-td svc-col-actions">
+                  <button
+                    className="btn-ghost svc-action-btn"
+                    onClick={() => runAction(svc.name, "start")}
+                    disabled={busy || !svc.canStart}
+                    title="Start"
+                  >▶</button>
+                  <button
+                    className="btn-ghost svc-action-btn"
+                    onClick={() => runAction(svc.name, "stop")}
+                    disabled={busy || !svc.canStop}
+                    title="Stop"
+                  >■</button>
+                  <button
+                    className="btn-ghost svc-action-btn"
+                    onClick={() => runAction(svc.name, "restart")}
+                    disabled={busy}
+                    title="Restart"
+                  >{busy ? <span className="svc-spinner" /> : "↺"}</button>
+                </div>
+              </>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

@@ -5,129 +5,58 @@
   overflow: hidden;
 }
 
-.wsw-error {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: rgba(224, 108, 117, 0.12);
-  border: 1px solid rgba(224, 108, 117, 0.35);
-  border-radius: 6px;
-  padding: 6px 10px;
-  margin-bottom: 8px;
-  gap: 8px;
-}
-
-.wsw-error-text {
-  font-size: 12px;
-  color: #e06c75;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.wsw-error-dismiss {
-  background: none;
-  border: none;
-  color: #e06c75;
-  cursor: pointer;
-  font-size: 11px;
-  padding: 0;
-  flex-shrink: 0;
-}
-
 .wsw-list {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 8px;
   overflow-y: auto;
   flex: 1;
 }
 
-.wsw-item {
-  display: flex;
+/* Inherit workflow-card layout, override only what's different */
+.wsw-card {
+  padding: 10px 12px;
+}
+
+/* ── status badge ── */
+.wsw-badge {
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  border-radius: 6px;
-  transition: background 0.12s;
-}
-
-.wsw-item:hover {
-  background: var(--bg-elevated-hover, rgba(255,255,255,0.05));
-}
-
-/* Status dot */
-.wsw-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
   flex-shrink: 0;
 }
 
-.wsw-dot--running {
-  background: #50c878;
-  box-shadow: 0 0 6px rgba(80, 200, 120, 0.5);
+.wsw-badge--running {
+  background: #dcfce7;
+  color: #15803d;
 }
 
-.wsw-dot--stopped {
-  background: #e06c75;
+.wsw-badge--stopped {
+  background: #fee2e2;
+  color: #dc2626;
 }
 
-.wsw-dot--pending {
-  background: #e5c07b;
+.wsw-badge--pending {
+  background: #fef3c7;
+  color: #d97706;
 }
 
-/* Info */
-.wsw-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.wsw-display-name {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.wsw-service-name {
-  font-size: 11px;
-  color: var(--text-secondary);
-  font-family: var(--font-mono, monospace);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* Action buttons */
+/* ── action buttons ── */
 .wsw-btns {
   display: flex;
-  gap: 2px;
+  gap: 4px;
   flex-shrink: 0;
+  align-items: center;
 }
 
 .wsw-btn {
-  background: none;
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  padding: 3px 6px;
-  font-size: 11px;
-  color: var(--text-secondary);
-  cursor: pointer;
-  min-width: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.12s, color 0.12s;
-}
-
-.wsw-btn:hover:not(:disabled) {
-  background: var(--bg-elevated-hover, rgba(255,255,255,0.08));
-  color: var(--text-primary);
+  padding: 4px 8px !important;
+  min-width: 28px;
+  font-size: 12px;
 }
 
 .wsw-btn:disabled {
@@ -135,7 +64,7 @@
   cursor: not-allowed;
 }
 
-/* Spinner */
+/* ── spinner ── */
 .wsw-spinner {
   display: inline-block;
   width: 10px;
