@@ -62,7 +62,7 @@ feat!: remove support for legacy workflow format
 BREAKING CHANGE: workflow files must be updated to the v2 schema.
 ```
 
-Release-please runs on every push to `main` and opens or updates a Release PR that bumps `version.txt` and prepends a changelog entry. Merging that PR publishes the GitHub Release and triggers the build workflow to attach artifacts.
+Release-please runs on every push to `main` and opens or updates a Release PR that bumps the version in `.release-please-manifest.json` and prepends a changelog entry. Merging that PR causes release-please to create and publish the GitHub Release, which triggers the build workflow to attach artifacts.
 
 ## Making Changes
 
