@@ -96,8 +96,7 @@ export default function RepositoriesPage() {
     .filter((r) => selectedTags.size === 0 || [...selectedTags].every((t) => r.tags.includes(t)))
     .sort((a, b) => {
       if (a.isFavorite !== b.isFavorite) return a.isFavorite ? -1 : 1;
-      if (b.usageScore !== a.usageScore) return b.usageScore - a.usageScore;
-      return a.name.localeCompare(b.name);
+      return b.usageScore - a.usageScore;
     });
 
   const repoFilters = [
