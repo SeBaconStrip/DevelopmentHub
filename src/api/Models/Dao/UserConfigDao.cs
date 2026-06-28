@@ -31,7 +31,14 @@ public class UserConfigDao
     public string PluginsFolderPath { get; set; } = string.Empty;
 
     /// <summary>Service name patterns to monitor (exact names or wildcards, e.g. "W3SVC", "*SQL*").</summary>
-    public List<string> WindowsServicePatterns { get; set; } = [];
+    // Setter coerces null to [] — LiteDB does not call C# property initializers during BSON deserialization,
+    // so pre-upgrade documents (missing the field) would otherwise produce a null reference.
+    private List<string> _windowsServicePatterns = [];
+    public List<string> WindowsServicePatterns
+    {
+        get => _windowsServicePatterns;
+        set => _windowsServicePatterns = value ?? [];
+    }
 
     /// <summary>
     /// Per-plugin settings. Outer key = pluginId.

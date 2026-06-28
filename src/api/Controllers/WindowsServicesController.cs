@@ -53,6 +53,10 @@ public class WindowsServicesController(
             logger.LogInformation("Windows service started. Name={Name}", name);
             return Ok(new { message = $"Service '{name}' started." });
         }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to start Windows service. Name={Name}", name);
@@ -69,6 +73,10 @@ public class WindowsServicesController(
             logger.LogInformation("Windows service stopped. Name={Name}", name);
             return Ok(new { message = $"Service '{name}' stopped." });
         }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to stop Windows service. Name={Name}", name);
@@ -84,6 +92,10 @@ public class WindowsServicesController(
             await windowsServiceService.RestartAsync(name);
             logger.LogInformation("Windows service restarted. Name={Name}", name);
             return Ok(new { message = $"Service '{name}' restarted." });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { error = ex.Message });
         }
         catch (Exception ex)
         {

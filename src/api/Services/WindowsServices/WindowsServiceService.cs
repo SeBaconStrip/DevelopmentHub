@@ -12,50 +12,60 @@ namespace DevelopmentHub.Api.Services;
 [SupportedOSPlatform("windows")]
 public class WindowsServiceService : IWindowsServiceService
 {
-    // Service names may only contain letters, digits, spaces, underscores, hyphens, and dots.
+    // Windows SCM allows service names to start with _ (e.g. _BEService, _LightSpeed).
     private static readonly Regex _safeServiceName =
-        new(@"^[A-Za-z0-9][A-Za-z0-9 _.\-]*$", RegexOptions.Compiled);
+        new(@"^[A-Za-z0-9_][A-Za-z0-9 _.\-]*$", RegexOptions.Compiled);
 
     public Task<IReadOnlyList<WindowsServiceDto>> GetStatusesAsync(string[] patterns)
     {
         if (patterns.Length == 0)
             return Task.FromResult<IReadOnlyList<WindowsServiceDto>>([]);
 
+        var compiled = patterns
+            .Select(p => new Regex(
+                "^" + Regex.Escape(p).Replace("\\*", ".*").Replace("\\?", ".") + "$",
+                RegexOptions.IgnoreCase | RegexOptions.Compiled))
+            .ToArray();
+
         var all = ServiceController.GetServices();
         var result = new List<WindowsServiceDto>();
-
-        foreach (var svc in all)
+        try
         {
-            if (!patterns.Any(p => MatchesPattern(svc.ServiceName, p) || MatchesPattern(svc.DisplayName, p)))
-                continue;
+            foreach (var svc in all)
+            {
+                if (!compiled.Any(r => r.IsMatch(svc.ServiceName) || r.IsMatch(svc.DisplayName)))
+                    continue;
 
-            string status;
-            bool canStart, canStop;
-            try
-            {
-                var s = svc.Status;
-                status = s.ToString();
-                canStart = s == ServiceControllerStatus.Stopped;
-                canStop = s == ServiceControllerStatus.Running;
-            }
-            catch
-            {
-                status = "Unknown";
-                canStart = false;
-                canStop = false;
-            }
+                string status;
+                bool canStart, canStop;
+                try
+                {
+                    var s = svc.Status;
+                    status = s.ToString();
+                    canStart = s == ServiceControllerStatus.Stopped;
+                    canStop = s == ServiceControllerStatus.Running;
+                }
+                catch
+                {
+                    status = "Unknown";
+                    canStart = false;
+                    canStop = false;
+                }
 
-            result.Add(new WindowsServiceDto
-            {
-                Name = svc.ServiceName,
-                DisplayName = svc.DisplayName,
-                Status = status,
-                CanStart = canStart,
-                CanStop = canStop,
-            });
+                result.Add(new WindowsServiceDto
+                {
+                    Name = svc.ServiceName,
+                    DisplayName = svc.DisplayName,
+                    Status = status,
+                    CanStart = canStart,
+                    CanStop = canStop,
+                });
+            }
         }
-
-        foreach (var svc in all) svc.Dispose();
+        finally
+        {
+            foreach (var svc in all) svc.Dispose();
+        }
 
         result.Sort((a, b) => string.Compare(a.DisplayName, b.DisplayName, StringComparison.OrdinalIgnoreCase));
         return Task.FromResult<IReadOnlyList<WindowsServiceDto>>(result);
@@ -64,18 +74,22 @@ public class WindowsServiceService : IWindowsServiceService
     public Task<IReadOnlyList<WindowsServiceSummaryDto>> GetAllAsync()
     {
         var all = ServiceController.GetServices();
-        var result = all
-            .Select(s => new WindowsServiceSummaryDto
-            {
-                Name = s.ServiceName,
-                DisplayName = s.DisplayName,
-            })
-            .OrderBy(s => s.DisplayName)
-            .ToList();
-
-        foreach (var svc in all) svc.Dispose();
-
-        return Task.FromResult<IReadOnlyList<WindowsServiceSummaryDto>>(result);
+        try
+        {
+            var result = all
+                .Select(s => new WindowsServiceSummaryDto
+                {
+                    Name = s.ServiceName,
+                    DisplayName = s.DisplayName,
+                })
+                .OrderBy(s => s.DisplayName)
+                .ToList();
+            return Task.FromResult<IReadOnlyList<WindowsServiceSummaryDto>>(result);
+        }
+        finally
+        {
+            foreach (var svc in all) svc.Dispose();
+        }
     }
 
     public Task StartAsync(string name)
@@ -149,12 +163,6 @@ public class WindowsServiceService : IWindowsServiceService
             throw new ArgumentException($"Invalid service name: '{name}'");
     }
 
-    private static bool MatchesPattern(string value, string pattern)
-    {
-        var regexPattern = "^" + Regex.Escape(pattern).Replace("\\*", ".*").Replace("\\?", ".") + "$";
-        return Regex.IsMatch(value, regexPattern, RegexOptions.IgnoreCase);
-    }
-
     /// <summary>
     /// Runs Start-Service, Stop-Service, or Restart-Service via an elevated PowerShell process (UAC).
     /// The service name has already been validated by the caller to contain only safe characters.
@@ -198,7 +206,14 @@ catch {
 
             using var process = Process.Start(psi)
                 ?? throw new InvalidOperationException($"Could not start elevated process for service '{serviceName}'.");
-            process.WaitForExit();
+
+            const int TimeoutMs = 120_000;
+            if (!process.WaitForExit(TimeoutMs))
+            {
+                try { process.Kill(); } catch { /* best-effort */ }
+                throw new InvalidOperationException(
+                    $"Elevated {verb.ToLower(CultureInfo.InvariantCulture)} of service '{serviceName}' timed out after 120 seconds.");
+            }
 
             if (process.ExitCode != 0)
             {

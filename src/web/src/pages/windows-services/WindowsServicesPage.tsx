@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { windowsServicesApi } from "../../api/windowsServices";
 import { configApi } from "../../api/config";
@@ -119,17 +119,17 @@ export default function WindowsServicesPage() {
           {filtered.map((svc) => {
             const busy = pendingService === svc.name;
             return (
-              <>
-                <div key={`${svc.name}-display`} className="svc-td svc-col-display">
+              <Fragment key={svc.name}>
+                <div className="svc-td svc-col-display">
                   <span className="item-name">{svc.displayName}</span>
                 </div>
-                <div key={`${svc.name}-svcname`} className="svc-td svc-col-name">
+                <div className="svc-td svc-col-name">
                   <span className="svc-service-name">{svc.name}</span>
                 </div>
-                <div key={`${svc.name}-status`} className="svc-td svc-col-status">
+                <div className="svc-td svc-col-status">
                   <StatusBadge status={svc.status} />
                 </div>
-                <div key={`${svc.name}-actions`} className="svc-td svc-col-actions">
+                <div className="svc-td svc-col-actions">
                   <button
                     className="btn-ghost svc-action-btn"
                     onClick={() => runAction(svc.name, "start")}
@@ -149,7 +149,7 @@ export default function WindowsServicesPage() {
                     title="Restart"
                   >{busy ? <span className="svc-spinner" /> : "↺"}</button>
                 </div>
-              </>
+              </Fragment>
             );
           })}
         </div>

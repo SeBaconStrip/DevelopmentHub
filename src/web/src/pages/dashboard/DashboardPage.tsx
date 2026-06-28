@@ -131,6 +131,7 @@ export default function DashboardPage() {
     queryKey: ["windows-services"],
     queryFn: windowsServicesApi.getStatuses,
     refetchInterval: 15_000,
+    enabled: (config?.windowsServicePatterns?.length ?? 0) > 0,
   });
 
   const [windowsServiceError, setWindowsServiceError] = useState<string | null>(null);
