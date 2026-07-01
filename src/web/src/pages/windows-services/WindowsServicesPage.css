@@ -19,7 +19,7 @@
 /* ── table ── */
 .svc-table {
   display: grid;
-  grid-template-columns: 1.6fr 1.2fr 140px 130px;
+  grid-template-columns: 1.6fr 1.2fr 140px 166px;
   border: 1px solid var(--border-accent);
   border-radius: 12px;
   overflow: hidden;
@@ -94,6 +94,10 @@
 .svc-action-btn:disabled {
   opacity: 0.3;
   cursor: not-allowed;
+}
+
+.svc-action-btn--grant {
+  color: #d97706;
 }
 
 /* ── spinner ── */

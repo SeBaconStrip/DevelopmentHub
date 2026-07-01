@@ -21,6 +21,7 @@ export function WindowsServicesWidget({
   onStart,
   onStop,
   onRestart,
+  onGrant,
 }: {
   services: WindowsServiceInfo[];
   pendingService: string | null;
@@ -29,6 +30,7 @@ export function WindowsServicesWidget({
   onStart: (name: string) => void;
   onStop: (name: string) => void;
   onRestart: (name: string) => void;
+  onGrant: (name: string) => void;
 }) {
   if (services.length === 0) {
     return <Empty text="No services configured. Open Windows Services page to add patterns." />;
@@ -50,6 +52,14 @@ export function WindowsServicesWidget({
                 <span className="item-meta">{svc.name}</span>
               </div>
               <div className="wsw-btns">
+                {svc.needsElevation && (
+                  <button
+                    className="btn-ghost wsw-btn wsw-btn--grant"
+                    onClick={() => onGrant(svc.name)}
+                    disabled={busy}
+                    title="Grant start/stop permissions (one-time admin prompt)"
+                  >{busy ? <span className="wsw-spinner" /> : "🔑"}</button>
+                )}
                 <button
                   className="btn-ghost wsw-btn"
                   onClick={() => onStart(svc.name)}

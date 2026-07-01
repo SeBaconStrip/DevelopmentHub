@@ -207,6 +207,7 @@ export interface WindowsServiceInfo {
   status: WindowsServiceStatus;
   canStart: boolean;
   canStop: boolean;
+  needsElevation: boolean;
 }
 
 export interface WindowsServiceSummary {

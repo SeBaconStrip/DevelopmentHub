@@ -103,4 +103,24 @@ public class WindowsServicesController(
             return StatusCode(500, new { error = ex.Message });
         }
     }
+
+    [HttpPost("{name}/grant-permission")]
+    public async Task<IActionResult> GrantPermission(string name)
+    {
+        try
+        {
+            await windowsServiceService.GrantPermissionAsync(name);
+            logger.LogInformation("Windows service permissions granted. Name={Name}", name);
+            return Ok(new { message = $"Permissions granted for service '{name}'." });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to grant permissions for Windows service. Name={Name}", name);
+            return StatusCode(500, new { error = ex.Message });
+        }
+    }
 }

@@ -29,4 +29,8 @@ export const windowsServicesApi = {
   restart: (name: string): Promise<{ message: string }> =>
     apiFetch(`${BASE}/${encodeURIComponent(name)}/restart`, { method: 'POST' })
       .then(r => handleResponse(r)),
+
+  grantPermission: (name: string): Promise<{ message: string }> =>
+    apiFetch(`${BASE}/${encodeURIComponent(name)}/grant-permission`, { method: 'POST' })
+      .then(r => handleResponse(r)),
 };

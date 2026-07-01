@@ -152,6 +152,19 @@ export default function DashboardPage() {
     }
   }
 
+  async function handleWindowsServiceGrant(name: string) {
+    setWindowsServiceError(null);
+    setPendingWindowsService(name);
+    try {
+      await windowsServicesApi.grantPermission(name);
+      queryClient.invalidateQueries({ queryKey: ["windows-services"] });
+    } catch (err) {
+      setWindowsServiceError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setPendingWindowsService(null);
+    }
+  }
+
   const {
     createTodo,
     updateTodo,
@@ -259,6 +272,7 @@ export default function DashboardPage() {
           onStart={(name) => handleWindowsServiceAction(name, "start")}
           onStop={(name) => handleWindowsServiceAction(name, "stop")}
           onRestart={(name) => handleWindowsServiceAction(name, "restart")}
+          onGrant={handleWindowsServiceGrant}
         />
       ),
       badge: windowsServices.filter((s) => s.status === "Running").length,

@@ -64,6 +64,10 @@
   cursor: not-allowed;
 }
 
+.wsw-btn--grant {
+  color: #d97706;
+}
+
 /* ── spinner ── */
 .wsw-spinner {
   display: inline-block;

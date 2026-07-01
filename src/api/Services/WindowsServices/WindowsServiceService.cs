@@ -2,7 +2,9 @@ using DevelopmentHub.Api.Models.Dtos;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
+using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
+using System.Security.Principal;
 using System.ServiceProcess;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -15,6 +17,36 @@ public class WindowsServiceService : IWindowsServiceService
     // Windows SCM allows service names to start with _ (e.g. _BEService, _LightSpeed).
     private static readonly Regex _safeServiceName =
         new(@"^[A-Za-z0-9_][A-Za-z0-9 _.\-]*$", RegexOptions.Compiled);
+
+    [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    private static extern IntPtr OpenSCManager(string? machineName, string? databaseName, uint dwAccess);
+
+    [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    private static extern IntPtr OpenService(IntPtr hSCManager, string lpServiceName, uint dwDesiredAccess);
+
+    [DllImport("advapi32.dll", SetLastError = true)]
+    private static extern bool CloseServiceHandle(IntPtr hSCObject);
+
+    private const uint ScManagerConnect = 0x0001;
+    private const uint ServiceStart     = 0x0010;
+    private const uint ServiceStop      = 0x0020;
+
+    private static bool CanControlService(string name)
+    {
+        var scm = OpenSCManager(null, null, ScManagerConnect);
+        if (scm == IntPtr.Zero) return false;
+        try
+        {
+            var svc = OpenService(scm, name, ServiceStart | ServiceStop);
+            if (svc == IntPtr.Zero) return false;
+            CloseServiceHandle(svc);
+            return true;
+        }
+        finally
+        {
+            CloseServiceHandle(scm);
+        }
+    }
 
     public Task<IReadOnlyList<WindowsServiceDto>> GetStatusesAsync(string[] patterns)
     {
@@ -59,6 +91,7 @@ public class WindowsServiceService : IWindowsServiceService
                     Status = status,
                     CanStart = canStart,
                     CanStop = canStop,
+                    NeedsElevation = !CanControlService(svc.ServiceName),
                 });
             }
         }
@@ -151,6 +184,90 @@ public class WindowsServiceService : IWindowsServiceService
         {
             RunElevated(name, "Restart");
         }
+        return Task.CompletedTask;
+    }
+
+    public Task GrantPermissionAsync(string name)
+    {
+        ValidateName(name);
+
+        var userSid = WindowsIdentity.GetCurrent().User
+            ?? throw new InvalidOperationException("Cannot determine current user SID.");
+        var sidString = userSid.Value;
+
+        var tempScriptPath = Path.Combine(Path.GetTempPath(), $"developmenthub-acl-{Guid.NewGuid():N}.ps1");
+        var tempResultPath = Path.Combine(Path.GetTempPath(), $"developmenthub-acl-{Guid.NewGuid():N}.json");
+
+        try
+        {
+            var escapedName   = EscapePowerShell(name);
+            var escapedResult = EscapePowerShellPath(tempResultPath);
+            var script = $$"""
+$ErrorActionPreference = 'Stop'
+try {
+    $serviceName = '{{escapedName}}'
+    $userSid     = '{{sidString}}'
+    $raw  = sc.exe sdshow $serviceName 2>&1
+    $sddl = ($raw | Where-Object { $_ -match 'D:' }) -join ''
+    if (-not $sddl) { throw "Could not read SDDL for service: $serviceName" }
+    if ($sddl -like "*$userSid*") {
+        @{ success = $true; message = 'Already granted' } | ConvertTo-Json -Compress | Set-Content -Path '{{escapedResult}}' -Encoding UTF8
+        exit 0
+    }
+    $ace     = "(A;;RPWP;;;$userSid)"
+    $newSddl = $sddl -replace '(D:[^(]*)', "`$1$ace"
+    sc.exe sdset $serviceName $newSddl | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "sc sdset failed with exit code $LASTEXITCODE" }
+    @{ success = $true; message = '' } | ConvertTo-Json -Compress | Set-Content -Path '{{escapedResult}}' -Encoding UTF8
+    exit 0
+}
+catch {
+    @{ success = $false; message = ($_ | Out-String) } | ConvertTo-Json -Compress | Set-Content -Path '{{escapedResult}}' -Encoding UTF8
+    exit 1
+}
+""";
+            File.WriteAllText(tempScriptPath, script, Encoding.UTF8);
+
+            var psi = new ProcessStartInfo
+            {
+                FileName = "powershell.exe",
+                Arguments = string.Format(
+                    CultureInfo.InvariantCulture,
+                    "-NoProfile -ExecutionPolicy Bypass -File \"{0}\"",
+                    tempScriptPath),
+                UseShellExecute = true,
+                Verb = "runas",
+                WindowStyle = ProcessWindowStyle.Hidden,
+            };
+
+            using var process = Process.Start(psi)
+                ?? throw new InvalidOperationException($"Could not start elevated process to grant permissions for service '{name}'.");
+
+            if (!process.WaitForExit(30_000))
+            {
+                try { process.Kill(); } catch { }
+                throw new InvalidOperationException($"Permission grant for service '{name}' timed out.");
+            }
+
+            if (process.ExitCode != 0)
+            {
+                var msg = ReadResultMessage(tempResultPath);
+                throw new InvalidOperationException(
+                    string.IsNullOrWhiteSpace(msg)
+                        ? $"Permission grant for service '{name}' failed (exit {process.ExitCode})."
+                        : msg.Trim());
+            }
+        }
+        catch (Win32Exception ex) when (ex.NativeErrorCode == 1223)
+        {
+            throw new InvalidOperationException($"Permission grant for service '{name}' was cancelled by the user.");
+        }
+        finally
+        {
+            TryDelete(tempScriptPath);
+            TryDelete(tempResultPath);
+        }
+
         return Task.CompletedTask;
     }
 

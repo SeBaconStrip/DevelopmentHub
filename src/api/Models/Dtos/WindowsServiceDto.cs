@@ -7,6 +7,7 @@ public class WindowsServiceDto
     public string Status { get; set; } = string.Empty;
     public bool CanStart { get; set; }
     public bool CanStop { get; set; }
+    public bool NeedsElevation { get; set; }
 }
 
 public class WindowsServiceSummaryDto

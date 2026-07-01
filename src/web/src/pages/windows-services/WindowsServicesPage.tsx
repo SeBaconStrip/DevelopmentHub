@@ -51,6 +51,19 @@ export default function WindowsServicesPage() {
     }
   }
 
+  async function grantPermission(name: string) {
+    setActionError(null);
+    setPendingService(name);
+    try {
+      await windowsServicesApi.grantPermission(name);
+      queryClient.invalidateQueries({ queryKey: ["windows-services"] });
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setPendingService(null);
+    }
+  }
+
   const runningCount = services.filter((s) => s.status === "Running").length;
   const stoppedCount = services.filter((s) => s.status === "Stopped").length;
   const otherCount  = services.filter((s) => s.status !== "Running" && s.status !== "Stopped").length;
@@ -130,6 +143,14 @@ export default function WindowsServicesPage() {
                   <StatusBadge status={svc.status} />
                 </div>
                 <div className="svc-td svc-col-actions">
+                  {svc.needsElevation && (
+                    <button
+                      className="btn-ghost svc-action-btn svc-action-btn--grant"
+                      onClick={() => grantPermission(svc.name)}
+                      disabled={busy}
+                      title="Grant start/stop permissions (one-time admin prompt)"
+                    >{busy ? <span className="svc-spinner" /> : "🔑"}</button>
+                  )}
                   <button
                     className="btn-ghost svc-action-btn"
                     onClick={() => runAction(svc.name, "start")}

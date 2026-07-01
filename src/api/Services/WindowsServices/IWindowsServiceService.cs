@@ -9,4 +9,5 @@ public interface IWindowsServiceService
     Task StartAsync(string name);
     Task StopAsync(string name);
     Task RestartAsync(string name);
+    Task GrantPermissionAsync(string name);
 }
