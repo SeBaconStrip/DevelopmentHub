@@ -91,6 +91,16 @@ Used by: `downloadAzureDevopsPipelineArtifactAsset`
 
 Any of these three values can be overridden directly on the step. Values set on the step take priority over the provider configuration.
 
+#### Azure CLI (optional, recommended for large artifacts)
+
+`downloadAzureDevopsPipelineArtifactAsset` downloads through the Azure CLI when the step writes extracted content (`destinationPath`) and `az` is on the PATH. This is significantly faster and more reliable for multi-GB artifacts. Install it once:
+
+```powershell
+winget install --id Microsoft.AzureCLI
+```
+
+The `azure-devops` CLI extension is installed automatically on first use. The configured PAT is handed to the CLI via its `AZURE_DEVOPS_EXT_PAT` environment variable, so no `az login` is required. When the CLI is missing, the step falls back to the REST API — no workflow change needed.
+
 ## Per-Step UAC Elevation
 
 Some steps support running elevated (as administrator) even when DevelopmentHub itself is not running as administrator.

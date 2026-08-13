@@ -40,6 +40,100 @@ internal static class WorkflowHelpers
             Directory.CreateDirectory(targetDirectory);
     }
 
+    /// <summary>
+    /// Ensures <paramref name="directoryPath"/> exists and may receive downloaded content.
+    /// A non-empty directory is only accepted when <paramref name="overwrite"/> is set;
+    /// with <paramref name="clean"/> the directory is recreated from scratch.
+    /// </summary>
+    public static void EnsureCanWriteDirectory(string directoryPath, bool overwrite, bool clean)
+    {
+        if (Directory.Exists(directoryPath))
+        {
+            var isEmpty = !Directory.EnumerateFileSystemEntries(directoryPath).Any();
+
+            if (!isEmpty && !overwrite && !clean)
+            {
+                throw new InvalidOperationException(
+                    $"Target directory '{directoryPath}' already contains files. Set \"overwrite\": true or \"cleanDestination\": true.");
+            }
+
+            if (clean)
+                Directory.Delete(directoryPath, recursive: true);
+        }
+
+        Directory.CreateDirectory(directoryPath);
+    }
+
+    /// <summary>
+    /// Moves every entry of <paramref name="sourceDirectory"/> into <paramref name="destinationDirectory"/>,
+    /// merging directories that exist on both sides and overwriting colliding files.
+    /// </summary>
+    public static void MoveDirectoryContents(string sourceDirectory, string destinationDirectory)
+    {
+        Directory.CreateDirectory(destinationDirectory);
+
+        foreach (var file in Directory.GetFiles(sourceDirectory))
+            File.Move(file, Path.Combine(destinationDirectory, Path.GetFileName(file)), overwrite: true);
+
+        foreach (var directory in Directory.GetDirectories(sourceDirectory))
+        {
+            var target = Path.Combine(destinationDirectory, Path.GetFileName(directory));
+            if (Directory.Exists(target))
+            {
+                MoveDirectoryContents(directory, target);
+                Directory.Delete(directory, recursive: true);
+            }
+            else
+            {
+                Directory.Move(directory, target);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Resolves <paramref name="name"/> against the current PATH, honouring PATHEXT for
+    /// extension-less names. Returns <see langword="null"/> when nothing matches.
+    /// </summary>
+    public static string? ResolveExecutableOnPath(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return null;
+
+        if (Path.IsPathRooted(name))
+            return File.Exists(name) ? name : null;
+
+        var pathExtensions = (Environment.GetEnvironmentVariable("PATHEXT") ?? ".EXE;.CMD;.BAT")
+            .Split(';', StringSplitOptions.RemoveEmptyEntries);
+        var searchDirectories = (Environment.GetEnvironmentVariable("PATH") ?? string.Empty)
+            .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries);
+
+        foreach (var directory in searchDirectories)
+        {
+            string candidate;
+            try
+            {
+                candidate = Path.Combine(directory.Trim(), name);
+            }
+            catch (ArgumentException)
+            {
+                // Malformed PATH entry — skip it.
+                continue;
+            }
+
+            if (File.Exists(candidate))
+                return candidate;
+
+            foreach (var extension in pathExtensions)
+            {
+                var withExtension = candidate + extension;
+                if (File.Exists(withExtension))
+                    return withExtension;
+            }
+        }
+
+        return null;
+    }
+
     /// <summary>Wraps <paramref name="arg"/> in double quotes if it contains spaces or quotes.</summary>
     public static string QuoteArgument(string arg) =>
         arg.Contains(' ') || arg.Contains('"')

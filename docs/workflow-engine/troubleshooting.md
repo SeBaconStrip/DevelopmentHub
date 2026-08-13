@@ -97,6 +97,21 @@ The `type` value on a step does not match any known step type.
 
 ---
 
+## Azure DevOps Artifact Download Breaks Off Midway (Large Artifacts)
+
+A multi-GB artifact downloaded over the REST API is a single long-lived HTTP stream, and a dropped connection fails the whole step.
+
+**Fix:** switch the step to the Azure CLI transport, which downloads in parallel chunks and retries individual chunks:
+
+1. Install the Azure CLI: `winget install --id Microsoft.AzureCLI`
+2. Replace `targetPath` (ZIP) with `destinationPath` (directory) on the step, and drop the `extractArchive` step that unpacked the ZIP afterwards.
+
+With `destinationPath` set and `az` on the PATH, the default `downloadMethod: "auto"` already uses the CLI. Set `downloadMethod: "azureCli"` to fail loudly instead of silently falling back to REST, and raise `maxAttempts` for flaky networks.
+
+**Check the execution log:** the step logs which transport it picked (`using the Azure CLI (…\az.cmd)` vs `using the REST API`).
+
+---
+
 ## `patchJson` Writes `null` Instead of the Expected Value
 
 This happens when a `set` or `append` operation is missing the `value` field.
