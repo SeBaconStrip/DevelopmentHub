@@ -1,8 +1,11 @@
 {
   "folders": [
     {
-      "path": ".",
+      "path": "."
     },
+    {
+      "path": "../../STUDER.DevelopmentHub.Utils"
+    }
   ],
   "settings": {
     "files.exclude": {

@@ -21,7 +21,7 @@ Workflows are defined as JSON files on disk. The backend loads them automaticall
 |---|---|
 | `downloadFile` | Download a file from a direct URL |
 | `downloadGithubReleaseAsset` | Download a GitHub release asset (public or private) |
-| `downloadAzureDevopsPipelineArtifactAsset` | Download an Azure DevOps pipeline artifact |
+| `downloadAzureDevopsPipelineArtifactAsset` | Download an Azure DevOps pipeline artifact (via Azure CLI or REST) |
 | `extractArchive` | Extract a ZIP archive |
 | `copy` | Copy a file or directory |
 | `runExecutable` | Run any executable or installer |
