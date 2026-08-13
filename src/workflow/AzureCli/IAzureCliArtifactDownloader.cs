@@ -28,7 +28,7 @@ public interface IAzureCliArtifactDownloader
 /// <summary>Parameters for a single Azure CLI artifact download.</summary>
 public sealed class AzureCliArtifactDownloadRequest
 {
-    /// <summary>Azure DevOps organization name (e.g. <c>grinding</c>) or full organization URL.</summary>
+    /// <summary>Azure DevOps organization name (e.g. <c>my-org</c>) or full organization URL.</summary>
     public required string Organization { get; init; }
 
     /// <summary>Team project name.</summary>

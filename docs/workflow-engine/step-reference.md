@@ -94,7 +94,7 @@ Downloads a pipeline artifact from Azure DevOps, either as a ZIP file (`targetPa
 | `pipelineId` | string | No* | — | The pipeline definition ID. Required when using pipeline run mode |
 | `pipelineName` | string | No* | — | Pipeline name, resolved to `pipelineId` at runtime |
 | `runId` | string | No* | — | The pipeline run ID. Required when using pipeline run mode |
-| `runName` | string | No* | — | Run name (e.g. `5.13.99`), resolved to `runId` at runtime |
+| `runName` | string | No* | — | Run name (e.g. `1.2.3`), resolved to `runId` at runtime |
 | `buildId` | string | No* | — | The build ID. Required when using build ID mode |
 | `artifactName` | string | Yes | — | The name of the artifact to download |
 | `targetPath` | string | No** | — | Local path of the ZIP file to write. Mutually exclusive with `destinationPath` |
@@ -122,7 +122,7 @@ You must use exactly one of these combinations:
 | `azureCli` | Runs `az pipelines runs artifact download`. Requires `destinationPath`; fails when the Azure CLI is not installed |
 | `rest` | Streams the artifact ZIP from the Azure DevOps REST API |
 
-Prefer `destinationPath` for large artifacts. The Azure CLI delegates to ArtifactTool, which transfers dedup artifacts in parallel chunks with per-chunk retries, whereas the REST transport pulls one long-lived ZIP stream — a multi-GB artifact (e.g. a ~4.5 GB rollout installer) regularly fails midway. The CLI transport also skips the separate `extractArchive` step and the double disk usage of ZIP + extracted content.
+Prefer `destinationPath` for large artifacts. The Azure CLI delegates to ArtifactTool, which transfers dedup artifacts in parallel chunks with per-chunk retries, whereas the REST transport pulls one long-lived ZIP stream — a multi-GB artifact (e.g. a large installer package) regularly fails midway. The CLI transport also skips the separate `extractArchive` step and the double disk usage of ZIP + extracted content.
 
 **Credential resolution order (for `organization`, `project`, `pat`):**
 

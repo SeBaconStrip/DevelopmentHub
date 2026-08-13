@@ -104,7 +104,7 @@ Downloads a multi-GB installer artifact straight into a folder. Because `destina
 
 ```json
 {
-  "id": "download-core-rollout",
+  "id": "download-large-artifact",
   "name": "Download Large Artifact",
   "description": "Downloads the xyz installer artifact into the installer folder.",
   "inputs": [

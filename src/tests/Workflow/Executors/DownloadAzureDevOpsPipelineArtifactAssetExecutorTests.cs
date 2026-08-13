@@ -11,7 +11,7 @@ namespace DevelopmentHub.Tests.Workflow.Executors;
 
 public sealed class DownloadAzureDevOpsPipelineArtifactAssetExecutorTests : IDisposable
 {
-    private const string ArtifactName = "CoreOS.Rollout.Installer_5.13.99";
+    private const string ArtifactName = "MyLargeArtifact_1.2.3";
 
     private readonly string _tempDir;
     private readonly FakeAzureCliArtifactDownloader _azureCli = new();
@@ -40,8 +40,8 @@ public sealed class DownloadAzureDevOpsPipelineArtifactAssetExecutorTests : IDis
         {
             ["azureDevOps"] = new()
             {
-                ["organization"] = "grinding",
-                ["project"] = "UGG",
+                ["organization"] = "my-org",
+                ["project"] = "my-project",
                 ["pat"] = pat,
             }
         }),
@@ -70,11 +70,11 @@ public sealed class DownloadAzureDevOpsPipelineArtifactAssetExecutorTests : IDis
     public async Task ExecuteAsync_UsesAzureCli_WhenDestinationPathIsSetAndCliIsAvailable()
     {
         _azureCli.IsAvailable = true;
-        var destination = TempPath("rollout");
+        var destination = TempPath("artifact-content");
 
         var step = new DownloadAzureDevOpsPipelineArtifactAssetStep
         {
-            BuildId = "290830",
+            BuildId = "123456",
             ArtifactName = ArtifactName,
             DestinationPath = destination,
         };
@@ -83,11 +83,11 @@ public sealed class DownloadAzureDevOpsPipelineArtifactAssetExecutorTests : IDis
 
         _azureCli.Requests.Should().HaveCount(1);
         var request = _azureCli.Requests[0];
-        request.RunId.Should().Be("290830");
+        request.RunId.Should().Be("123456");
         request.ArtifactName.Should().Be(ArtifactName);
         request.DestinationPath.Should().Be(destination);
-        request.Organization.Should().Be("grinding");
-        request.Project.Should().Be("UGG");
+        request.Organization.Should().Be("my-org");
+        request.Project.Should().Be("my-project");
         request.Pat.Should().Be("test-pat");
         _httpClientFactory.Handler.Requests.Should().BeEmpty("the CLI transport needs no REST calls");
     }
@@ -101,7 +101,7 @@ public sealed class DownloadAzureDevOpsPipelineArtifactAssetExecutorTests : IDis
 
         var step = new DownloadAzureDevOpsPipelineArtifactAssetStep
         {
-            BuildId = "290830",
+            BuildId = "123456",
             ArtifactName = ArtifactName,
             TargetPath = target,
         };
@@ -116,12 +116,12 @@ public sealed class DownloadAzureDevOpsPipelineArtifactAssetExecutorTests : IDis
     public async Task ExecuteAsync_FallsBackToRest_WhenCliIsNotInstalled()
     {
         _azureCli.IsAvailable = false;
-        var destination = TempPath("rollout");
-        _httpClientFactory.Handler.ArtifactZip = CreateArtifactZip(("ConfigGenerator.zip", "payload"));
+        var destination = TempPath("artifact-content");
+        _httpClientFactory.Handler.ArtifactZip = CreateArtifactZip(("payload.zip", "payload"));
 
         var step = new DownloadAzureDevOpsPipelineArtifactAssetStep
         {
-            BuildId = "290830",
+            BuildId = "123456",
             ArtifactName = ArtifactName,
             DestinationPath = destination,
         };
@@ -130,7 +130,7 @@ public sealed class DownloadAzureDevOpsPipelineArtifactAssetExecutorTests : IDis
 
         _azureCli.Requests.Should().BeEmpty();
         // The artifact root folder is flattened away so both transports produce the same layout.
-        File.Exists(Path.Combine(destination, "ConfigGenerator.zip")).Should().BeTrue();
+        File.Exists(Path.Combine(destination, "payload.zip")).Should().BeTrue();
         Directory.Exists(Path.Combine(destination, ArtifactName)).Should().BeFalse();
         Directory.GetFiles(destination).Should().HaveCount(1, "the temporary download ZIP is removed");
     }
@@ -139,12 +139,12 @@ public sealed class DownloadAzureDevOpsPipelineArtifactAssetExecutorTests : IDis
     public async Task ExecuteAsync_UsesRest_WhenDownloadMethodIsRest()
     {
         _azureCli.IsAvailable = true;
-        var destination = TempPath("rollout");
+        var destination = TempPath("artifact-content");
         _httpClientFactory.Handler.ArtifactZip = CreateArtifactZip(("readme.txt", "hello"));
 
         var step = new DownloadAzureDevOpsPipelineArtifactAssetStep
         {
-            BuildId = "290830",
+            BuildId = "123456",
             ArtifactName = ArtifactName,
             DestinationPath = destination,
             DownloadMethod = "rest",
@@ -163,11 +163,11 @@ public sealed class DownloadAzureDevOpsPipelineArtifactAssetExecutorTests : IDis
 
         var step = new DownloadAzureDevOpsPipelineArtifactAssetStep
         {
-            Organization = "grinding",
-            Project = "UGG",
-            BuildId = "290830",
+            Organization = "my-org",
+            Project = "my-project",
+            BuildId = "123456",
             ArtifactName = ArtifactName,
-            DestinationPath = TempPath("rollout"),
+            DestinationPath = TempPath("artifact-content"),
         };
 
         await CreateSut().ExecuteAsync(step, MakeContext(pat: string.Empty), CancellationToken.None);
@@ -183,9 +183,9 @@ public sealed class DownloadAzureDevOpsPipelineArtifactAssetExecutorTests : IDis
 
         var step = new DownloadAzureDevOpsPipelineArtifactAssetStep
         {
-            BuildId = "290830",
+            BuildId = "123456",
             ArtifactName = ArtifactName,
-            DestinationPath = TempPath("rollout"),
+            DestinationPath = TempPath("artifact-content"),
             MaxAttempts = 7,
         };
 
@@ -200,13 +200,13 @@ public sealed class DownloadAzureDevOpsPipelineArtifactAssetExecutorTests : IDis
     public async Task ExecuteAsync_Throws_WhenDestinationIsNotEmptyAndOverwriteIsFalse()
     {
         _azureCli.IsAvailable = true;
-        var destination = TempPath("rollout");
+        var destination = TempPath("artifact-content");
         Directory.CreateDirectory(destination);
         File.WriteAllText(Path.Combine(destination, "leftover.txt"), "old");
 
         var step = new DownloadAzureDevOpsPipelineArtifactAssetStep
         {
-            BuildId = "290830",
+            BuildId = "123456",
             ArtifactName = ArtifactName,
             DestinationPath = destination,
         };
@@ -219,13 +219,13 @@ public sealed class DownloadAzureDevOpsPipelineArtifactAssetExecutorTests : IDis
     public async Task ExecuteAsync_CleansDestination_WhenCleanDestinationIsTrue()
     {
         _azureCli.IsAvailable = true;
-        var destination = TempPath("rollout");
+        var destination = TempPath("artifact-content");
         Directory.CreateDirectory(destination);
         File.WriteAllText(Path.Combine(destination, "leftover.txt"), "old");
 
         var step = new DownloadAzureDevOpsPipelineArtifactAssetStep
         {
-            BuildId = "290830",
+            BuildId = "123456",
             ArtifactName = ArtifactName,
             DestinationPath = destination,
             CleanDestination = true,
@@ -245,7 +245,7 @@ public sealed class DownloadAzureDevOpsPipelineArtifactAssetExecutorTests : IDis
 
         var step = new DownloadAzureDevOpsPipelineArtifactAssetStep
         {
-            BuildId = "290830",
+            BuildId = "123456",
             ArtifactName = ArtifactName,
             TargetPath = TempPath("artifact.zip"),
             DownloadMethod = "azureCli",
@@ -260,10 +260,10 @@ public sealed class DownloadAzureDevOpsPipelineArtifactAssetExecutorTests : IDis
     {
         var step = new DownloadAzureDevOpsPipelineArtifactAssetStep
         {
-            BuildId = "290830",
+            BuildId = "123456",
             ArtifactName = ArtifactName,
             TargetPath = TempPath("artifact.zip"),
-            DestinationPath = TempPath("rollout"),
+            DestinationPath = TempPath("artifact-content"),
         };
 
         var act = () => CreateSut().ExecuteAsync(step, MakeContext(), CancellationToken.None);
@@ -275,7 +275,7 @@ public sealed class DownloadAzureDevOpsPipelineArtifactAssetExecutorTests : IDis
     {
         var step = new DownloadAzureDevOpsPipelineArtifactAssetStep
         {
-            BuildId = "290830",
+            BuildId = "123456",
             ArtifactName = ArtifactName,
         };
 
@@ -288,9 +288,9 @@ public sealed class DownloadAzureDevOpsPipelineArtifactAssetExecutorTests : IDis
     {
         var step = new DownloadAzureDevOpsPipelineArtifactAssetStep
         {
-            BuildId = "290830",
+            BuildId = "123456",
             ArtifactName = ArtifactName,
-            DestinationPath = TempPath("rollout"),
+            DestinationPath = TempPath("artifact-content"),
             DownloadMethod = "ftp",
         };
 
@@ -305,9 +305,9 @@ public sealed class DownloadAzureDevOpsPipelineArtifactAssetExecutorTests : IDis
 
         var step = new DownloadAzureDevOpsPipelineArtifactAssetStep
         {
-            Organization = "grinding",
-            Project = "UGG",
-            BuildId = "290830",
+            Organization = "my-org",
+            Project = "my-project",
+            BuildId = "123456",
             ArtifactName = ArtifactName,
             TargetPath = TempPath("artifact.zip"),
         };
@@ -323,12 +323,12 @@ public sealed class DownloadAzureDevOpsPipelineArtifactAssetExecutorTests : IDis
 
         var step = new DownloadAzureDevOpsPipelineArtifactAssetStep
         {
-            Organization = "grinding",
-            Project = "UGG",
-            PipelineName = "SoftwareRollout.CI",
-            RunName = "5.13.99",
+            Organization = "my-org",
+            Project = "my-project",
+            PipelineName = "MyPipeline.CI",
+            RunName = "1.2.3",
             ArtifactName = ArtifactName,
-            DestinationPath = TempPath("rollout"),
+            DestinationPath = TempPath("artifact-content"),
         };
 
         var act = () => CreateSut().ExecuteAsync(step, MakeContext(pat: string.Empty), CancellationToken.None);
@@ -340,8 +340,8 @@ public sealed class DownloadAzureDevOpsPipelineArtifactAssetExecutorTests : IDis
     {
         var step = new DownloadAzureDevOpsPipelineArtifactAssetStep
         {
-            BuildId = "290830",
-            DestinationPath = TempPath("rollout"),
+            BuildId = "123456",
+            DestinationPath = TempPath("artifact-content"),
         };
 
         var act = () => CreateSut().ExecuteAsync(step, MakeContext(), CancellationToken.None);
@@ -355,22 +355,22 @@ public sealed class DownloadAzureDevOpsPipelineArtifactAssetExecutorTests : IDis
     {
         _azureCli.IsAvailable = true;
         _httpClientFactory.Handler.PipelineListJson =
-            """{"value":[{"id":42,"name":"SoftwareRollout.CI"}]}""";
+            """{"value":[{"id":42,"name":"MyPipeline.CI"}]}""";
         _httpClientFactory.Handler.RunListJson =
-            """{"value":[{"id":290830,"name":"5.13.99"}]}""";
+            """{"value":[{"id":123456,"name":"1.2.3"}]}""";
 
         var step = new DownloadAzureDevOpsPipelineArtifactAssetStep
         {
-            PipelineName = "SoftwareRollout.CI",
-            RunName = "5.13.99",
+            PipelineName = "MyPipeline.CI",
+            RunName = "1.2.3",
             ArtifactName = ArtifactName,
-            DestinationPath = TempPath("rollout"),
+            DestinationPath = TempPath("artifact-content"),
         };
 
         await CreateSut().ExecuteAsync(step, MakeContext(), CancellationToken.None);
 
         _azureCli.Requests.Should().HaveCount(1);
-        _azureCli.Requests[0].RunId.Should().Be("290830");
+        _azureCli.Requests[0].RunId.Should().Be("123456");
     }
 
     // ── Test doubles ──────────────────────────────────────────────────────────
@@ -391,7 +391,7 @@ public sealed class DownloadAzureDevOpsPipelineArtifactAssetExecutorTests : IDis
             Requests.Add(request);
             // Mimic ArtifactTool writing the artifact content into the destination directory.
             Directory.CreateDirectory(request.DestinationPath);
-            File.WriteAllText(Path.Combine(request.DestinationPath, "ConfigGenerator.zip"), "payload");
+            File.WriteAllText(Path.Combine(request.DestinationPath, "payload.zip"), "payload");
             return Task.CompletedTask;
         }
     }
