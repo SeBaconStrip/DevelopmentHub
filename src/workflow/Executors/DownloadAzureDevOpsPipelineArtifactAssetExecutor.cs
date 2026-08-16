@@ -65,6 +65,13 @@ public sealed class DownloadAzureDevOpsPipelineArtifactAssetExecutor(
             : WorkflowHelpers.ResolveTargetFilePath(rawTargetPath, $"{artifactName}.zip");
 
         var method = ResolveDownloadMethod(step.ResolvedDownloadMethod, writesDirectory);
+        if (step.ResolvedDownloadMethod == ArtifactDownloadMethod.Auto && writesDirectory && method == ArtifactDownloadMethod.Rest)
+        {
+            await context.LogInfoAsync(
+                "Azure CLI ('az') was not found on the PATH; using the REST API download transport. " +
+                "If you installed Azure CLI while DevelopmentHub was running, restart DevelopmentHub so it can see the updated PATH.")
+                .ConfigureAwait(false);
+        }
 
         var needsNameResolution =
             (!string.IsNullOrWhiteSpace(pipelineName) && string.IsNullOrWhiteSpace(pipelineId)) ||
@@ -220,9 +227,9 @@ public sealed class DownloadAzureDevOpsPipelineArtifactAssetExecutor(
         if (string.IsNullOrWhiteSpace(downloadUrl))
             throw new InvalidOperationException($"Azure DevOps artifact '{artifactName}' does not expose a download URL.");
 
-        // Keep the temporary ZIP on the destination volume so the extraction move stays cheap.
+        // Keep the temporary ZIP next to the destination so it stays on the same volume without polluting the output directory.
         var zipPath = writesDirectory
-            ? Path.Combine(destinationPath, $".{Guid.NewGuid():N}.download.zip")
+            ? CreateSiblingTempZipPath(destinationPath)
             : targetPath;
 
         await context.LogInfoAsync(
@@ -259,13 +266,23 @@ public sealed class DownloadAzureDevOpsPipelineArtifactAssetExecutor(
                 Directory.Delete(nestedRoot, recursive: true);
             }
 
-            await LogDirectoryResultAsync(context, destinationPath, artifactName).ConfigureAwait(false);
         }
         finally
         {
             if (writesDirectory && File.Exists(zipPath))
                 File.Delete(zipPath);
         }
+
+        if (writesDirectory)
+            await LogDirectoryResultAsync(context, destinationPath, artifactName).ConfigureAwait(false);
+    }
+
+    private static string CreateSiblingTempZipPath(string destinationPath)
+    {
+        var fullDestinationPath = Path.GetFullPath(destinationPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+        var parentDirectory = Path.GetDirectoryName(fullDestinationPath) ?? Path.GetTempPath();
+        var destinationName = Path.GetFileName(fullDestinationPath);
+        return Path.Combine(parentDirectory, $".{destinationName}.{Guid.NewGuid():N}.download.zip");
     }
 
     /// <summary>Logs how many files were written and their total size.</summary>

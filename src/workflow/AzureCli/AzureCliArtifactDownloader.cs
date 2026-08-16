@@ -15,11 +15,13 @@ public sealed class AzureCliArtifactDownloader : IAzureCliArtifactDownloader
     /// <summary>Minimum interval between two forwarded progress lines.</summary>
     private static readonly TimeSpan _progressLogInterval = TimeSpan.FromSeconds(3);
 
-    private readonly Lazy<string?> _executablePath = new(ResolveExecutable, LazyThreadSafetyMode.ExecutionAndPublication);
+    private readonly object _executableLock = new();
+    private string? _executablePath;
+    private bool _executableResolved;
 
-    public bool IsAvailable => _executablePath.Value is not null;
+    public bool IsAvailable => ResolveExecutablePath() is not null;
 
-    public string? ExecutablePath => _executablePath.Value;
+    public string? ExecutablePath => ResolveExecutablePath();
 
     public async Task DownloadAsync(
         AzureCliArtifactDownloadRequest request,
@@ -29,21 +31,21 @@ public sealed class AzureCliArtifactDownloader : IAzureCliArtifactDownloader
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(logAsync);
 
-        var executable = _executablePath.Value
+        var executable = ResolveExecutablePath()
             ?? throw new InvalidOperationException(
                 "Azure CLI ('az') was not found on the PATH. Install it (winget install --id Microsoft.AzureCLI) " +
                 "or set \"downloadMethod\": \"rest\" on the step.");
 
         var organizationUrl = NormalizeOrganizationUrl(request.Organization);
-        var arguments = string.Join(' ', new[]
+        var arguments = new[]
         {
             "pipelines", "runs", "artifact", "download",
-            "--run-id", WorkflowHelpers.QuoteArgument(request.RunId),
-            "--artifact-name", WorkflowHelpers.QuoteArgument(request.ArtifactName),
-            "--path", WorkflowHelpers.QuoteArgument(request.DestinationPath),
-            "--org", WorkflowHelpers.QuoteArgument(organizationUrl),
-            "--project", WorkflowHelpers.QuoteArgument(request.Project),
-        });
+            "--run-id", request.RunId,
+            "--artifact-name", request.ArtifactName,
+            "--path", request.DestinationPath,
+            "--org", organizationUrl,
+            "--project", request.Project,
+        };
 
         var maxAttempts = Math.Max(1, request.MaxAttempts);
 
@@ -77,7 +79,7 @@ public sealed class AzureCliArtifactDownloader : IAzureCliArtifactDownloader
     /// <summary>Starts the CLI, forwards its output to the log and returns the exit code plus the tail of stderr.</summary>
     private static async Task<(int ExitCode, string ErrorTail)> RunAsync(
         string executable,
-        string arguments,
+        IReadOnlyList<string> arguments,
         string pat,
         Func<string, string, Task> logAsync,
         CancellationToken cancellationToken)
@@ -85,12 +87,14 @@ public sealed class AzureCliArtifactDownloader : IAzureCliArtifactDownloader
         var startInfo = new ProcessStartInfo
         {
             FileName = executable,
-            Arguments = arguments,
             UseShellExecute = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             CreateNoWindow = true,
         };
+
+        foreach (var argument in arguments)
+            startInfo.ArgumentList.Add(argument);
 
         if (!string.IsNullOrWhiteSpace(pat))
             startInfo.Environment["AZURE_DEVOPS_EXT_PAT"] = pat;
@@ -101,44 +105,17 @@ public sealed class AzureCliArtifactDownloader : IAzureCliArtifactDownloader
 
         using var process = new Process { StartInfo = startInfo };
 
-        var errorTail = new Queue<string>();
-        var lastProgressLog = Stopwatch.StartNew();
-
-        async Task ForwardAsync(string? line, string stream)
-        {
-            if (string.IsNullOrWhiteSpace(line))
-                return;
-
-            if (stream == "stderr")
-            {
-                errorTail.Enqueue(line);
-                while (errorTail.Count > 10)
-                    errorTail.Dequeue();
-            }
-
-            // ArtifactTool reports transfer progress line by line — only forward it periodically.
-            if (IsProgressLine(line))
-            {
-                if (lastProgressLog.Elapsed < _progressLogInterval)
-                    return;
-                lastProgressLog.Restart();
-            }
-
-            await logAsync(line, stream).ConfigureAwait(false);
-        }
-
-        process.OutputDataReceived += (_, args) => _ = ForwardAsync(args.Data, "stdout");
-        process.ErrorDataReceived += (_, args) => _ = ForwardAsync(args.Data, "stderr");
-
         if (!process.Start())
             throw new InvalidOperationException($"Azure CLI process '{executable}' could not be started.");
 
-        process.BeginOutputReadLine();
-        process.BeginErrorReadLine();
+        var errorTail = new Queue<string>();
+        var stdoutTask = ForwardOutputAsync(process.StandardOutput, logAsync, cancellationToken);
+        var stderrTask = ForwardErrorAsync(process.StandardError, errorTail, logAsync, cancellationToken);
 
         try
         {
             await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+            await Task.WhenAll(stdoutTask, stderrTask).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -151,6 +128,49 @@ public sealed class AzureCliArtifactDownloader : IAzureCliArtifactDownloader
             : $"Last CLI output: {string.Join(" | ", errorTail)}";
 
         return (process.ExitCode, tail);
+    }
+
+    private static async Task ForwardOutputAsync(
+        StreamReader reader,
+        Func<string, string, Task> logAsync,
+        CancellationToken cancellationToken)
+    {
+        var lastProgressLog = Stopwatch.StartNew();
+
+        while (await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false) is { } line)
+        {
+            if (string.IsNullOrWhiteSpace(line))
+                continue;
+
+            // ArtifactTool reports transfer progress line by line — only forward it periodically.
+            if (IsProgressLine(line))
+            {
+                if (lastProgressLog.Elapsed < _progressLogInterval)
+                    continue;
+                lastProgressLog.Restart();
+            }
+
+            await logAsync(line, "stdout").ConfigureAwait(false);
+        }
+    }
+
+    private static async Task ForwardErrorAsync(
+        StreamReader reader,
+        Queue<string> errorTail,
+        Func<string, string, Task> logAsync,
+        CancellationToken cancellationToken)
+    {
+        while (await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false) is { } line)
+        {
+            if (string.IsNullOrWhiteSpace(line))
+                continue;
+
+            errorTail.Enqueue(line);
+            while (errorTail.Count > 10)
+                errorTail.Dequeue();
+
+            await logAsync(line, "stderr").ConfigureAwait(false);
+        }
     }
 
     private static void TryKill(Process process)
@@ -168,9 +188,20 @@ public sealed class AzureCliArtifactDownloader : IAzureCliArtifactDownloader
 
     /// <summary>Recognises ArtifactTool/az transfer progress output so it can be throttled.</summary>
     private static bool IsProgressLine(string line) =>
-        line.Contains('%', StringComparison.Ordinal) ||
-        line.StartsWith("Downloading", StringComparison.OrdinalIgnoreCase) ||
-        line.StartsWith("Downloaded", StringComparison.OrdinalIgnoreCase);
+        ContainsPercentage(line) ||
+        line.StartsWith("Downloading ", StringComparison.OrdinalIgnoreCase) ||
+        line.StartsWith("Downloaded ", StringComparison.OrdinalIgnoreCase);
+
+    private static bool ContainsPercentage(string line)
+    {
+        for (var i = 1; i < line.Length; i++)
+        {
+            if (line[i] == '%' && char.IsDigit(line[i - 1]))
+                return true;
+        }
+
+        return false;
+    }
 
     /// <summary>Accepts both a bare organization name and a full organization URL.</summary>
     internal static string NormalizeOrganizationUrl(string organization)
@@ -189,4 +220,21 @@ public sealed class AzureCliArtifactDownloader : IAzureCliArtifactDownloader
         _executableCandidates
             .Select(WorkflowHelpers.ResolveExecutableOnPath)
             .FirstOrDefault(path => path is not null);
+
+    private string? ResolveExecutablePath()
+    {
+        if (_executableResolved && _executablePath is not null)
+            return _executablePath;
+
+        lock (_executableLock)
+        {
+            if (!_executableResolved || _executablePath is null)
+            {
+                _executablePath = ResolveExecutable();
+                _executableResolved = true;
+            }
+
+            return _executablePath;
+        }
+    }
 }

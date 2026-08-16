@@ -33,7 +33,7 @@ public sealed class DownloadAzureDevOpsPipelineArtifactAssetExecutorTests : IDis
 
     private string TempPath(string name) => Path.Combine(_tempDir, name);
 
-    private static StepContext MakeContext(string pat = "test-pat") => new()
+    private static StepContext MakeContext(string pat = "test-pat", List<(string Message, string Stream)>? logs = null) => new()
     {
         Inputs = new Dictionary<string, string>(),
         Providers = new ProviderSettings(new Dictionary<string, Dictionary<string, string>>
@@ -45,7 +45,11 @@ public sealed class DownloadAzureDevOpsPipelineArtifactAssetExecutorTests : IDis
                 ["pat"] = pat,
             }
         }),
-        LogAsync = (_, _) => Task.CompletedTask
+        LogAsync = (message, stream) =>
+        {
+            logs?.Add((message, stream));
+            return Task.CompletedTask;
+        }
     };
 
     /// <summary>Builds an artifact ZIP the way Azure DevOps does — content wrapped in a folder named after the artifact.</summary>
@@ -117,6 +121,7 @@ public sealed class DownloadAzureDevOpsPipelineArtifactAssetExecutorTests : IDis
     {
         _azureCli.IsAvailable = false;
         var destination = TempPath("artifact-content");
+        var logs = new List<(string Message, string Stream)>();
         _httpClientFactory.Handler.ArtifactZip = CreateArtifactZip(("payload.zip", "payload"));
 
         var step = new DownloadAzureDevOpsPipelineArtifactAssetStep
@@ -126,13 +131,15 @@ public sealed class DownloadAzureDevOpsPipelineArtifactAssetExecutorTests : IDis
             DestinationPath = destination,
         };
 
-        await CreateSut().ExecuteAsync(step, MakeContext(), CancellationToken.None);
+        await CreateSut().ExecuteAsync(step, MakeContext(logs: logs), CancellationToken.None);
 
         _azureCli.Requests.Should().BeEmpty();
+        logs.Should().Contain(log => log.Stream == "info" && log.Message.Contains("Azure CLI ('az') was not found", StringComparison.Ordinal));
         // The artifact root folder is flattened away so both transports produce the same layout.
         File.Exists(Path.Combine(destination, "payload.zip")).Should().BeTrue();
         Directory.Exists(Path.Combine(destination, ArtifactName)).Should().BeFalse();
         Directory.GetFiles(destination).Should().HaveCount(1, "the temporary download ZIP is removed");
+        Directory.GetFiles(_tempDir, "*.download.zip").Should().BeEmpty("the REST temp ZIP is deleted from its sibling location");
     }
 
     [Fact]

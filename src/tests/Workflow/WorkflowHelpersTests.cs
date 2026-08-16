@@ -85,4 +85,28 @@ public sealed class WorkflowHelpersTests
             new Dictionary<string, string> { ["suffix"] = "" });
         result.Should().Be("prefix--end");
     }
+
+    [Fact]
+    public void ResolveExecutableOnPath_ResolvesRootedPathWithPathext()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), $"workflow-helper-tests-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(directory);
+        var oldPathext = Environment.GetEnvironmentVariable("PATHEXT");
+
+        try
+        {
+            var executable = Path.Combine(directory, "setup.exe");
+            File.WriteAllText(executable, string.Empty);
+            Environment.SetEnvironmentVariable("PATHEXT", ".exe;.cmd");
+
+            var result = WorkflowHelpers.ResolveExecutableOnPath(Path.Combine(directory, "setup"));
+
+            result.Should().Be(executable);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("PATHEXT", oldPathext);
+            Directory.Delete(directory, recursive: true);
+        }
+    }
 }

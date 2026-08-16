@@ -99,11 +99,12 @@ internal static class WorkflowHelpers
         if (string.IsNullOrWhiteSpace(name))
             return null;
 
-        if (Path.IsPathRooted(name))
-            return File.Exists(name) ? name : null;
-
         var pathExtensions = (Environment.GetEnvironmentVariable("PATHEXT") ?? ".EXE;.CMD;.BAT")
             .Split(';', StringSplitOptions.RemoveEmptyEntries);
+
+        if (Path.IsPathRooted(name))
+            return ResolveCandidate(name, pathExtensions);
+
         var searchDirectories = (Environment.GetEnvironmentVariable("PATH") ?? string.Empty)
             .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries);
 
@@ -120,15 +121,24 @@ internal static class WorkflowHelpers
                 continue;
             }
 
-            if (File.Exists(candidate))
-                return candidate;
+            var resolved = ResolveCandidate(candidate, pathExtensions);
+            if (resolved is not null)
+                return resolved;
+        }
 
-            foreach (var extension in pathExtensions)
-            {
-                var withExtension = candidate + extension;
-                if (File.Exists(withExtension))
-                    return withExtension;
-            }
+        return null;
+    }
+
+    private static string? ResolveCandidate(string candidate, IEnumerable<string> pathExtensions)
+    {
+        if (File.Exists(candidate))
+            return candidate;
+
+        foreach (var extension in pathExtensions)
+        {
+            var withExtension = candidate + extension;
+            if (File.Exists(withExtension))
+                return withExtension;
         }
 
         return null;

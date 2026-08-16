@@ -104,6 +104,7 @@ A multi-GB artifact downloaded over the REST API is a single long-lived HTTP str
 **Fix:** switch the step to the Azure CLI transport, which downloads in parallel chunks and retries individual chunks:
 
 1. Install the Azure CLI: `winget install --id Microsoft.AzureCLI`
+   - If DevelopmentHub was already running, restart it after installation so the process sees the updated `PATH`.
 2. Replace `targetPath` (ZIP) with `destinationPath` (directory) on the step, and drop the `extractArchive` step that unpacked the ZIP afterwards.
 
 With `destinationPath` set and `az` on the PATH, the default `downloadMethod: "auto"` already uses the CLI. Set `downloadMethod: "azureCli"` to fail loudly instead of silently falling back to REST, and raise `maxAttempts` for flaky networks.
