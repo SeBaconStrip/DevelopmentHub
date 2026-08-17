@@ -13,6 +13,21 @@ from [Conventional Commits](https://www.conventionalcommits.org/).
 
 ---
 
+## [1.1.0](https://github.com/SeBaconStrip/DevelopmentHub/compare/v1.0.7...v1.1.0) (2026-08-17)
+
+
+### Features
+
+* migrate versioning and changelog to release-please ([f6f32e6](https://github.com/SeBaconStrip/DevelopmentHub/commit/f6f32e6133f0dcd837b91083027450a93408f2bf))
+* migrate versioning and changelog to release-please ([3d0f643](https://github.com/SeBaconStrip/DevelopmentHub/commit/3d0f64349941b50d7d14b6f80802b23ff358942e))
+* migrate versioning and changelog to release-please ([#44](https://github.com/SeBaconStrip/DevelopmentHub/issues/44)) ([fb52b88](https://github.com/SeBaconStrip/DevelopmentHub/commit/fb52b886cdc063b10c05c46c38bb74faff37c347))
+* Use az cli (if available) for faster downloads from azure devops ([#46](https://github.com/SeBaconStrip/DevelopmentHub/issues/46)) ([7c99f2d](https://github.com/SeBaconStrip/DevelopmentHub/commit/7c99f2da8a529332955ebb1ee39d8e406a895993))
+
+
+### Bug Fixes
+
+* trigger release please after config fix ([#47](https://github.com/SeBaconStrip/DevelopmentHub/issues/47)) ([e2a7830](https://github.com/SeBaconStrip/DevelopmentHub/commit/e2a783087f308721322706e894d4ea451d3680f1))
+
 ## [1.0.0] (2026-05-02)
 
 ### Features
