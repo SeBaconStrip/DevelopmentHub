@@ -19,7 +19,7 @@ public sealed class RunExecutableExecutor : WorkflowStepExecutor<RunExecutableSt
 
         if (!File.Exists(filePath))
         {
-            var resolved = ResolveOnPath(filePath);
+            var resolved = WorkflowHelpers.ResolveExecutableOnPath(filePath);
             if (resolved is null)
                 throw new FileNotFoundException("Executable not found.", filePath);
             filePath = resolved;
@@ -87,25 +87,5 @@ public sealed class RunExecutableExecutor : WorkflowStepExecutor<RunExecutableSt
         if (!step.SuccessExitCodes.Contains(process.ExitCode))
             throw new InvalidOperationException(
                 $"Executable '{Path.GetFileName(filePath)}' exited with code {process.ExitCode}.");
-    }
-
-    private static string? ResolveOnPath(string name)
-    {
-        var pathExt = (Environment.GetEnvironmentVariable("PATHEXT") ?? ".EXE;.CMD;.BAT")
-            .Split(';', StringSplitOptions.RemoveEmptyEntries);
-        var searchDirs = (Environment.GetEnvironmentVariable("PATH") ?? "")
-            .Split(';', StringSplitOptions.RemoveEmptyEntries);
-
-        foreach (var dir in searchDirs)
-        {
-            var candidate = Path.Combine(dir.Trim(), name);
-            if (File.Exists(candidate)) return candidate;
-            foreach (var ext in pathExt)
-            {
-                var withExt = candidate + ext;
-                if (File.Exists(withExt)) return withExt;
-            }
-        }
-        return null;
     }
 }

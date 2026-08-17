@@ -98,6 +98,42 @@ Downloads the `drop` artifact from a specific pipeline run.
 
 ---
 
+## Download a Large Azure DevOps Artifact via the Azure CLI
+
+Downloads a multi-GB installer artifact straight into a folder. Because `destinationPath` is used instead of `targetPath`, the download runs through `az pipelines runs artifact download` (chunked and resumable) and no separate `extractArchive` step is needed.
+
+```json
+{
+  "id": "download-large-artifact",
+  "name": "Download Large Artifact",
+  "description": "Downloads the xyz installer artifact into the installer folder.",
+  "inputs": [
+    {
+      "name": "BuildVersion",
+      "label": "Build version",
+      "type": "text",
+      "defaultValue": "1.2.3"
+    }
+  ],
+  "steps": [
+    {
+      "type": "downloadAzureDevopsPipelineArtifactAsset",
+      "name": "Download pipeline artifact",
+      "organization": "my-org",
+      "project": "my-project",
+      "pipelineName": "MyPipeline.CI",
+      "runName": "{{BuildVersion}}",
+      "artifactName": "MyLargeArtifact_{{BuildVersion}}",
+      "destinationPath": "C:\\artifacts\\MyLargeArtifact_{{BuildVersion}}",
+      "downloadMethod": "azureCli",
+      "overwrite": true
+    }
+  ]
+}
+```
+
+---
+
 ## Extract a Local ZIP
 
 Extracts an already-downloaded ZIP to a clean destination folder.

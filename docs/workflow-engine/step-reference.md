@@ -85,26 +85,44 @@ Downloads a specific asset from a GitHub release. Supports both public and priva
 
 ## `downloadAzureDevopsPipelineArtifactAsset`
 
-Downloads a pipeline artifact from Azure DevOps. The artifact is downloaded as a single file (typically a ZIP). Supports two lookup modes: by pipeline run, or by build ID.
+Downloads a pipeline artifact from Azure DevOps, either as a ZIP file (`targetPath`) or as extracted content in a directory (`destinationPath`). Supports two lookup modes: by pipeline run, or by build ID.
 
 | Field | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `organization` | string | No | Provider setting | Azure DevOps organisation name. Falls back to provider settings |
 | `project` | string | No | Provider setting | Azure DevOps project name. Falls back to provider settings |
 | `pipelineId` | string | No* | — | The pipeline definition ID. Required when using pipeline run mode |
+| `pipelineName` | string | No* | — | Pipeline name, resolved to `pipelineId` at runtime |
 | `runId` | string | No* | — | The pipeline run ID. Required when using pipeline run mode |
+| `runName` | string | No* | — | Run name (e.g. `1.2.3`), resolved to `runId` at runtime |
 | `buildId` | string | No* | — | The build ID. Required when using build ID mode |
 | `artifactName` | string | Yes | — | The name of the artifact to download |
-| `targetPath` | string | Yes | — | The local path where the artifact file will be saved |
-| `overwrite` | boolean | No | `false` | If `false` and the target file already exists, the step fails |
+| `targetPath` | string | No** | — | Local path of the ZIP file to write. Mutually exclusive with `destinationPath` |
+| `destinationPath` | string | No** | — | Directory that receives the extracted artifact content, without keeping a ZIP. Mutually exclusive with `targetPath` |
+| `cleanDestination` | boolean | No | `false` | If `true`, `destinationPath` is deleted before the download starts |
+| `downloadMethod` | string | No | `auto` | `auto`, `azureCli` or `rest` — see below |
+| `maxAttempts` | number | No | `3` | Download attempts of the `azureCli` transport before the step fails |
+| `overwrite` | boolean | No | `false` | If `false`, the step fails when the target file exists or `destinationPath` is not empty |
 | `pat` | string | No | — | Override PAT. Falls back to `pullRequestProviders.azureDevOps.pat` |
+
+\* Exactly one lookup mode. \*\* Exactly one of `targetPath` / `destinationPath`.
 
 **Lookup modes:**
 
 You must use exactly one of these combinations:
 
-- **Pipeline run mode:** provide `pipelineId` + `runId`
+- **Pipeline run mode:** provide `pipelineId` (or `pipelineName`) + `runId` (or `runName`)
 - **Build ID mode:** provide `buildId`
+
+**Transports (`downloadMethod`):**
+
+| Value | Behaviour |
+|---|---|
+| `auto` (default) | Uses `azureCli` when `destinationPath` is set and the Azure CLI is installed, otherwise `rest` |
+| `azureCli` | Runs `az pipelines runs artifact download`. Requires `destinationPath`; fails when the Azure CLI is not installed |
+| `rest` | Streams the artifact ZIP from the Azure DevOps REST API |
+
+Prefer `destinationPath` for large artifacts. The Azure CLI delegates to ArtifactTool, which transfers dedup artifacts in parallel chunks with per-chunk retries, whereas the REST transport pulls one long-lived ZIP stream — a multi-GB artifact (e.g. a large installer package) regularly fails midway. The CLI transport also skips the separate `extractArchive` step and the double disk usage of ZIP + extracted content.
 
 **Credential resolution order (for `organization`, `project`, `pat`):**
 
@@ -114,7 +132,24 @@ You must use exactly one of these combinations:
 **Notes:**
 
 - The `artifactName` must match the name of the published artifact exactly (case-sensitive).
-- This step downloads the artifact as a whole (a ZIP file), not an individual file inside it. Use `extractArchive` afterwards to unpack it.
+- Both transports produce the same layout under `destinationPath`: the artifact's own root folder is flattened away, so the content lands directly in the directory.
+- With `targetPath`, the artifact is downloaded as a whole (a ZIP file), not an individual file inside it. Use `extractArchive` afterwards to unpack it.
+- The PAT is passed to the Azure CLI through the `AZURE_DEVOPS_EXT_PAT` environment variable of the CLI process. With `downloadMethod: "azureCli"` and an explicit `runId`/`buildId`, no PAT is needed at all — the CLI then uses its own `az login` session. Resolving `pipelineName`/`runName` always requires a PAT.
+- The `azure-devops` CLI extension is installed automatically on first use.
+
+**Example writing extracted content (recommended for large artifacts):**
+
+```json
+{
+  "type": "downloadAzureDevopsPipelineArtifactAsset",
+  "name": "Download build artifact",
+  "pipelineName": "MyPipeline.CI",
+  "runName": "{{BuildVersion}}",
+  "artifactName": "MyArtifact_{{BuildVersion}}",
+  "destinationPath": "C:\\artifacts\\MyArtifact_{{BuildVersion}}",
+  "overwrite": true
+}
+```
 
 **Example using pipeline run:**
 

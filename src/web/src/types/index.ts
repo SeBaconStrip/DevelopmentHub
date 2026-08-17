@@ -135,10 +135,14 @@ export interface WorkflowStep {
   organization: string;
   project: string;
   pipelineId: string;
+  pipelineName?: string;
   runId: string;
+  runName?: string;
   buildId: string;
   pat: string;
   targetPath: string;
+  downloadMethod?: "auto" | "azureCli" | "rest";
+  maxAttempts?: number;
   overwrite: boolean;
   runElevated: boolean;
   archivePath: string;

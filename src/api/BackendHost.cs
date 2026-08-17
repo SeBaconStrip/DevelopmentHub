@@ -9,6 +9,7 @@ using DevelopmentHub.Api.Services.Todos.Sync;
 using DevelopmentHub.Api.Services.Todos.Sync.MicrosoftTodo;
 using DevelopmentHub.Plugins;
 using DevelopmentHub.Workflow;
+using DevelopmentHub.Workflow.AzureCli;
 using DevelopmentHub.Workflow.Executors;
 using Serilog;
 using Serilog.Events;
@@ -114,6 +115,7 @@ public static class BackendHost
         builder.Services.AddSingleton<ITodoSyncService, TodoSyncService>();
         builder.Services.AddHostedService<TodoSyncBackgroundService>();
         builder.Services.AddHttpClient("MicrosoftGraph");
+        builder.Services.AddSingleton<IAzureCliArtifactDownloader, AzureCliArtifactDownloader>();
         builder.Services.AddSingleton<IWorkflowStepExecutor, DownloadFileExecutor>();
         builder.Services.AddSingleton<IWorkflowStepExecutor, DownloadGitHubReleaseAssetExecutor>();
         builder.Services.AddSingleton<IWorkflowStepExecutor, DownloadAzureDevOpsPipelineArtifactAssetExecutor>();
