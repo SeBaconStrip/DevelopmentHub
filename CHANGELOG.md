@@ -13,6 +13,13 @@ from [Conventional Commits](https://www.conventionalcommits.org/).
 
 ---
 
+## [1.1.1](https://github.com/SeBaconStrip/DevelopmentHub/compare/v1.1.0...v1.1.1) (2026-08-26)
+
+
+### Bug Fixes
+
+* upload release assets from release-please run ([#50](https://github.com/SeBaconStrip/DevelopmentHub/issues/50)) ([43bf4ad](https://github.com/SeBaconStrip/DevelopmentHub/commit/43bf4ad9c7385ee87a0b9467bf37120f29581f40))
+
 ## [1.1.0](https://github.com/SeBaconStrip/DevelopmentHub/compare/v1.0.7...v1.1.0) (2026-08-17)
 
 
