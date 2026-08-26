@@ -14,20 +14,38 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       tag_name: ${{ steps.release.outputs.tag_name }}
+      chain_build: ${{ steps.token.outputs.chain_build }}
     steps:
+      # Releases created with GITHUB_TOKEN cannot trigger other workflows, so
+      # `on: release: published` in build.yml never fires for them. With a PAT
+      # in RELEASE_PLEASE_TOKEN the release event works normally and build.yml
+      # picks it up on its own; without one we chain the build below instead.
+      # Exactly one of the two paths runs, so assets are never uploaded twice.
+      - name: Detect release token
+        id: token
+        env:
+          RELEASE_PLEASE_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+        run: |
+          if [ -n "$RELEASE_PLEASE_TOKEN" ]; then
+            echo "chain_build=false" >> "$GITHUB_OUTPUT"
+            echo "PAT configured - build.yml runs from the release event."
+          else
+            echo "chain_build=true" >> "$GITHUB_OUTPUT"
+            echo "No PAT - chaining build.yml from this run."
+          fi
+
       - uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 # v4
         id: release
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
-  # Releases created by release-please use GITHUB_TOKEN, and GitHub does not let
-  # such events trigger other workflows. So the build is chained here directly
-  # instead of relying on `on: release: published`.
   publish-assets:
     needs: release-please
-    if: needs.release-please.outputs.tag_name != ''
+    if: >-
+      needs.release-please.outputs.tag_name != '' &&
+      needs.release-please.outputs.chain_build == 'true'
     permissions:
       contents: write
     uses: ./.github/workflows/build.yml
