@@ -12,9 +12,24 @@ permissions:
 jobs:
   release-please:
     runs-on: ubuntu-latest
+    outputs:
+      tag_name: ${{ steps.release.outputs.tag_name }}
     steps:
       - uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 # v4
+        id: release
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+
+  # Releases created by release-please use GITHUB_TOKEN, and GitHub does not let
+  # such events trigger other workflows. So the build is chained here directly
+  # instead of relying on `on: release: published`.
+  publish-assets:
+    needs: release-please
+    if: needs.release-please.outputs.tag_name != ''
+    permissions:
+      contents: write
+    uses: ./.github/workflows/build.yml
+    with:
+      tag_name: ${{ needs.release-please.outputs.tag_name }}

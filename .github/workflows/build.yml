@@ -6,6 +6,18 @@ on:
       - main
   release:
     types: [published]
+  workflow_call:
+    inputs:
+      tag_name:
+        description: "Release tag to build and upload assets for (e.g. v1.2.0)"
+        type: string
+        required: true
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: "Existing release tag to (re)build and upload assets for (e.g. v1.2.0)"
+        type: string
+        required: true
 
 jobs:
   build:
@@ -16,14 +28,17 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Empty for pull_request / release events -> default ref is used.
+          ref: ${{ inputs.tag_name }}
 
       - name: Determine version
         id: version
         shell: bash
         run: |
-          if [ "${{ github.event_name }}" = "release" ]; then
-            VERSION="${{ github.event.release.tag_name }}"
-            VERSION="${VERSION#v}"
+          TAG="${{ inputs.tag_name || github.event.release.tag_name }}"
+          if [ -n "$TAG" ]; then
+            VERSION="${TAG#v}"
           else
             VERSION="$(jq -r '.["."]' .release-please-manifest.json)"
             if [ "$VERSION" = "null" ] || [ -z "$VERSION" ]; then
@@ -32,6 +47,7 @@ jobs:
             fi
             VERSION="${VERSION}-ci"
           fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Setup Node.js
@@ -122,8 +138,8 @@ jobs:
           $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
           & $iscc src\installer\DevelopmentHub.iss
 
-      - name: Upload artifacts (PR only)
-        if: github.event_name == 'pull_request'
+      - name: Upload artifacts (non-release builds)
+        if: steps.version.outputs.tag == ''
         uses: actions/upload-artifact@v4
         with:
           name: DevelopmentHub-${{ steps.version.outputs.version }}
@@ -135,10 +151,10 @@ jobs:
           retention-days: 1
 
       - name: Upload release assets
-        if: github.event_name == 'release'
+        if: steps.version.outputs.tag != ''
         shell: bash
         run: |
-          gh release upload "${{ github.event.release.tag_name }}" \
+          gh release upload "${{ steps.version.outputs.tag }}" \
             --clobber \
             src/installer/output/DevelopmentHub-Setup-*.exe \
             artifacts/DevelopmentHub-Edge-Extension-*.zip \
