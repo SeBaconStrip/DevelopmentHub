@@ -86,7 +86,7 @@
   gap: 8px;
   padding: 8px 14px;
   margin-bottom: 16px;
-  background: var(--color-error-bg, #fee2e2);
+  background: var(--color-error-bg);
   color: var(--color-error, #dc2626);
   border-radius: 8px;
   font-size: 13px;
