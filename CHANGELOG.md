@@ -13,6 +13,19 @@ from [Conventional Commits](https://www.conventionalcommits.org/).
 
 ---
 
+## [1.2.0](https://github.com/SeBaconStrip/DevelopmentHub/compare/v1.1.1...v1.2.0) (2026-08-27)
+
+
+### Features
+
+* show application version in settings ([#55](https://github.com/SeBaconStrip/DevelopmentHub/issues/55)) ([958bac0](https://github.com/SeBaconStrip/DevelopmentHub/commit/958bac015093577e9c341aa6aaa51616a4100342))
+
+
+### Bug Fixes
+
+* make plugin labels and status colours theme-aware ([#54](https://github.com/SeBaconStrip/DevelopmentHub/issues/54)) ([dabfeeb](https://github.com/SeBaconStrip/DevelopmentHub/commit/dabfeeb8bb6dc5c7948ce728151a0e89c4224829))
+* report why a plugin frontend bundle failed to load ([#56](https://github.com/SeBaconStrip/DevelopmentHub/issues/56)) ([f070591](https://github.com/SeBaconStrip/DevelopmentHub/commit/f0705916a9ac04c257b8d1d140b0088ce0b9d693))
+
 ## [1.1.1](https://github.com/SeBaconStrip/DevelopmentHub/compare/v1.1.0...v1.1.1) (2026-08-26)
 
 
