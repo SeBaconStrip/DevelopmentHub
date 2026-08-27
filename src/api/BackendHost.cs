@@ -127,6 +127,7 @@ public static class BackendHost
         builder.Services.AddSingleton<IWorkflowStepExecutor, CallWorkflowExecutor>();
         builder.Services.AddSingleton<IWorkflowService, WorkflowService>();
         builder.Services.AddSingleton<ApiTokenService>();
+        builder.Services.AddSingleton<IAppVersionService, AppVersionService>();
 
         // ── Plugins ───────────────────────────────────────────────────────────
         var pluginsPath = startupUserConfig?.PluginsFolderPath ?? string.Empty;
@@ -201,7 +202,7 @@ public static class BackendHost
 
         startupLogger.LogInformation(
             "DevelopmentHub backend starting. Version={Version} Environment={Environment} ContentRoot={ContentRoot} WebRoot={WebRoot} LiteDbPath={LiteDbPath} LogDir={LogDir}",
-            ResolveBackendVersion(),
+            app.Services.GetRequiredService<IAppVersionService>().Version,
             app.Environment.EnvironmentName,
             app.Environment.ContentRootPath,
             app.Environment.WebRootPath ?? "(none)",
@@ -331,35 +332,5 @@ public static class BackendHost
         }
 
         return app;
-    }
-
-    private static string ResolveBackendVersion()
-    {
-        var baseDirectory = AppContext.BaseDirectory;
-        var candidateDirectories = new[]
-        {
-            baseDirectory,
-            Directory.GetParent(baseDirectory)?.FullName,
-            Directory.GetParent(Directory.GetParent(baseDirectory ?? string.Empty)?.FullName ?? string.Empty)?.FullName,
-            Directory.GetCurrentDirectory()
-        }
-        .Where(path => !string.IsNullOrWhiteSpace(path))
-        .Distinct(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var directory in candidateDirectories)
-        {
-            var versionFile = Path.Combine(directory!, "version.txt");
-            if (!File.Exists(versionFile))
-                continue;
-
-            var version = File.ReadAllText(versionFile).Trim();
-            if (!string.IsNullOrWhiteSpace(version))
-                return version;
-        }
-
-        return typeof(BackendHost).Assembly
-            .GetName()
-            .Version?
-            .ToString() ?? "unknown";
     }
 }
