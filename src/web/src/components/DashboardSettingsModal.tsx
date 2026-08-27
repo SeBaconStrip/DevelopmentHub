@@ -13,6 +13,7 @@ import { SettingsSectionIntegrations } from "./settings/SettingsSectionIntegrati
 import { SettingsSectionAppearance } from "./settings/SettingsSectionAppearance";
 import { SettingsSectionPlugins } from "./settings/SettingsSectionPlugins";
 import { SettingsSectionPluginDetail } from "./settings/SettingsSectionPluginDetail";
+import { SettingsSectionAbout } from "./settings/SettingsSectionAbout";
 import type { PluginManifest } from "../plugins/PluginLoader";
 import "./DashboardSettingsModal.css";
 
@@ -26,6 +27,7 @@ type NavPage =
   | "integrations"
   | "appearance"
   | "plugins"
+  | "about"
   | `plugin:${string}`;
 
 const STATIC_NAV_ITEMS: { id: NavPage; icon: string; label: string }[] = [
@@ -274,6 +276,8 @@ export function DashboardSettingsModal({ onClose }: Props) {
         );
       case "appearance":
         return <SettingsSectionAppearance />;
+      case "about":
+        return <SettingsSectionAbout />;
       case "plugins":
         return <SettingsSectionPlugins form={form} savedConfig={data ? normalizeConfig(JSON.parse(JSON.stringify(data))) : null} setField={setField} />;
       default:
@@ -328,6 +332,13 @@ export function DashboardSettingsModal({ onClose }: Props) {
                 <span className="settings-nav-label">{p.name || p.id}</span>
               </button>
             ))}
+            <button
+              className={`settings-nav-item${page === "about" ? " settings-nav-item--active" : ""}`}
+              onClick={() => setPage("about")}
+            >
+              <span className="settings-nav-icon">ℹ</span>
+              <span className="settings-nav-label">About</span>
+            </button>
           </nav>
 
           <div className="settings-modal-body">{renderPage()}</div>
