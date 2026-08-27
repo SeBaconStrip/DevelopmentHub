@@ -125,8 +125,8 @@
 
 /* ── restart warning banner ── */
 .settings-restart-warning {
-  background: color-mix(in srgb, var(--color-warning, #f59e0b) 15%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-warning, #f59e0b) 50%, transparent);
+  background: color-mix(in srgb, var(--color-warning) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-warning) 50%, transparent);
   border-radius: 6px;
   color: var(--text-primary);
   font-size: 13px;
@@ -657,7 +657,7 @@
 .plugin-settings-name {
   font-weight: 600;
   font-size: 13px;
-  color: var(--text);
+  color: var(--text-primary);
 }
 
 .plugin-settings-desc {
@@ -675,9 +675,9 @@
   margin-top: 8px;
   padding: 6px 10px;
   border-radius: 4px;
-  background: color-mix(in srgb, var(--error, #f38ba8) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--error, #f38ba8) 40%, transparent);
-  color: var(--error, #f38ba8);
+  background: color-mix(in srgb, var(--color-error) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-error) 40%, transparent);
+  color: var(--color-error);
   font-size: 11px;
   word-break: break-all;
 }
