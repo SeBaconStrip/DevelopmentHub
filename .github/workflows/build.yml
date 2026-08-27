@@ -85,7 +85,9 @@ jobs:
 
       - name: Publish app (builds frontend + .NET)
         working-directory: src/app
-        run: dotnet publish -c Release -r win-x64 --self-contained -o ../../publish
+        # -p:Version stamps the assembly so the About section reports the real
+        # version instead of the 1.0.0.0 default.
+        run: dotnet publish -c Release -r win-x64 --self-contained -o ../../publish -p:Version="${{ steps.version.outputs.version }}"
 
       - name: Update Edge extension version
         shell: pwsh
