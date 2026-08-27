@@ -146,13 +146,36 @@ async function loadPluginBundle(manifest: PluginManifest, pluginSettings: Record
   document.head.querySelectorAll(`script[data-plugin-id="${manifest.id}"]`)
     .forEach((el) => el.remove());
 
-  await new Promise<void>((resolve, reject) => {
+  const loaded = await new Promise<boolean>((resolve) => {
     const script = document.createElement('script');
     script.type = 'module';
     script.src = bundleUrl;
     script.dataset.pluginId = manifest.id;
-    script.onload = () => resolve();
-    script.onerror = (e) => reject(new Error(`Plugin bundle load failed: ${manifest.id} — ${e}`));
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
     document.head.appendChild(script);
   });
+
+  if (!loaded) {
+    // The error event of a <script type="module"> carries no detail — it
+    // stringifies to "[object Event]", which makes install problems on other
+    // machines impossible to diagnose. Ask the server what actually happened.
+    throw new Error(`${bundleUrl} — ${await describeBundleFailure(bundleUrl)}`);
+  }
+}
+
+/**
+ * Turns a failed bundle injection into an actionable message by re-requesting
+ * the bundle. A non-OK status means the backend rejected it (missing file,
+ * disabled plugin); an OK status means the module was served but failed to
+ * execute, which points at the bundle's own code rather than the installation.
+ */
+async function describeBundleFailure(bundleUrl: string): Promise<string> {
+  try {
+    const res = await fetch(bundleUrl, { cache: 'no-store' });
+    if (!res.ok) return `HTTP ${res.status} ${res.statusText}`;
+    return `HTTP ${res.status}, but the module did not execute — check the DevTools console for a syntax or import error`;
+  } catch (err) {
+    return `request failed: ${err instanceof Error ? err.message : String(err)}`;
+  }
 }

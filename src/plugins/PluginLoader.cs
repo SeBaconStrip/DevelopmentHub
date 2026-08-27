@@ -26,7 +26,10 @@ public class PluginLoader(ILogger<PluginLoader> logger)
         {
             var manifestPath = Path.Combine(dir, "manifest.json");
             if (!File.Exists(manifestPath))
+            {
+                logger.LogDebug("Skipping {Dir}: no manifest.json", dir);
                 continue;
+            }
 
             try
             {
@@ -74,7 +77,19 @@ public class PluginLoader(ILogger<PluginLoader> logger)
         {
             var bundlePath = Path.Combine(pluginDir, manifest.Frontend.Bundle);
             if (File.Exists(bundlePath))
+            {
                 bundleMtime = File.GetLastWriteTimeUtc(bundlePath).Ticks;
+            }
+            else
+            {
+                // The plugin still loads — the manifest, widgets and routes are
+                // valid — but the browser will get a 404 for the bundle. Warning
+                // here names the missing file at startup instead of leaving the
+                // failure to surface as an opaque script error in the UI.
+                logger.LogWarning(
+                    "Plugin {Id} declares frontend bundle {Bundle} but no file exists at {Path}",
+                    manifest.Id, manifest.Frontend.Bundle, bundlePath);
+            }
         }
 
         return manifest with { PluginDirectory = pluginDir, BundleMtime = bundleMtime };

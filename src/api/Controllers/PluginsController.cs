@@ -6,7 +6,10 @@ namespace DevelopmentHub.Api.Controllers;
 
 [ApiController]
 [Route("api/plugins")]
-public class PluginsController(IPluginRegistry registry, IUserConfigService userConfigService) : ControllerBase
+public class PluginsController(
+    IPluginRegistry registry,
+    IUserConfigService userConfigService,
+    ILogger<PluginsController> logger) : ControllerBase
 {
     /// <summary>
     /// Returns manifests for all installed plugins regardless of enabled state.
@@ -76,22 +79,43 @@ public class PluginsController(IPluginRegistry registry, IUserConfigService user
     [HttpGet("{pluginId}/ui/bundle.js")]
     public async Task<IActionResult> GetBundle(string pluginId)
     {
+        // Every rejection below is logged: the browser only sees a bare 404 and a
+        // <script type="module"> error event carries no detail, so without this
+        // a failing plugin install cannot be diagnosed from the client side.
         var plugin = registry.GetById(pluginId);
-        if (plugin?.Manifest.Frontend?.Enabled != true)
+        if (plugin is null)
+        {
+            logger.LogWarning("Bundle request for unknown plugin {PluginId}", pluginId);
             return NotFound();
+        }
+
+        if (plugin.Manifest.Frontend?.Enabled != true)
+        {
+            logger.LogWarning(
+                "Bundle request for {PluginId} but its manifest does not enable a frontend", pluginId);
+            return NotFound();
+        }
 
         var cfg = await userConfigService.GetAsync();
         if (cfg.PluginSettings.TryGetValue(pluginId, out var ps)
             && ps.TryGetValue("enabled", out var val)
             && val == "false")
+        {
+            logger.LogWarning("Bundle request for {PluginId} which is disabled in user config", pluginId);
             return NotFound();
+        }
 
         var bundlePath = Path.Combine(
             plugin.Manifest.PluginDirectory,
             plugin.Manifest.Frontend.Bundle);
 
         if (!System.IO.File.Exists(bundlePath))
+        {
+            logger.LogWarning(
+                "Bundle file for {PluginId} not found at {BundlePath} (plugin directory {PluginDirectory}, manifest bundle {ManifestBundle})",
+                pluginId, bundlePath, plugin.Manifest.PluginDirectory, plugin.Manifest.Frontend.Bundle);
             return NotFound();
+        }
 
         // No-store so the browser always fetches the latest bundle.
         // Bundles are small and only loaded once on app start.
