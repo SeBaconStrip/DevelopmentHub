@@ -55,6 +55,8 @@
   --fav-active:            #f9c74f;
   --color-error:           #dc2626;
   --color-success:         #16a34a;
+  --color-warning:         #d97706;
+  --color-error-bg:        color-mix(in srgb, var(--color-error) 14%, var(--surface));
   --toggle-off:            #d1d5db;
   --toggle-on:             #7b6ebe;
   --widget-border:         #e5e7eb;
@@ -106,6 +108,7 @@
   --fav-active:            #f9c74f;
   --color-error:           #f38ba8;
   --color-success:         #a6e3a1;
+  --color-warning:         #f9e2af;
   --toggle-off:            #45475a;
   --toggle-on:             #8b7fd4;
   --widget-border:         #313244;
@@ -157,6 +160,7 @@
   --fav-active:            #dcdcaa;
   --color-error:           #f44747;
   --color-success:         #4ec9b0;
+  --color-warning:         #cca700;
   --toggle-off:            #3c3c3c;
   --toggle-on:             #007acc;
   --widget-border:         #3c3c3c;
@@ -208,6 +212,7 @@
   --fav-active:            #f9c74f;
   --color-error:           #dc2626;
   --color-success:         #16a34a;
+  --color-warning:         #d97706;
   --toggle-off:            #d1d5db;
   --toggle-on:             #3b82f6;
   --widget-border:         #dbeafe;
@@ -259,6 +264,7 @@
   --fav-active:            #f9c74f;
   --color-error:           #dc2626;
   --color-success:         #16a34a;
+  --color-warning:         #b45309;
   --toggle-off:            #d1d5db;
   --toggle-on:             #ea580c;
   --widget-border:         #fed7aa;
@@ -310,6 +316,7 @@
   --fav-active:            #f9c74f;
   --color-error:           #dc2626;
   --color-success:         #16a34a;
+  --color-warning:         #ca8a04;
   --toggle-off:            #d1d5db;
   --toggle-on:             #2ca390;
   --widget-border:         #c8e6d0;
