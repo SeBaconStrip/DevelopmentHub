@@ -1,0 +1,116 @@
+.svc-page {
+  padding: 28px 48px 48px;
+}
+
+.svc-card {
+  background-color: var(--surface-alpha);
+  border-radius: 20px;
+  padding: 20px 24px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+  margin-bottom: 24px;
+}
+
+.svc-empty {
+  font-size: 13px;
+  color: var(--text-muted);
+  padding: 8px 0;
+}
+
+/* ── table ── */
+.svc-table {
+  display: grid;
+  grid-template-columns: 1.6fr 1.2fr 140px 166px;
+  border: 1px solid var(--border-accent);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--surface-muted);
+}
+
+.svc-th {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 12px 16px 12px 12px;
+  background: transparent;
+}
+
+.svc-td {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px 10px 12px;
+  border-top: 1px solid var(--border-accent);
+  min-width: 0;
+}
+
+.svc-service-name {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-family: var(--font-mono, monospace);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── status badge ── */
+.svc-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 2px 9px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.svc-badge--running {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.svc-badge--stopped {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.svc-badge--pending {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+/* ── action buttons ── */
+.svc-col-actions {
+  gap: 4px;
+}
+
+.svc-action-btn {
+  padding: 4px 8px !important;
+  min-width: 30px;
+  font-size: 12px;
+}
+
+.svc-action-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.svc-action-btn--grant {
+  color: #d97706;
+}
+
+/* ── spinner ── */
+.svc-spinner {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: svc-spin 0.7s linear infinite;
+}
+
+@keyframes svc-spin {
+  to { transform: rotate(360deg); }
+}
