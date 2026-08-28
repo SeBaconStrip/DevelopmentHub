@@ -380,4 +380,5 @@ export const mockConfig: AppConfig = {
   todoSyncIntervalSeconds: 300,
   pluginsFolderPath: 'C:\\Users\\colin\\AppData\\Roaming\\DevelopmentHub\\plugins',
   pluginSettings: {},
+  windowsServicePatterns: [],
 };
