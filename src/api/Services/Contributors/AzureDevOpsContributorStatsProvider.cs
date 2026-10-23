@@ -10,501 +10,328 @@ public class AzureDevOpsContributorStatsProvider(
     IHttpClientFactory httpClientFactory,
     ILogger<AzureDevOpsContributorStatsProvider> logger) : IContributorStatsProvider
 {
-  private const int PageSize = 100;
-  private const int MaxPullRequestsPerRepo = 2000;
-  private const int MaxConcurrentDiffRequests = 8;
+    private const int PageSize = 100;
+    private const int MaxPullRequestsPerRepo = 2000;
 
-  public string ProviderId => "azureDevOps";
+    // Azure DevOps throttles bursts (HTTP 429 / TF400733), so every fan-out is capped.
+    private const int MaxConcurrentRepoRequests = 4;
+    private const int MaxConcurrentDiffRequests = 8;
+    private const int MaxConcurrentAvatarRequests = 8;
 
-  public async Task<List<RepositoryRefDto>> ListRepositoriesAsync(
-      UserConfigDao userConfig,
-      CancellationToken cancellationToken = default)
-  {
-    var cfg = GetSettings(userConfig);
-    if (!IsConfigured(cfg))
+    public string ProviderId => "azureDevOps";
+
+    public async Task<List<RepositoryRefDto>> ListRepositoriesAsync(
+        UserConfigDao userConfig,
+        CancellationToken cancellationToken = default)
     {
-      logger.LogWarning("Azure DevOps is not fully configured. Skipping repository listing.");
-      return [];
+        var cfg = GetSettings(userConfig);
+        EnsureConfigured(cfg);
+
+        var client = CreateAuthorizedClient(cfg.Pat);
+        var url = $"https://dev.azure.com/{cfg.Organization}/{cfg.Project}/_apis/git/repositories?api-version=7.1";
+
+        var values = (await GetJsonAsync(client, url, "list Azure DevOps repositories", cancellationToken))?["value"]?.AsArray()
+            ?? throw new ContributorProviderException("Azure DevOps returned an unexpected repository list.");
+
+        return values
+            .Where(v => v is not null)
+            .Select(v => new RepositoryRefDto
+            {
+                ProviderId = ProviderId,
+                Id = v!["id"]?.GetValue<string>() ?? string.Empty,
+                Name = v["name"]?.GetValue<string>() ?? string.Empty,
+                FullName = $"{cfg.Project}/{v["name"]?.GetValue<string>()}",
+            })
+            .Where(r => !string.IsNullOrEmpty(r.Id))
+            .OrderBy(r => r.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
-    var client = CreateAuthorizedClient(cfg.Pat);
-    var url = $"https://dev.azure.com/{cfg.Organization}/{cfg.Project}/_apis/git/repositories?api-version=7.1";
-
-    try
+    public async Task<PullRequestFetchResult> FetchPullRequestsAsync(
+        UserConfigDao userConfig,
+        IReadOnlyCollection<RepositoryRefDto> repositories,
+        DateTime? since,
+        DateTime? until,
+        Func<ContributorIdentity, bool>? includeFileChangesFor,
+        CancellationToken cancellationToken = default)
     {
-      var response = await client.GetStringAsync(url, cancellationToken);
-      var values = JsonNode.Parse(response)?["value"]?.AsArray();
-      if (values is null) return [];
+        var cfg = GetSettings(userConfig);
+        EnsureConfigured(cfg);
 
-      return values
-          .Where(v => v is not null)
-          .Select(v => new RepositoryRefDto
-          {
-            ProviderId = ProviderId,
-            Id = v!["id"]?.GetValue<string>() ?? string.Empty,
-            Name = v["name"]?.GetValue<string>() ?? string.Empty,
-            FullName = $"{cfg.Project}/{v["name"]?.GetValue<string>()}",
-          })
-          .Where(r => !string.IsNullOrEmpty(r.Id))
-          .OrderBy(r => r.Name, StringComparer.OrdinalIgnoreCase)
-          .ToList();
-    }
-    catch (Exception ex)
-    {
-      logger.LogError(ex, "Failed to list Azure DevOps repositories");
-      return [];
-    }
-  }
+        var client = CreateAuthorizedClient(cfg.Pat);
+        var result = new PullRequestFetchResult();
 
-  public async Task<List<ContributorStatDto>> GetContributorStatsAsync(
-      UserConfigDao userConfig,
-      IReadOnlyCollection<string> repositoryIds,
-      DateTime? since,
-      DateTime? until,
-      CancellationToken cancellationToken = default)
-  {
-    var cfg = GetSettings(userConfig);
-    if (!IsConfigured(cfg) || repositoryIds.Count == 0)
-      return [];
+        var perRepo = await Throttled.SelectAsync(
+            repositories,
+            MaxConcurrentRepoRequests,
+            async repo => (Repo: repo, Prs: await FetchRepoPullRequestsAsync(client, cfg, repo, since, until, result, cancellationToken)),
+            cancellationToken);
 
-    var client = CreateAuthorizedClient(cfg.Pat);
-    var aggregate = new Dictionary<string, ContributorAccumulator>(StringComparer.OrdinalIgnoreCase);
+        var prs = perRepo
+            .SelectMany(r => r.Prs.Select(pr => (r.Repo, Pr: pr, Author: ReadIdentity(pr["createdBy"]))))
+            .ToList();
 
-    var perRepoResults = await Task.WhenAll(
-        repositoryIds.Select(repoId =>
-            FetchRepoPullRequestsAsync(client, cfg, repoId, since, until, cancellationToken)));
+        // Only PRs authored by an included contributor need (relatively expensive) diff stats.
+        var needsFiles = includeFileChangesFor is null
+            ? []
+            : prs.Where(p => p.Author is not null && includeFileChangesFor(p.Author)).ToList();
 
-    foreach (var pr in perRepoResults.SelectMany(prs => prs))
-      Accumulate(aggregate, pr);
+        var fileStats = await Throttled.SelectAsync(
+            needsFiles,
+            MaxConcurrentDiffRequests,
+            async p => (Key: PrKey(p.Repo.Id, p.Pr), Counts: await FetchPrFileChangeCountsAsync(client, cfg, p.Repo.Id, p.Pr, cancellationToken)),
+            cancellationToken);
 
-    var ordered = aggregate.Values
-        .OrderByDescending(c => c.AuthoredCount)
-        .ThenByDescending(c => c.ReviewedCount)
-        .ThenBy(c => c.DisplayName, StringComparer.OrdinalIgnoreCase)
-        .ToList();
+        var countsByPr = fileStats
+            .Where(s => s.Counts is not null)
+            .ToDictionary(s => s.Key, s => s.Counts!);
 
-    // Azure DevOps avatar URLs require PAT authentication, which the WebView cannot
-    // provide for <img> requests. Fetch them server-side and inline as data URIs.
-    var avatars = await Task.WhenAll(
-        ordered.Select(a => FetchAvatarDataUriAsync(client, a.AvatarUrl, cancellationToken)));
+        var missingCounts = fileStats.Count(s => s.Counts is null);
+        if (missingCounts > 0)
+            result.Warnings.Add($"File counts are unavailable for {missingCounts} pull request(s) and are missing from the totals.");
 
-    return ordered
-        .Select((a, i) => new ContributorStatDto
+        foreach (var (repo, pr, author) in prs)
         {
-          Login = a.Login,
-          DisplayName = a.DisplayName,
-          AvatarUrl = avatars[i],
-          AuthoredCount = a.AuthoredCount,
-          ReviewedCount = a.ReviewedCount,
-        })
-        .ToList();
-  }
-
-  private async Task<string> FetchAvatarDataUriAsync(
-      HttpClient client,
-      string avatarUrl,
-      CancellationToken cancellationToken)
-  {
-    if (string.IsNullOrWhiteSpace(avatarUrl))
-      return string.Empty;
-
-    try
-    {
-      using var response = await client.GetAsync(avatarUrl, cancellationToken);
-      if (!response.IsSuccessStatusCode)
-        return string.Empty;
-
-      var contentType = response.Content.Headers.ContentType?.MediaType ?? "image/png";
-      if (!contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
-        return string.Empty;
-
-      var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
-      if (bytes.Length == 0)
-        return string.Empty;
-
-      return $"data:{contentType};base64,{Convert.ToBase64String(bytes)}";
-    }
-    catch (Exception ex)
-    {
-      logger.LogDebug(ex, "Failed to fetch Azure DevOps avatar from {Url}", avatarUrl);
-      return string.Empty;
-    }
-  }
-
-  public async Task<List<ContributorCoverageDto>> GetRepositoryCoverageAsync(
-      UserConfigDao userConfig,
-      IReadOnlyCollection<RepositoryRefDto> repositories,
-      IReadOnlyCollection<string> contributors,
-      DateTime? since,
-      DateTime? until,
-      CancellationToken cancellationToken = default)
-  {
-    var cfg = GetSettings(userConfig);
-    if (!IsConfigured(cfg) || repositories.Count == 0)
-      return [];
-
-    var client = CreateAuthorizedClient(cfg.Pat);
-
-    var filter = contributors
-        .Where(c => !string.IsNullOrWhiteSpace(c))
-        .Select(c => c.Trim())
-        .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-    var aggregate = new Dictionary<string, CoverageAccumulator>(StringComparer.OrdinalIgnoreCase);
-
-    var perRepo = await Task.WhenAll(repositories.Select(async repo =>
-    {
-      var prs = await FetchRepoPullRequestsAsync(client, cfg, repo.Id, since, until, cancellationToken);
-      return (repo, prs);
-    }));
-
-    // Only PRs authored by an included contributor need (relatively expensive) diff stats.
-    var authoredPrs = new List<(RepositoryRefDto Repo, JsonNode Pr)>();
-    foreach (var (repo, prs) in perRepo)
-      foreach (var pr in prs)
-      {
-        var author = pr["createdBy"];
-        if (author is not null && IdentityPassesFilter(author, filter))
-          authoredPrs.Add((repo, pr));
-      }
-
-    var fileStats = await FetchFileChangeStatsAsync(client, cfg, authoredPrs, cancellationToken);
-
-    foreach (var (repo, prs) in perRepo)
-      foreach (var pr in prs)
-        AccumulateCoverage(aggregate, repo, pr, filter, fileStats);
-
-    var ordered = aggregate.Values
-        .OrderByDescending(c => c.TotalAuthored)
-        .ThenByDescending(c => c.TotalReviewed)
-        .ThenBy(c => c.DisplayName, StringComparer.OrdinalIgnoreCase)
-        .ToList();
-
-    var avatars = await Task.WhenAll(
-        ordered.Select(a => FetchAvatarDataUriAsync(client, a.AvatarUrl, cancellationToken)));
-
-    return ordered
-        .Select((a, i) => new ContributorCoverageDto
-        {
-          Login = a.Login,
-          DisplayName = a.DisplayName,
-          AvatarUrl = avatars[i],
-          TotalAuthored = a.TotalAuthored,
-          TotalReviewed = a.TotalReviewed,
-          TotalFilesAdded = a.TotalFilesAdded,
-          TotalFilesEdited = a.TotalFilesEdited,
-          TotalFilesDeleted = a.TotalFilesDeleted,
-          Repositories = a.Repositories.Values
-              .OrderByDescending(r => r.AuthoredCount + r.ReviewedCount)
-              .ThenBy(r => r.RepositoryName, StringComparer.OrdinalIgnoreCase)
-              .ToList(),
-        })
-        .ToList();
-  }
-
-  private async Task<Dictionary<string, (int Added, int Edited, int Deleted)>> FetchFileChangeStatsAsync(
-      HttpClient client,
-      AzureDevOpsProviderSettings cfg,
-      IReadOnlyList<(RepositoryRefDto Repo, JsonNode Pr)> authoredPrs,
-      CancellationToken cancellationToken)
-  {
-    var results = new System.Collections.Concurrent.ConcurrentDictionary<string, (int, int, int)>();
-    using var throttle = new SemaphoreSlim(MaxConcurrentDiffRequests);
-
-    var tasks = authoredPrs.Select(async item =>
-    {
-      await throttle.WaitAsync(cancellationToken);
-      try
-      {
-        var counts = await FetchPrFileChangeCountsAsync(client, cfg, item.Repo.Id, item.Pr, cancellationToken);
-        results[PrKey(item.Repo.Id, item.Pr)] = counts;
-      }
-      finally
-      {
-        throttle.Release();
-      }
-    });
-
-    await Task.WhenAll(tasks);
-    return results.ToDictionary(kv => kv.Key, kv => kv.Value);
-  }
-
-  private async Task<(int Added, int Edited, int Deleted)> FetchPrFileChangeCountsAsync(
-      HttpClient client,
-      AzureDevOpsProviderSettings cfg,
-      string repoId,
-      JsonNode pr,
-      CancellationToken cancellationToken)
-  {
-    try
-    {
-      var baseCommit = pr["lastMergeTargetCommit"]?["commitId"]?.GetValue<string>();
-      var headCommit = pr["lastMergeSourceCommit"]?["commitId"]?.GetValue<string>();
-      if (string.IsNullOrEmpty(baseCommit) || string.IsNullOrEmpty(headCommit))
-        return (0, 0, 0);
-
-      var url =
-          $"https://dev.azure.com/{cfg.Organization}/{cfg.Project}/_apis/git/repositories/{repoId}/diffs/commits" +
-          $"?baseVersion={baseCommit}&baseVersionType=commit&targetVersion={headCommit}&targetVersionType=commit&api-version=7.1";
-
-      var response = await client.GetStringAsync(url, cancellationToken);
-      var changeCounts = JsonNode.Parse(response)?["changeCounts"];
-      if (changeCounts is null)
-        return (0, 0, 0);
-
-      int Count(string key) => changeCounts[key]?.GetValue<int>() ?? 0;
-      return (Count("Add"), Count("Edit"), Count("Delete"));
-    }
-    catch (Exception ex)
-    {
-      logger.LogDebug(ex, "Failed to fetch PR file change counts for repository {RepoId}", repoId);
-      return (0, 0, 0);
-    }
-  }
-
-  private static string PrKey(string repoId, JsonNode pr) =>
-      $"{repoId}/{pr["pullRequestId"]?.GetValue<int>() ?? 0}";
-
-  private static void AccumulateCoverage(
-      Dictionary<string, CoverageAccumulator> aggregate,
-      RepositoryRefDto repo,
-      JsonNode pr,
-      HashSet<string> filter,
-      IReadOnlyDictionary<string, (int Added, int Edited, int Deleted)> fileStats)
-  {
-    var author = pr["createdBy"];
-    if (author is not null)
-    {
-      var acc = GetOrAddCoverage(aggregate, author, filter);
-      if (acc is not null)
-      {
-        acc.TotalAuthored++;
-        var contrib = GetRepoContribution(acc, repo);
-        contrib.AuthoredCount++;
-
-        if (fileStats.TryGetValue(PrKey(repo.Id, pr), out var counts))
-        {
-          contrib.FilesAdded += counts.Added;
-          contrib.FilesEdited += counts.Edited;
-          contrib.FilesDeleted += counts.Deleted;
-          acc.TotalFilesAdded += counts.Added;
-          acc.TotalFilesEdited += counts.Edited;
-          acc.TotalFilesDeleted += counts.Deleted;
+            result.PullRequests.Add(new PullRequestRecord
+            {
+                RepositoryId = repo.Id,
+                Author = author,
+                Reviewers = ReadReviewers(pr),
+                FileChanges = countsByPr.GetValueOrDefault(PrKey(repo.Id, pr)),
+            });
         }
-      }
+
+        return result;
     }
 
-    var reviewers = pr["reviewers"]?.AsArray();
-    if (reviewers is null) return;
-
-    foreach (var reviewer in reviewers)
+    public async Task<IReadOnlyList<string>> ResolveAvatarUrlsAsync(
+        UserConfigDao userConfig,
+        IReadOnlyList<string> avatarUrls,
+        CancellationToken cancellationToken = default)
     {
-      if (reviewer is null) continue;
-      var vote = reviewer["vote"]?.GetValue<int>() ?? 0;
-      if (vote == 0) continue; // only count reviewers who actually voted
-
-      var acc = GetOrAddCoverage(aggregate, reviewer, filter);
-      if (acc is null) continue;
-      acc.TotalReviewed++;
-      GetRepoContribution(acc, repo).ReviewedCount++;
+        // Azure DevOps avatar URLs require PAT authentication, which the WebView cannot
+        // provide for <img> requests. Fetch them server-side and inline as data URIs.
+        var client = CreateAuthorizedClient(GetSettings(userConfig).Pat);
+        return await Throttled.SelectAsync(
+            avatarUrls,
+            MaxConcurrentAvatarRequests,
+            url => FetchAvatarDataUriAsync(client, url, cancellationToken),
+            cancellationToken);
     }
-  }
 
-  private static bool IdentityPassesFilter(JsonNode identity, HashSet<string> filter)
-  {
-    if (filter.Count == 0) return true;
-    var uniqueName = identity["uniqueName"]?.GetValue<string>();
-    var displayName = identity["displayName"]?.GetValue<string>() ?? string.Empty;
-    var login = !string.IsNullOrWhiteSpace(uniqueName) ? uniqueName : displayName;
-    return filter.Contains(login) || filter.Contains(displayName);
-  }
-
-  private static CoverageAccumulator? GetOrAddCoverage(
-      Dictionary<string, CoverageAccumulator> aggregate,
-      JsonNode identity,
-      HashSet<string> filter)
-  {
-    var uniqueName = identity["uniqueName"]?.GetValue<string>();
-    var displayName = identity["displayName"]?.GetValue<string>() ?? string.Empty;
-    var login = !string.IsNullOrWhiteSpace(uniqueName) ? uniqueName : displayName;
-
-    if (string.IsNullOrWhiteSpace(login))
-      return null;
-
-    if (filter.Count > 0 && !filter.Contains(login) && !filter.Contains(displayName))
-      return null;
-
-    if (!aggregate.TryGetValue(login, out var acc))
+    /// <summary>
+    /// Reviewers who actually voted. Group reviewers (e.g. "[Project]\Project Team" added
+    /// by a branch policy) inherit a member's vote, so they are not people and are skipped.
+    /// </summary>
+    public static List<ContributorIdentity> ReadReviewers(JsonNode pr)
     {
-      acc = new CoverageAccumulator
-      {
-        Login = login,
-        DisplayName = string.IsNullOrWhiteSpace(displayName) ? login : displayName,
-        AvatarUrl = identity["imageUrl"]?.GetValue<string>() ?? string.Empty,
-      };
-      aggregate[login] = acc;
+        var reviewers = new List<ContributorIdentity>();
+        foreach (var reviewer in pr["reviewers"]?.AsArray() ?? [])
+        {
+            if (reviewer is null) continue;
+            if (reviewer["isContainer"]?.GetValue<bool>() == true) continue;
+            if ((reviewer["vote"]?.GetValue<int>() ?? 0) == 0) continue;
+            if (ReadIdentity(reviewer) is { } identity)
+                reviewers.Add(identity);
+        }
+
+        return reviewers;
     }
 
-    return acc;
-  }
-
-  private static RepositoryContributionDto GetRepoContribution(CoverageAccumulator acc, RepositoryRefDto repo)
-  {
-    if (!acc.Repositories.TryGetValue(repo.Id, out var contrib))
+    private static ContributorIdentity? ReadIdentity(JsonNode? identity)
     {
-      contrib = new RepositoryContributionDto
-      {
-        RepositoryId = repo.Id,
-        RepositoryName = repo.Name,
-      };
-      acc.Repositories[repo.Id] = contrib;
+        if (identity is null) return null;
+        var uniqueName = identity["uniqueName"]?.GetValue<string>();
+        var displayName = identity["displayName"]?.GetValue<string>() ?? string.Empty;
+        var login = !string.IsNullOrWhiteSpace(uniqueName) ? uniqueName : displayName;
+        if (string.IsNullOrWhiteSpace(login)) return null;
+
+        return new ContributorIdentity(
+            login,
+            string.IsNullOrWhiteSpace(displayName) ? login : displayName,
+            identity["imageUrl"]?.GetValue<string>() ?? string.Empty);
     }
 
-    return contrib;
-  }
-
-  private async Task<List<JsonNode>> FetchRepoPullRequestsAsync(
-      HttpClient client,
-      AzureDevOpsProviderSettings cfg,
-      string repoId,
-      DateTime? since,
-      DateTime? until,
-      CancellationToken cancellationToken)
-  {
-    var collected = new List<JsonNode>();
-    var skip = 0;
-
-    try
+    private async Task<string> FetchAvatarDataUriAsync(
+        HttpClient client,
+        string avatarUrl,
+        CancellationToken cancellationToken)
     {
-      while (skip < MaxPullRequestsPerRepo)
-      {
-        var url = BuildPullRequestUrl(cfg, repoId, since, until, skip);
-        var response = await client.GetStringAsync(url, cancellationToken);
-        var values = JsonNode.Parse(response)?["value"]?.AsArray();
-        if (values is null || values.Count == 0)
-          break;
+        if (string.IsNullOrWhiteSpace(avatarUrl))
+            return string.Empty;
 
-        collected.AddRange(values.Where(v => v is not null).Select(v => v!));
+        try
+        {
+            using var response = await client.GetAsync(avatarUrl, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+                return string.Empty;
 
-        if (values.Count < PageSize)
-          break;
+            var contentType = response.Content.Headers.ContentType?.MediaType ?? "image/png";
+            if (!contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+                return string.Empty;
 
-        skip += PageSize;
-      }
+            var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
+            if (bytes.Length == 0)
+                return string.Empty;
+
+            return $"data:{contentType};base64,{Convert.ToBase64String(bytes)}";
+        }
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            logger.LogDebug(ex, "Failed to fetch Azure DevOps avatar from {Url}", avatarUrl);
+            return string.Empty;
+        }
     }
-    catch (Exception ex)
+
+    /// <returns><c>null</c> when the counts could not be determined.</returns>
+    private async Task<FileChangeCounts?> FetchPrFileChangeCountsAsync(
+        HttpClient client,
+        AzureDevOpsProviderSettings cfg,
+        string repoId,
+        JsonNode pr,
+        CancellationToken cancellationToken)
     {
-      logger.LogWarning(ex, "Failed to fetch Azure DevOps pull requests for repository {RepoId}", repoId);
+        var baseCommit = pr["lastMergeTargetCommit"]?["commitId"]?.GetValue<string>();
+        var headCommit = pr["lastMergeSourceCommit"]?["commitId"]?.GetValue<string>();
+        if (string.IsNullOrEmpty(baseCommit) || string.IsNullOrEmpty(headCommit))
+            return null;
+
+        var url =
+            $"https://dev.azure.com/{cfg.Organization}/{cfg.Project}/_apis/git/repositories/{repoId}/diffs/commits" +
+            $"?baseVersion={baseCommit}&baseVersionType=commit&targetVersion={headCommit}&targetVersionType=commit&api-version=7.1";
+
+        try
+        {
+            var response = await client.GetStringAsync(url, cancellationToken);
+            var changeCounts = JsonNode.Parse(response)?["changeCounts"];
+            if (changeCounts is null)
+                return null;
+
+            int Count(string key) => changeCounts[key]?.GetValue<int>() ?? 0;
+            return new FileChangeCounts(Count("Add"), Count("Edit"), Count("Delete"));
+        }
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            logger.LogDebug(ex, "Failed to fetch PR file change counts for repository {RepoId}", repoId);
+            return null;
+        }
     }
 
-    return collected;
-  }
+    private static string PrKey(string repoId, JsonNode pr) =>
+        $"{repoId}/{pr["pullRequestId"]?.GetValue<int>() ?? 0}";
 
-  private static string BuildPullRequestUrl(
-      AzureDevOpsProviderSettings cfg,
-      string repoId,
-      DateTime? since,
-      DateTime? until,
-      int skip)
-  {
-    var url =
-        $"https://dev.azure.com/{cfg.Organization}/{cfg.Project}/_apis/git/repositories/{repoId}/pullrequests" +
-        $"?searchCriteria.status=all&$top={PageSize}&$skip={skip}&api-version=7.1";
-
-    if (since.HasValue || until.HasValue)
-      url += "&searchCriteria.queryTimeRangeType=Created";
-    if (since.HasValue)
-      url += $"&searchCriteria.minTime={Uri.EscapeDataString(since.Value.ToUniversalTime().ToString("o"))}";
-    if (until.HasValue)
-      url += $"&searchCriteria.maxTime={Uri.EscapeDataString(until.Value.ToUniversalTime().ToString("o"))}";
-
-    return url;
-  }
-
-  private static void Accumulate(
-      Dictionary<string, ContributorAccumulator> aggregate,
-      JsonNode pr)
-  {
-    var author = pr["createdBy"];
-    if (author is not null)
-      GetOrAdd(aggregate, author).AuthoredCount++;
-
-    var reviewers = pr["reviewers"]?.AsArray();
-    if (reviewers is null) return;
-
-    foreach (var reviewer in reviewers)
+    private async Task<List<JsonNode>> FetchRepoPullRequestsAsync(
+        HttpClient client,
+        AzureDevOpsProviderSettings cfg,
+        RepositoryRefDto repo,
+        DateTime? since,
+        DateTime? until,
+        PullRequestFetchResult result,
+        CancellationToken cancellationToken)
     {
-      if (reviewer is null) continue;
-      var vote = reviewer["vote"]?.GetValue<int>() ?? 0;
-      if (vote == 0) continue; // only count reviewers who actually voted
-      GetOrAdd(aggregate, reviewer).ReviewedCount++;
+        var collected = new List<JsonNode>();
+        var skip = 0;
+
+        while (true)
+        {
+            var url = BuildPullRequestUrl(cfg, repo.Id, since, until, skip);
+            var values = (await GetJsonAsync(client, url, $"fetch pull requests for {repo.Name}", cancellationToken))?["value"]?.AsArray()
+                ?? throw new ContributorProviderException($"Azure DevOps returned an unexpected pull request list for {repo.Name}.");
+
+            collected.AddRange(values.Where(v => v is not null).Select(v => v!));
+
+            if (values.Count < PageSize)
+                break;
+
+            skip += PageSize;
+            if (skip >= MaxPullRequestsPerRepo)
+            {
+                lock (result.Warnings)
+                    result.Warnings.Add($"{repo.Name}: only the newest {MaxPullRequestsPerRepo} pull requests were counted.");
+                break;
+            }
+        }
+
+        return collected;
     }
-  }
 
-  private static ContributorAccumulator GetOrAdd(
-      Dictionary<string, ContributorAccumulator> aggregate,
-      JsonNode identity)
-  {
-    var uniqueName = identity["uniqueName"]?.GetValue<string>();
-    var displayName = identity["displayName"]?.GetValue<string>() ?? string.Empty;
-    var login = !string.IsNullOrWhiteSpace(uniqueName) ? uniqueName : displayName;
-
-    if (!aggregate.TryGetValue(login, out var acc))
+    private async Task<JsonNode?> GetJsonAsync(
+        HttpClient client,
+        string url,
+        string operation,
+        CancellationToken cancellationToken)
     {
-      acc = new ContributorAccumulator
-      {
-        Login = login,
-        DisplayName = string.IsNullOrWhiteSpace(displayName) ? login : displayName,
-        AvatarUrl = identity["imageUrl"]?.GetValue<string>() ?? string.Empty,
-      };
-      aggregate[login] = acc;
+        try
+        {
+            using var response = await client.GetAsync(url, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                logger.LogWarning("Azure DevOps request failed. Operation={Operation} Status={Status}", operation, (int)response.StatusCode);
+                throw new ContributorProviderException(response.StatusCode switch
+                {
+                    System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden =>
+                        $"Azure DevOps rejected the access token ({(int)response.StatusCode}). Check the key in Settings → Integrations.",
+                    System.Net.HttpStatusCode.TooManyRequests =>
+                        "Azure DevOps is throttling requests. Try again in a few minutes or select fewer repositories.",
+                    _ => $"Failed to {operation} (HTTP {(int)response.StatusCode}).",
+                });
+            }
+
+            return JsonNode.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
+        }
+        catch (Exception ex) when (ex is not ContributorProviderException && !cancellationToken.IsCancellationRequested)
+        {
+            logger.LogWarning(ex, "Azure DevOps request failed. Operation={Operation}", operation);
+            throw new ContributorProviderException($"Failed to {operation}: {ex.Message}", ex);
+        }
     }
 
-    return acc;
-  }
+    private static string BuildPullRequestUrl(
+        AzureDevOpsProviderSettings cfg,
+        string repoId,
+        DateTime? since,
+        DateTime? until,
+        int skip)
+    {
+        var url =
+            $"https://dev.azure.com/{cfg.Organization}/{cfg.Project}/_apis/git/repositories/{repoId}/pullrequests" +
+            $"?searchCriteria.status=all&$top={PageSize}&$skip={skip}&api-version=7.1";
 
-  private static bool IsConfigured(AzureDevOpsProviderSettings cfg) =>
-      !string.IsNullOrWhiteSpace(cfg.Organization) &&
-      !string.IsNullOrWhiteSpace(cfg.Project) &&
-      !string.IsNullOrWhiteSpace(cfg.Pat);
+        if (since.HasValue || until.HasValue)
+            url += "&searchCriteria.queryTimeRangeType=Created";
+        if (since.HasValue)
+            url += $"&searchCriteria.minTime={Uri.EscapeDataString(since.Value.ToUniversalTime().ToString("o"))}";
+        if (until.HasValue)
+            url += $"&searchCriteria.maxTime={Uri.EscapeDataString(until.Value.ToUniversalTime().ToString("o"))}";
 
-  private static AzureDevOpsProviderSettings GetSettings(UserConfigDao userConfig) =>
-      new()
-      {
-        Organization = userConfig.GetProviderSetting("azureDevOps", "organization"),
-        Project = userConfig.GetProviderSetting("azureDevOps", "project"),
-        UserEmail = userConfig.GetProviderSetting("azureDevOps", "userEmail"),
-        Pat = userConfig.GetProviderSetting("azureDevOps", "pat"),
-      };
+        return url;
+    }
 
-  private HttpClient CreateAuthorizedClient(string pat)
-  {
-    var client = httpClientFactory.CreateClient("AzureDevOps");
-    var encoded = Convert.ToBase64String(Encoding.ASCII.GetBytes($":{pat}"));
-    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", encoded);
-    return client;
-  }
+    private static void EnsureConfigured(AzureDevOpsProviderSettings cfg)
+    {
+        if (string.IsNullOrWhiteSpace(cfg.Organization) ||
+            string.IsNullOrWhiteSpace(cfg.Project) ||
+            string.IsNullOrWhiteSpace(cfg.Pat))
+        {
+            throw new ContributorProviderException(
+                "Azure DevOps is not configured. Set organization, project and key in Settings → Integrations.");
+        }
+    }
 
-  private sealed class ContributorAccumulator
-  {
-    public string Login { get; init; } = string.Empty;
-    public string DisplayName { get; set; } = string.Empty;
-    public string AvatarUrl { get; set; } = string.Empty;
-    public int AuthoredCount { get; set; }
-    public int ReviewedCount { get; set; }
-  }
+    private static AzureDevOpsProviderSettings GetSettings(UserConfigDao userConfig) =>
+        new()
+        {
+            Organization = userConfig.GetProviderSetting("azureDevOps", "organization"),
+            Project = userConfig.GetProviderSetting("azureDevOps", "project"),
+            UserEmail = userConfig.GetProviderSetting("azureDevOps", "userEmail"),
+            Pat = userConfig.GetProviderSetting("azureDevOps", "pat"),
+        };
 
-  private sealed class CoverageAccumulator
-  {
-    public string Login { get; init; } = string.Empty;
-    public string DisplayName { get; set; } = string.Empty;
-    public string AvatarUrl { get; set; } = string.Empty;
-    public int TotalAuthored { get; set; }
-    public int TotalReviewed { get; set; }
-    public int TotalFilesAdded { get; set; }
-    public int TotalFilesEdited { get; set; }
-    public int TotalFilesDeleted { get; set; }
-    public Dictionary<string, RepositoryContributionDto> Repositories { get; } =
-        new(StringComparer.OrdinalIgnoreCase);
-  }
+    private HttpClient CreateAuthorizedClient(string pat)
+    {
+        var client = httpClientFactory.CreateClient("AzureDevOps");
+        var encoded = Convert.ToBase64String(Encoding.ASCII.GetBytes($":{pat}"));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", encoded);
+        return client;
+    }
 }

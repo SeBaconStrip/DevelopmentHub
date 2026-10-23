@@ -139,13 +139,6 @@
 .contributors-repo-search {
   flex: 1;
   min-width: 0;
-  border: 1px solid var(--input-border);
-  border-radius: 8px;
-  padding: 7px 12px;
-  font-size: 13px;
-  background: var(--input-bg);
-  color: var(--text-primary);
-  font-family: inherit;
 }
 
 .contributors-selectall {
@@ -300,6 +293,20 @@
 
 .contributors-empty--error {
   color: var(--color-danger, #e5534b);
+}
+
+.contributors-warnings {
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--color-warning, #d4a72c);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.contributors-warnings ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
 }
 
 @media (max-width: 900px) {

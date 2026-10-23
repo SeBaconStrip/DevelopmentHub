@@ -8,7 +8,7 @@ interface HeaderActionsCtx {
 }
 
 export const HeaderActionsContext = createContext<HeaderActionsCtx>({
-  setHeaderActions: () => { },
+  setHeaderActions: () => {},
 });
 
 export function useHeaderActions(actions: React.ReactNode, deps: React.DependencyList) {
@@ -16,7 +16,7 @@ export function useHeaderActions(actions: React.ReactNode, deps: React.Dependenc
   useEffect(() => {
     setHeaderActions(actions);
     return () => setHeaderActions(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
 }
 
@@ -76,99 +76,99 @@ export function AppLayout({
 
   return (
     <HeaderActionsContext.Provider value={ctx}>
-      <div className="app-root">
-        <header
-          className="app-header"
-          onMouseDown={handleHeaderMouseDown}
-          onDoubleClick={handleHeaderDblClick}
-        >
-          <Link to="/" className="app-brand" onMouseDown={(e) => e.preventDefault()}>Development Hub</Link>
+    <div className="app-root">
+      <header
+        className="app-header"
+        onMouseDown={handleHeaderMouseDown}
+        onDoubleClick={handleHeaderDblClick}
+      >
+        <Link to="/" className="app-brand" onMouseDown={(e) => e.preventDefault()}>Development Hub</Link>
 
-          <nav className="app-nav">
+        <nav className="app-nav">
+          <NavLink
+            to="/"
+            end
+            className={({ isActive }) => "app-nav-link" + (isActive ? " app-nav-link--active" : "")}
+          >
+            Dashboard
+          </NavLink>
+          <NavLink
+            to="/repositories"
+            className={({ isActive }) => "app-nav-link" + (isActive ? " app-nav-link--active" : "")}
+          >
+            Repositories
+          </NavLink>
+          <NavLink
+            to="/pull-requests"
+            className={({ isActive }) => "app-nav-link" + (isActive ? " app-nav-link--active" : "")}
+          >
+            Pull Requests
+          </NavLink>
+          <NavLink
+            to="/contributors"
+            className={({ isActive }) => "app-nav-link" + (isActive ? " app-nav-link--active" : "")}
+          >
+            Contributors
+          </NavLink>
+          <NavLink
+            to="/todos"
+            className={({ isActive }) => "app-nav-link" + (isActive ? " app-nav-link--active" : "")}
+          >
+            Todos
+          </NavLink>
+          <NavLink
+            to="/workflows"
+            className={({ isActive }) => "app-nav-link" + (isActive ? " app-nav-link--active" : "")}
+          >
+            Workflows
+          </NavLink>
+          <NavLink
+            to="/quick-links"
+            className={({ isActive }) => "app-nav-link" + (isActive ? " app-nav-link--active" : "")}
+          >
+            Quick Links
+          </NavLink>
+          {pluginNavLinks.map((link) => (
             <NavLink
-              to="/"
-              end
+              key={link.path}
+              to={link.path}
               className={({ isActive }) => "app-nav-link" + (isActive ? " app-nav-link--active" : "")}
             >
-              Dashboard
+              {link.label}
             </NavLink>
-            <NavLink
-              to="/repositories"
-              className={({ isActive }) => "app-nav-link" + (isActive ? " app-nav-link--active" : "")}
-            >
-              Repositories
-            </NavLink>
-            <NavLink
-              to="/pull-requests"
-              className={({ isActive }) => "app-nav-link" + (isActive ? " app-nav-link--active" : "")}
-            >
-              Pull Requests
-            </NavLink>
-            <NavLink
-              to="/contributors"
-              className={({ isActive }) => "app-nav-link" + (isActive ? " app-nav-link--active" : "")}
-            >
-              Contributors
-            </NavLink>
-            <NavLink
-              to="/todos"
-              className={({ isActive }) => "app-nav-link" + (isActive ? " app-nav-link--active" : "")}
-            >
-              Todos
-            </NavLink>
-            <NavLink
-              to="/workflows"
-              className={({ isActive }) => "app-nav-link" + (isActive ? " app-nav-link--active" : "")}
-            >
-              Workflows
-            </NavLink>
-            <NavLink
-              to="/quick-links"
-              className={({ isActive }) => "app-nav-link" + (isActive ? " app-nav-link--active" : "")}
-            >
-              Quick Links
-            </NavLink>
-            {pluginNavLinks.map((link) => (
-              <NavLink
-                key={link.path}
-                to={link.path}
-                className={({ isActive }) => "app-nav-link" + (isActive ? " app-nav-link--active" : "")}
-              >
-                {link.label}
-              </NavLink>
-            ))}
-          </nav>
+          ))}
+        </nav>
 
-          <div className="app-header-end">
-            <div className="app-header-actions" onMouseDown={(e) => e.stopPropagation()}>
-              {headerActions}
-              <button className="btn-ghost" onClick={() => setShowSettings(true)}>
-                ⚙ Settings
-              </button>
-            </div>
-            <div className="wc-buttons">
-              <button className="wc-btn wc-minimize" onClick={() => sendWindowMsg("minimize")} title="Minimize">
-                <svg width="10" height="10" viewBox="0 0 10 10"><rect y="4.5" width="10" height="1" fill="currentColor" /></svg>
-              </button>
-              <button className="wc-btn wc-maximize" onClick={() => sendWindowMsg("maximize")} title={isMaximized ? "Restore" : "Maximize"}>
-                {isMaximized
-                  ? <svg width="10" height="10" viewBox="0 0 10 10"><rect x="0" y="3" width="7" height="7" fill="none" stroke="currentColor" strokeWidth="1" /><polyline points="3,3 3,0 10,0 10,7 7,7" fill="none" stroke="currentColor" strokeWidth="1" /></svg>
-                  : <svg width="10" height="10" viewBox="0 0 10 10"><rect x="0" y="0" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="1" /></svg>
-                }
-              </button>
-              <button className="wc-btn wc-close" onClick={() => sendWindowMsg("close")} title="Close">
-                <svg width="10" height="10" viewBox="0 0 10 10"><line x1="0" y1="0" x2="10" y2="10" stroke="currentColor" strokeWidth="1.5" /><line x1="10" y1="0" x2="0" y2="10" stroke="currentColor" strokeWidth="1.5" /></svg>
-              </button>
-            </div>
+        <div className="app-header-end">
+          <div className="app-header-actions" onMouseDown={(e) => e.stopPropagation()}>
+            {headerActions}
+            <button className="btn-ghost" onClick={() => setShowSettings(true)}>
+              ⚙ Settings
+            </button>
           </div>
-        </header>
-
-        <div className="app-scroll">
-          {children}
+          <div className="wc-buttons">
+            <button className="wc-btn wc-minimize" onClick={() => sendWindowMsg("minimize")} title="Minimize">
+              <svg width="10" height="10" viewBox="0 0 10 10"><rect y="4.5" width="10" height="1" fill="currentColor" /></svg>
+            </button>
+            <button className="wc-btn wc-maximize" onClick={() => sendWindowMsg("maximize")} title={isMaximized ? "Restore" : "Maximize"}>
+              {isMaximized
+                ? <svg width="10" height="10" viewBox="0 0 10 10"><rect x="0" y="3" width="7" height="7" fill="none" stroke="currentColor" strokeWidth="1" /><polyline points="3,3 3,0 10,0 10,7 7,7" fill="none" stroke="currentColor" strokeWidth="1" /></svg>
+                : <svg width="10" height="10" viewBox="0 0 10 10"><rect x="0" y="0" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="1" /></svg>
+              }
+            </button>
+            <button className="wc-btn wc-close" onClick={() => sendWindowMsg("close")} title="Close">
+              <svg width="10" height="10" viewBox="0 0 10 10"><line x1="0" y1="0" x2="10" y2="10" stroke="currentColor" strokeWidth="1.5" /><line x1="10" y1="0" x2="0" y2="10" stroke="currentColor" strokeWidth="1.5" /></svg>
+            </button>
+          </div>
         </div>
+      </header>
 
-        {showSettings && <DashboardSettingsModal onClose={() => setShowSettings(false)} />}
+      <div className="app-scroll">
+        {children}
       </div>
+
+      {showSettings && <DashboardSettingsModal onClose={() => setShowSettings(false)} />}
+    </div>
     </HeaderActionsContext.Provider>
   );
 }

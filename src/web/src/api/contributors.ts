@@ -3,7 +3,13 @@ import { apiFetch } from './client';
 async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
     const body = await res.text().catch(() => res.statusText);
-    throw new Error(body || `HTTP ${res.status}`);
+    let message = body;
+    try {
+      message = (JSON.parse(body) as { error?: string }).error ?? body;
+    } catch {
+      // Not JSON: show the raw body.
+    }
+    throw new Error(message || `HTTP ${res.status}`);
   }
   return res.json() as Promise<T>;
 }
@@ -27,6 +33,8 @@ export interface ContributorStatsResult {
   providerId: string;
   repositories: RepositoryRef[];
   contributors: ContributorStat[];
+  /** Data that was left out of the counts (limits reached, counts unavailable). */
+  warnings: string[];
   fetchedAt: string;
 }
 
@@ -63,6 +71,8 @@ export interface RepositoryCoverageResult {
   providerId: string;
   repositories: RepositoryRef[];
   contributors: ContributorCoverage[];
+  /** Data that was left out of the counts (limits reached, counts unavailable). */
+  warnings: string[];
   fetchedAt: string;
 }
 
