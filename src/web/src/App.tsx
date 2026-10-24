@@ -6,6 +6,8 @@ import { AppLayout } from "./components/AppLayout";
 import DashboardPage from "./pages/dashboard/DashboardPage";
 import RepositoriesPage from "./pages/repositories/RepositoriesPage";
 import PullRequestsPage from "./pages/pull-requests/PullRequestsPage";
+import ContributorsPage from "./pages/contributors/ContributorsPage";
+import RepositoryCoveragePage from "./pages/contributors/RepositoryCoveragePage";
 import TodosPage from "./pages/todos/TodosPage";
 import WorkflowsPage from "./pages/workflows/WorkflowsPage";
 import QuickLinksPage from "./pages/quick-links/QuickLinksPage";
@@ -34,6 +36,8 @@ export default function App() {
             <Route path="/" element={<DashboardPage />} />
             <Route path="/repositories" element={<RepositoriesPage />} />
             <Route path="/pull-requests" element={<PullRequestsPage />} />
+            <Route path="/contributors" element={<ContributorsPage />} />
+            <Route path="/contributors/coverage" element={<RepositoryCoveragePage />} />
             <Route path="/todos" element={<TodosPage />} />
             <Route path="/workflows" element={<WorkflowsPage />} />
             <Route path="/quick-links" element={<QuickLinksPage />} />

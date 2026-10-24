@@ -105,6 +105,12 @@ export function AppLayout({
             Pull Requests
           </NavLink>
           <NavLink
+            to="/contributors"
+            className={({ isActive }) => "app-nav-link" + (isActive ? " app-nav-link--active" : "")}
+          >
+            Contributors
+          </NavLink>
+          <NavLink
             to="/todos"
             className={({ isActive }) => "app-nav-link" + (isActive ? " app-nav-link--active" : "")}
           >

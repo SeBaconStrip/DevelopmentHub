@@ -107,6 +107,9 @@ public static class BackendHost
         builder.Services.AddScoped<IPullRequestService, PullRequestService>();
         builder.Services.AddScoped<IPullRequestProvider, AzureDevOpsPullRequestProvider>();
         builder.Services.AddScoped<IPullRequestProvider, GitHubPullRequestProvider>();
+        builder.Services.AddScoped<IContributorStatsService, ContributorStatsService>();
+        builder.Services.AddScoped<IContributorStatsProvider, AzureDevOpsContributorStatsProvider>();
+        builder.Services.AddScoped<IContributorStatsProvider, GitHubContributorStatsProvider>();
         builder.Services.AddScoped<IRepositoryService, RepositoryService>();
         builder.Services.AddScoped<ITodoService, TodoService>();
         builder.Services.AddSingleton<IUserConfigService, UserConfigService>();
