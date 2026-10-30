@@ -146,15 +146,40 @@ async function loadPluginBundle(manifest: PluginManifest, pluginSettings: Record
   document.head.querySelectorAll(`script[data-plugin-id="${manifest.id}"]`)
     .forEach((el) => el.remove());
 
-  const loaded = await new Promise<boolean>((resolve) => {
-    const script = document.createElement('script');
-    script.type = 'module';
-    script.src = bundleUrl;
-    script.dataset.pluginId = manifest.id;
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
-    document.head.appendChild(script);
-  });
+  // Resolution and evaluation errors of a module script (e.g. an unresolvable
+  // import, or an exception while the bundle registers itself) are reported to
+  // window "error" with the real message, not to the script's own error event,
+  // and "load" still fires — without this the plugin silently registers nothing.
+  // Evaluation errors carry the bundle URL as filename; resolution errors carry
+  // the document URL. Plugins load one at a time, so an error from the bundle or
+  // from no script file at all during this window belongs to this plugin.
+  const pluginPathPrefix = `/api/plugins/${encodeURIComponent(manifest.id)}/`;
+  let moduleError: string | null = null;
+  const onWindowError = (e: ErrorEvent) => {
+    const fromBundle = e.filename?.includes(pluginPathPrefix);
+    const fromScriptFile = /\.m?js(?:[?#]|$)/.test(e.filename ?? '');
+    if (moduleError === null && (fromBundle || !fromScriptFile))
+      moduleError = e.message || String(e.error);
+  };
+  window.addEventListener('error', onWindowError);
+
+  let loaded: boolean;
+  try {
+    loaded = await new Promise<boolean>((resolve) => {
+      const script = document.createElement('script');
+      script.type = 'module';
+      script.src = bundleUrl;
+      script.dataset.pluginId = manifest.id;
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.head.appendChild(script);
+    });
+  } finally {
+    window.removeEventListener('error', onWindowError);
+  }
+
+  if (moduleError !== null)
+    throw new Error(`${bundleUrl} — ${moduleError}`);
 
   if (!loaded) {
     // The error event of a <script type="module"> carries no detail — it
