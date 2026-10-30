@@ -13,6 +13,18 @@ from [Conventional Commits](https://www.conventionalcommits.org/).
 
 ---
 
+## [1.4.0](https://github.com/SeBaconStrip/DevelopmentHub/compare/v1.3.0...v1.4.0) (2026-10-30)
+
+
+### Features
+
+* add Windows Service Manager page and widget ([#45](https://github.com/SeBaconStrip/DevelopmentHub/issues/45)) ([7be4017](https://github.com/SeBaconStrip/DevelopmentHub/commit/7be401721f26d21c5c25bebe427343542742dfa6))
+
+
+### Bug Fixes
+
+* keep taskbar visible when the window is maximized ([#60](https://github.com/SeBaconStrip/DevelopmentHub/issues/60)) ([80530c4](https://github.com/SeBaconStrip/DevelopmentHub/commit/80530c457431826a7861fb31edf8e0dcaab94e3b))
+
 ## [1.3.0](https://github.com/SeBaconStrip/DevelopmentHub/compare/v1.2.0...v1.3.0) (2026-10-24)
 
 
