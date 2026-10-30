@@ -33,7 +33,8 @@ export function WindowsServicesWidget({
   onGrant: (name: string) => void;
 }) {
   if (services.length === 0) {
-    return <Empty text="No services configured. Open Windows Services page to add patterns." />;
+    if (error) return <ErrorBar message={error} onDismiss={onClearError} />;
+    return <Empty text="No services configured. Add patterns under Settings → Services." />;
   }
 
   return (
@@ -57,7 +58,7 @@ export function WindowsServicesWidget({
                     className="btn-ghost wsw-btn wsw-btn--grant"
                     onClick={() => onGrant(svc.name)}
                     disabled={busy}
-                    title="Grant start/stop permissions (one-time admin prompt)"
+                    title="Permanently allow your user to start/stop this service (admin prompt once)"
                   >{busy ? <span className="wsw-spinner" /> : "🔑"}</button>
                 )}
                 <button

@@ -6,17 +6,19 @@ using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Security.Principal;
 using System.ServiceProcess;
-using System.Text;
 using System.Text.RegularExpressions;
+using DevelopmentHub.Workflow;
 
 namespace DevelopmentHub.Api.Services;
 
 [SupportedOSPlatform("windows")]
 public class WindowsServiceService : IWindowsServiceService
 {
-    // Windows SCM allows service names to start with _ (e.g. _BEService, _LightSpeed).
+    // Windows SCM allows service names to start with _ (e.g. _BEService, _LightSpeed) and to contain $
+    // (named SQL Server instances such as MSSQL$SQLEXPRESS). The name only ever ends up inside a
+    // single-quoted PowerShell string, where $ is not expanded.
     private static readonly Regex _safeServiceName =
-        new(@"^[A-Za-z0-9_][A-Za-z0-9 _.\-]*$", RegexOptions.Compiled);
+        new(@"^[A-Za-z0-9_][A-Za-z0-9 _.$\-]*$", RegexOptions.Compiled);
 
     [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
     private static extern IntPtr OpenSCManager(string? machineName, string? databaseName, uint dwAccess);
@@ -53,11 +55,7 @@ public class WindowsServiceService : IWindowsServiceService
         if (patterns.Length == 0)
             return Task.FromResult<IReadOnlyList<WindowsServiceDto>>([]);
 
-        var compiled = patterns
-            .Select(p => new Regex(
-                "^" + Regex.Escape(p).Replace("\\*", ".*").Replace("\\?", ".") + "$",
-                RegexOptions.IgnoreCase | RegexOptions.Compiled))
-            .ToArray();
+        var compiled = CompilePatterns(patterns);
 
         var all = ServiceController.GetServices();
         var result = new List<WindowsServiceDto>();
@@ -103,6 +101,30 @@ public class WindowsServiceService : IWindowsServiceService
         result.Sort((a, b) => string.Compare(a.DisplayName, b.DisplayName, StringComparison.OrdinalIgnoreCase));
         return Task.FromResult<IReadOnlyList<WindowsServiceDto>>(result);
     }
+
+    public bool MatchesAnyPattern(string name, string[] patterns)
+    {
+        var compiled = CompilePatterns(patterns);
+        if (compiled.Any(r => r.IsMatch(name)))
+            return true;
+
+        try
+        {
+            using var controller = new ServiceController(name);
+            var displayName = controller.DisplayName;
+            return compiled.Any(r => r.IsMatch(displayName));
+        }
+        catch (InvalidOperationException)
+        {
+            return false; // service does not exist
+        }
+    }
+
+    private static Regex[] CompilePatterns(string[] patterns) => patterns
+        .Select(p => new Regex(
+            "^" + Regex.Escape(p).Replace("\\*", ".*").Replace("\\?", ".") + "$",
+            RegexOptions.IgnoreCase))
+        .ToArray();
 
     public Task<IReadOnlyList<WindowsServiceSummaryDto>> GetAllAsync()
     {
@@ -195,79 +217,34 @@ public class WindowsServiceService : IWindowsServiceService
             ?? throw new InvalidOperationException("Cannot determine current user SID.");
         var sidString = userSid.Value;
 
-        var tempScriptPath = Path.Combine(Path.GetTempPath(), $"developmenthub-acl-{Guid.NewGuid():N}.ps1");
-        var tempResultPath = Path.Combine(Path.GetTempPath(), $"developmenthub-acl-{Guid.NewGuid():N}.json");
-
-        try
-        {
-            var escapedName   = EscapePowerShell(name);
-            var escapedResult = EscapePowerShellPath(tempResultPath);
-            var script = $$"""
+        // Adds an ACE granting the current user start (RP) and stop (WP) unless one already exists.
+        var script = $$"""
 $ErrorActionPreference = 'Stop'
 try {
-    $serviceName = '{{escapedName}}'
+    $serviceName = '{{EscapePowerShell(name)}}'
     $userSid     = '{{sidString}}'
-    $raw  = sc.exe sdshow $serviceName 2>&1
-    $sddl = ($raw | Where-Object { $_ -match 'D:' }) -join ''
-    if (-not $sddl) { throw "Could not read SDDL for service: $serviceName" }
-    if ($sddl -like "*$userSid*") {
-        @{ success = $true; message = 'Already granted' } | ConvertTo-Json -Compress | Set-Content -Path '{{escapedResult}}' -Encoding UTF8
-        exit 0
+    $raw = sc.exe sdshow $serviceName 2>&1
+    if ($LASTEXITCODE -ne 0) { throw "sc sdshow failed with exit code ${LASTEXITCODE}: $raw" }
+    $sddl = (($raw | ForEach-Object { "$_".Trim() }) -join '')
+    if ($sddl -notmatch '^[OGDS]:' -or $sddl -notmatch 'D:') { throw "Unexpected SDDL for service ${serviceName}: $sddl" }
+    $granted = [regex]::Matches($sddl, "\(A;[^;]*;([A-Z]*);[^;]*;[^;]*;$userSid\)") | Where-Object {
+        $rights = $_.Groups[1].Value -split '(..)' | Where-Object { $_ }
+        ($rights -contains 'RP') -and ($rights -contains 'WP')
     }
+    if ($granted) { exit 0 }
     $ace     = "(A;;RPWP;;;$userSid)"
     $newSddl = $sddl -replace '(D:[^(]*)', "`$1$ace"
     sc.exe sdset $serviceName $newSddl | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "sc sdset failed with exit code $LASTEXITCODE" }
-    @{ success = $true; message = '' } | ConvertTo-Json -Compress | Set-Content -Path '{{escapedResult}}' -Encoding UTF8
     exit 0
 }
 catch {
-    @{ success = $false; message = ($_ | Out-String) } | ConvertTo-Json -Compress | Set-Content -Path '{{escapedResult}}' -Encoding UTF8
+    Send-Result ($_ | Out-String)
     exit 1
 }
 """;
-            File.WriteAllText(tempScriptPath, script, Encoding.UTF8);
 
-            var psi = new ProcessStartInfo
-            {
-                FileName = "powershell.exe",
-                Arguments = string.Format(
-                    CultureInfo.InvariantCulture,
-                    "-NoProfile -ExecutionPolicy Bypass -File \"{0}\"",
-                    tempScriptPath),
-                UseShellExecute = true,
-                Verb = "runas",
-                WindowStyle = ProcessWindowStyle.Hidden,
-            };
-
-            using var process = Process.Start(psi)
-                ?? throw new InvalidOperationException($"Could not start elevated process to grant permissions for service '{name}'.");
-
-            if (!process.WaitForExit(30_000))
-            {
-                try { process.Kill(); } catch { }
-                throw new InvalidOperationException($"Permission grant for service '{name}' timed out.");
-            }
-
-            if (process.ExitCode != 0)
-            {
-                var msg = ReadResultMessage(tempResultPath);
-                throw new InvalidOperationException(
-                    string.IsNullOrWhiteSpace(msg)
-                        ? $"Permission grant for service '{name}' failed (exit {process.ExitCode})."
-                        : msg.Trim());
-            }
-        }
-        catch (Win32Exception ex) when (ex.NativeErrorCode == 1223)
-        {
-            throw new InvalidOperationException($"Permission grant for service '{name}' was cancelled by the user.");
-        }
-        finally
-        {
-            TryDelete(tempScriptPath);
-            TryDelete(tempResultPath);
-        }
-
+        RunElevatedScript(script, TimeSpan.FromSeconds(30), $"Permission grant for service '{name}'");
         return Task.CompletedTask;
     }
 
@@ -286,92 +263,46 @@ catch {
     /// </summary>
     private static void RunElevated(string serviceName, string verb)
     {
-        var tempScriptPath = Path.Combine(Path.GetTempPath(), $"developmenthub-svc-{Guid.NewGuid():N}.ps1");
-        var tempResultPath = Path.Combine(Path.GetTempPath(), $"developmenthub-svc-{Guid.NewGuid():N}.json");
-
-        try
-        {
-            var escapedName = EscapePowerShell(serviceName);
-            var escapedResult = EscapePowerShellPath(tempResultPath);
-            var forceFlag = verb == "Start" ? "" : " -Force";
-            var script = $$"""
+        var forceFlag = verb == "Start" ? "" : " -Force";
+        var script = $$"""
 $ErrorActionPreference = 'Stop'
-$ServiceName = '{{escapedName}}'
+$ServiceName = '{{EscapePowerShell(serviceName)}}'
 try {
     {{verb}}-Service -Name $ServiceName{{forceFlag}} -ErrorAction Stop
-    @{ success = $true; message = '' } | ConvertTo-Json -Compress | Set-Content -Path '{{escapedResult}}' -Encoding UTF8
     exit 0
 }
 catch {
-    @{ success = $false; message = ($_ | Out-String) } | ConvertTo-Json -Compress | Set-Content -Path '{{escapedResult}}' -Encoding UTF8
+    Send-Result ($_ | Out-String)
     exit 1
 }
 """;
-            File.WriteAllText(tempScriptPath, script, Encoding.UTF8);
 
-            var psi = new ProcessStartInfo
-            {
-                FileName = "powershell.exe",
-                Arguments = string.Format(
-                    CultureInfo.InvariantCulture,
-                    "-NoProfile -ExecutionPolicy Bypass -File \"{0}\"",
-                    tempScriptPath),
-                UseShellExecute = true,
-                Verb = "runas",
-                WindowStyle = ProcessWindowStyle.Hidden,
-            };
-
-            using var process = Process.Start(psi)
-                ?? throw new InvalidOperationException($"Could not start elevated process for service '{serviceName}'.");
-
-            const int TimeoutMs = 120_000;
-            if (!process.WaitForExit(TimeoutMs))
-            {
-                try { process.Kill(); } catch { /* best-effort */ }
-                throw new InvalidOperationException(
-                    $"Elevated {verb.ToLower(CultureInfo.InvariantCulture)} of service '{serviceName}' timed out after 120 seconds.");
-            }
-
-            if (process.ExitCode != 0)
-            {
-                var msg = ReadResultMessage(tempResultPath);
-                throw new InvalidOperationException(
-                    string.IsNullOrWhiteSpace(msg)
-                        ? $"Elevated {verb.ToLower(CultureInfo.InvariantCulture)} of service '{serviceName}' failed (exit {process.ExitCode})."
-                        : msg.Trim());
-            }
-        }
-        catch (Win32Exception ex) when (ex.NativeErrorCode == 1223 /* UAC cancelled */)
-        {
-            throw new InvalidOperationException($"Elevated operation on service '{serviceName}' was cancelled by the user.");
-        }
-        finally
-        {
-            TryDelete(tempScriptPath);
-            TryDelete(tempResultPath);
-        }
+        RunElevatedScript(script, TimeSpan.FromSeconds(120),
+            $"Elevated {verb.ToLower(CultureInfo.InvariantCulture)} of service '{serviceName}'");
     }
 
-    private static string? ReadResultMessage(string path)
+    private static void RunElevatedScript(string script, TimeSpan timeout, string operation)
     {
-        if (!File.Exists(path)) return null;
+        int exitCode;
+        string? message;
         try
         {
-            var node = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(path));
-            return node?["message"]?.GetValue<string?>();
+            (exitCode, message) = ElevatedPowerShell.Run(script, timeout);
         }
-        catch { return null; }
-    }
+        catch (OperationCanceledException)
+        {
+            throw new InvalidOperationException($"{operation} was cancelled by the user.");
+        }
+        catch (System.TimeoutException)
+        {
+            throw new InvalidOperationException($"{operation} timed out after {timeout.TotalSeconds:0} seconds.");
+        }
 
-    private static void TryDelete(string path)
-    {
-        try { if (File.Exists(path)) File.Delete(path); }
-        catch { /* best-effort */ }
+        if (exitCode != 0)
+            throw new InvalidOperationException(
+                string.IsNullOrWhiteSpace(message) ? $"{operation} failed (exit {exitCode})." : message.Trim());
     }
 
     private static string EscapePowerShell(string value) =>
         value.Replace("'", "''");
-
-    private static string EscapePowerShellPath(string path) =>
-        path.Replace("'", "''").Replace("[", "`[").Replace("]", "`]");
 }

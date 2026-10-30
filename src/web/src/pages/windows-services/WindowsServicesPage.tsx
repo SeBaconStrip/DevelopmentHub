@@ -148,7 +148,7 @@ export default function WindowsServicesPage() {
                       className="btn-ghost svc-action-btn svc-action-btn--grant"
                       onClick={() => grantPermission(svc.name)}
                       disabled={busy}
-                      title="Grant start/stop permissions (one-time admin prompt)"
+                      title="Permanently allow your user to start/stop this service (admin prompt once)"
                     >{busy ? <span className="svc-spinner" /> : "🔑"}</button>
                   )}
                   <button

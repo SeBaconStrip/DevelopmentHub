@@ -127,7 +127,7 @@ export default function DashboardPage() {
     queryFn: workflowsApi.list,
   });
 
-  const { data: windowsServices = [] } = useQuery<WindowsServiceInfo[]>({
+  const { data: windowsServices = [], error: windowsServicesLoadError } = useQuery<WindowsServiceInfo[]>({
     queryKey: ["windows-services"],
     queryFn: windowsServicesApi.getStatuses,
     refetchInterval: 15_000,
@@ -267,7 +267,7 @@ export default function DashboardPage() {
         <WindowsServicesWidget
           services={windowsServices}
           pendingService={pendingWindowsService}
-          error={windowsServiceError}
+          error={windowsServiceError ?? windowsServicesLoadError?.message ?? null}
           onClearError={() => setWindowsServiceError(null)}
           onStart={(name) => handleWindowsServiceAction(name, "start")}
           onStop={(name) => handleWindowsServiceAction(name, "stop")}

@@ -14,8 +14,7 @@ public class WindowsServicesController(
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<WindowsServiceDto>>> GetStatuses()
     {
-        var config = await configService.GetAsync();
-        var patterns = (config.WindowsServicePatterns ?? []).Where(p => !string.IsNullOrWhiteSpace(p)).ToArray();
+        var patterns = await GetPatternsAsync();
         if (patterns.Length == 0)
             return Ok(Array.Empty<WindowsServiceDto>());
 
@@ -47,6 +46,9 @@ public class WindowsServicesController(
     [HttpPost("{name}/start")]
     public async Task<IActionResult> Start(string name)
     {
+        if (await RejectUnconfiguredAsync(name) is { } rejected)
+            return rejected;
+
         try
         {
             await windowsServiceService.StartAsync(name);
@@ -67,6 +69,9 @@ public class WindowsServicesController(
     [HttpPost("{name}/stop")]
     public async Task<IActionResult> Stop(string name)
     {
+        if (await RejectUnconfiguredAsync(name) is { } rejected)
+            return rejected;
+
         try
         {
             await windowsServiceService.StopAsync(name);
@@ -87,6 +92,9 @@ public class WindowsServicesController(
     [HttpPost("{name}/restart")]
     public async Task<IActionResult> Restart(string name)
     {
+        if (await RejectUnconfiguredAsync(name) is { } rejected)
+            return rejected;
+
         try
         {
             await windowsServiceService.RestartAsync(name);
@@ -107,6 +115,9 @@ public class WindowsServicesController(
     [HttpPost("{name}/grant-permission")]
     public async Task<IActionResult> GrantPermission(string name)
     {
+        if (await RejectUnconfiguredAsync(name) is { } rejected)
+            return rejected;
+
         try
         {
             await windowsServiceService.GrantPermissionAsync(name);
@@ -122,5 +133,22 @@ public class WindowsServicesController(
             logger.LogError(ex, "Failed to grant permissions for Windows service. Name={Name}", name);
             return StatusCode(500, new { error = ex.Message });
         }
+    }
+
+    private async Task<string[]> GetPatternsAsync()
+    {
+        var config = await configService.GetAsync();
+        return (config.WindowsServicePatterns ?? []).Where(p => !string.IsNullOrWhiteSpace(p)).ToArray();
+    }
+
+    // Only configured services may be controlled, so the API token alone (e.g. inside a plugin)
+    // cannot start, stop or grant permissions on arbitrary services.
+    private async Task<IActionResult?> RejectUnconfiguredAsync(string name)
+    {
+        if (windowsServiceService.MatchesAnyPattern(name, await GetPatternsAsync()))
+            return null;
+
+        logger.LogWarning("Rejected action on unconfigured Windows service. Name={Name}", name);
+        return StatusCode(403, new { error = $"Service '{name}' is not in the configured service patterns." });
     }
 }
