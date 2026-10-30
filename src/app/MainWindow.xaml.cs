@@ -30,12 +30,27 @@ public partial class MainWindow : Window
     [DllImport("user32.dll")] static extern IntPtr MonitorFromRect(ref RECT lprc, uint dwFlags);
     [DllImport("user32.dll")] static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO lpmi);
     [DllImport("user32.dll")] static extern bool IsZoomed(IntPtr hWnd);
+    [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+    [DllImport("shell32.dll")] static extern UIntPtr SHAppBarMessage(uint dwMessage, ref APPBARDATA pData);
 
     [StructLayout(LayoutKind.Sequential)]
     private struct POINT { public int X, Y; }
 
     [StructLayout(LayoutKind.Sequential)]
     private struct RECT { public int Left, Top, Right, Bottom; }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct APPBARDATA
+    {
+        public int cbSize;
+        public IntPtr hWnd;
+        public uint uCallbackMessage, uEdge;
+        public RECT rc;
+        public IntPtr lParam;
+    }
+
+    private const uint ABM_GETAUTOHIDEBAREX = 0x0000000B;
+    private const uint ABE_LEFT = 0, ABE_TOP = 1, ABE_RIGHT = 2, ABE_BOTTOM = 3;
 
     [StructLayout(LayoutKind.Sequential)]
     private struct MINMAXINFO
@@ -110,15 +125,23 @@ public partial class MainWindow : Window
                     var hwnd = new WindowInteropHelper(this).Handle;
                     if (WindowState == WindowState.Maximized)
                     {
-                        // Restore and position so cursor stays at proportional X offset
+                        // Restore so the cursor keeps its relative X position on the window.
+                        // GetCursorPos/GetWindowRect are physical pixels, Left/Top are DIPs, and
+                        // monitors left of or above the primary have negative coordinates.
                         GetCursorPos(out var pt);
-                        var restored = RestoreBounds;
-                        double ratio = SystemParameters.PrimaryScreenWidth > 0
-                            ? (double)pt.X / SystemParameters.PrimaryScreenWidth
+                        GetWindowRect(hwnd, out var maximized);
+                        var maximizedWidth = maximized.Right - maximized.Left;
+                        var ratio = maximizedWidth > 0
+                            ? Math.Clamp((double)(pt.X - maximized.Left) / maximizedWidth, 0, 1)
                             : 0.5;
+                        var fromDevice = PresentationSource.FromVisual(this)?.CompositionTarget?.TransformFromDevice
+                            ?? System.Windows.Media.Matrix.Identity;
+                        var cursor = fromDevice.Transform(new System.Windows.Point(pt.X, pt.Y));
+                        var grabOffsetY = fromDevice.Transform(new Vector(0, pt.Y - maximized.Top)).Y;
+                        var restored = RestoreBounds;
                         WindowState = WindowState.Normal;
-                        Left = Math.Max(0, pt.X - restored.Width * ratio);
-                        Top = Math.Max(0, pt.Y - 20);
+                        Left = cursor.X - restored.Width * ratio;
+                        Top = cursor.Y - grabOffsetY;
                     }
                     ReleaseCapture();
                     SendMessage(hwnd, WM_NCLBUTTONDOWN, (IntPtr)HTCAPTION, IntPtr.Zero);
@@ -203,13 +226,12 @@ public partial class MainWindow : Window
         if ((pos.flags & (SWP_NOSIZE | SWP_NOMOVE)) != 0) return;
 
         var target = new RECT { Left = pos.x, Top = pos.y, Right = pos.x + pos.cx, Bottom = pos.y + pos.cy };
-        var info = new MONITORINFO { cbSize = Marshal.SizeOf<MONITORINFO>() };
-        if (!GetMonitorInfo(MonitorFromRect(ref target, MONITOR_DEFAULTTONEAREST), ref info)) return;
+        if (!TryGetMaximizedArea(MonitorFromRect(ref target, MONITOR_DEFAULTTONEAREST), out _, out var area)) return;
 
-        pos.x = info.rcWork.Left;
-        pos.y = info.rcWork.Top;
-        pos.cx = info.rcWork.Right - info.rcWork.Left;
-        pos.cy = info.rcWork.Bottom - info.rcWork.Top;
+        pos.x = area.Left;
+        pos.y = area.Top;
+        pos.cx = area.Right - area.Left;
+        pos.cy = area.Bottom - area.Top;
         Marshal.StructureToPtr(pos, lParam, false);
     }
 
@@ -218,18 +240,41 @@ public partial class MainWindow : Window
     // bounds to the work area of the monitor the window is on.
     private static void LimitMaximizedBoundsToWorkArea(IntPtr hwnd, IntPtr lParam)
     {
-        var monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
-        if (monitor == IntPtr.Zero) return;
-
-        var info = new MONITORINFO { cbSize = Marshal.SizeOf<MONITORINFO>() };
-        if (!GetMonitorInfo(monitor, ref info)) return;
+        if (!TryGetMaximizedArea(MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST), out var monitor, out var area)) return;
 
         var mmi = Marshal.PtrToStructure<MINMAXINFO>(lParam);
-        mmi.ptMaxPosition.X = info.rcWork.Left - info.rcMonitor.Left;
-        mmi.ptMaxPosition.Y = info.rcWork.Top - info.rcMonitor.Top;
-        mmi.ptMaxSize.X = info.rcWork.Right - info.rcWork.Left;
-        mmi.ptMaxSize.Y = info.rcWork.Bottom - info.rcWork.Top;
+        mmi.ptMaxPosition.X = area.Left - monitor.Left;
+        mmi.ptMaxPosition.Y = area.Top - monitor.Top;
+        mmi.ptMaxSize.X = area.Right - area.Left;
+        mmi.ptMaxSize.Y = area.Bottom - area.Top;
         Marshal.StructureToPtr(mmi, lParam, false);
+    }
+
+    // The work area of the monitor, minus a small strip at each edge that has an auto-hide taskbar:
+    // there the work area is the whole monitor, so the window would count as fullscreen again and
+    // the taskbar could not slide in when the mouse touches that edge.
+    private static bool TryGetMaximizedArea(IntPtr hMonitor, out RECT monitor, out RECT area)
+    {
+        monitor = area = default;
+        if (hMonitor == IntPtr.Zero) return false;
+
+        var info = new MONITORINFO { cbSize = Marshal.SizeOf<MONITORINFO>() };
+        if (!GetMonitorInfo(hMonitor, ref info)) return false;
+
+        monitor = info.rcMonitor;
+        area = info.rcWork;
+        const int autoHideReveal = 2;
+        if (area.Left == monitor.Left && HasAutoHideTaskbar(ABE_LEFT, monitor)) area.Left += autoHideReveal;
+        if (area.Top == monitor.Top && HasAutoHideTaskbar(ABE_TOP, monitor)) area.Top += autoHideReveal;
+        if (area.Right == monitor.Right && HasAutoHideTaskbar(ABE_RIGHT, monitor)) area.Right -= autoHideReveal;
+        if (area.Bottom == monitor.Bottom && HasAutoHideTaskbar(ABE_BOTTOM, monitor)) area.Bottom -= autoHideReveal;
+        return true;
+    }
+
+    private static bool HasAutoHideTaskbar(uint edge, RECT monitor)
+    {
+        var data = new APPBARDATA { cbSize = Marshal.SizeOf<APPBARDATA>(), uEdge = edge, rc = monitor };
+        return SHAppBarMessage(ABM_GETAUTOHIDEBAREX, ref data) != UIntPtr.Zero;
     }
 
     public void ToggleFromHotkey()
