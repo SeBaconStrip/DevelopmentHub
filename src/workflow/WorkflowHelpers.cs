@@ -188,7 +188,4 @@ internal static class WorkflowHelpers
 
     /// <summary>Escapes single quotes in a PowerShell string literal by doubling them.</summary>
     public static string EscapePowerShell(string value) => value.Replace("'", "''");
-
-    /// <summary>Escapes single quotes in a PowerShell path literal by doubling them.</summary>
-    public static string EscapePowerShellPath(string value) => value.Replace("'", "''");
 }

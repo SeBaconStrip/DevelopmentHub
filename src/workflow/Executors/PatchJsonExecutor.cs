@@ -1,6 +1,6 @@
 using DevelopmentHub.Workflow.Steps;
-using System.ComponentModel;
-using System.Diagnostics;
+using System.Runtime.Versioning;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -38,6 +38,8 @@ public sealed class PatchJsonExecutor : WorkflowStepExecutor<PatchJsonStep>
         }
         else if (step.RunElevated)
         {
+            if (!OperatingSystem.IsWindows())
+                throw new PlatformNotSupportedException("patchJson runElevated is only supported on Windows.");
             WriteElevated(filePath, json);
         }
         else
@@ -49,93 +51,59 @@ public sealed class PatchJsonExecutor : WorkflowStepExecutor<PatchJsonStep>
 
     /// <summary>
     /// Writes <paramref name="json"/> to a temporary file, then uses an elevated PowerShell process to
-    /// back up the original and move the temp file into place, allowing writes to protected paths.
+    /// back up the original and write the content into place, allowing writes to protected paths.
+    /// The elevated script only writes the bytes if their SHA-256 matches, so another process that
+    /// swaps the temp file in between cannot get its content into the protected path.
     /// </summary>
+    [SupportedOSPlatform("windows")]
     private static void WriteElevated(string filePath, string json)
     {
         var tempPath = Path.Combine(Path.GetTempPath(), $"developmenthub-patchjson-{Guid.NewGuid():N}.json");
-        var tempResultPath = Path.Combine(Path.GetTempPath(), $"developmenthub-patchjson-result-{Guid.NewGuid():N}.json");
-
         try
         {
-            File.WriteAllText(tempPath, json, Encoding.UTF8);
+            var bytes = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false).GetBytes(json);
+            File.WriteAllBytes(tempPath, bytes);
+            var expectedHash = Convert.ToHexString(SHA256.HashData(bytes));
 
-            var escapedFilePath = WorkflowHelpers.EscapePowerShellPath(filePath);
-            var escapedTempPath = WorkflowHelpers.EscapePowerShellPath(tempPath);
-            var escapedResultPath = WorkflowHelpers.EscapePowerShellPath(tempResultPath);
+            var escapedFilePath = WorkflowHelpers.EscapePowerShell(filePath);
+            var escapedTempPath = WorkflowHelpers.EscapePowerShell(tempPath);
 
             var script = $$"""
 $ErrorActionPreference = 'Stop'
-
 try {
-    Copy-Item -Path '{{escapedFilePath}}' -Destination '{{escapedFilePath}}.bak' -Force
-    Copy-Item -Path '{{escapedTempPath}}' -Destination '{{escapedFilePath}}' -Force
-
-    @{ success = $true; message = '' } | ConvertTo-Json -Compress | Set-Content -Path '{{escapedResultPath}}' -Encoding UTF8
+    $bytes = [System.IO.File]::ReadAllBytes('{{escapedTempPath}}')
+    $hash  = [System.BitConverter]::ToString([System.Security.Cryptography.SHA256]::Create().ComputeHash($bytes)).Replace('-', '')
+    if ($hash -ne '{{expectedHash}}') { throw 'The patched content was modified before it could be written.' }
+    [System.IO.File]::Copy('{{escapedFilePath}}', '{{escapedFilePath}}.bak', $true)
+    [System.IO.File]::WriteAllBytes('{{escapedFilePath}}', $bytes)
     exit 0
 }
 catch {
-    @{ success = $false; message = $_ | Out-String } | ConvertTo-Json -Compress | Set-Content -Path '{{escapedResultPath}}' -Encoding UTF8
+    Send-Result ($_ | Out-String)
     exit 1
 }
 """;
-            var tempScriptPath = Path.Combine(Path.GetTempPath(), $"developmenthub-patchjson-{Guid.NewGuid():N}.ps1");
+
+            int exitCode;
+            string? message;
             try
             {
-                File.WriteAllText(tempScriptPath, script, Encoding.UTF8);
-
-                var psi = new ProcessStartInfo
-                {
-                    FileName = "powershell.exe",
-                    Arguments = $"-NoProfile -ExecutionPolicy Bypass -File \"{tempScriptPath}\"",
-                    UseShellExecute = true,
-                    Verb = "runas",
-                    WindowStyle = ProcessWindowStyle.Hidden
-                };
-
-                using var process = Process.Start(psi)
-                    ?? throw new InvalidOperationException($"Elevated patchJson for '{filePath}' could not be started.");
-                process.WaitForExit();
-
-                if (process.ExitCode != 0)
-                {
-                    var message = ReadElevatedResultMessage(tempResultPath);
-                    throw new InvalidOperationException(
-                        string.IsNullOrWhiteSpace(message)
-                            ? $"Elevated patchJson for '{filePath}' failed with exit code {process.ExitCode}."
-                            : message.Trim());
-                }
+                (exitCode, message) = ElevatedPowerShell.Run(script);
             }
-            catch (Win32Exception ex) when (ex.NativeErrorCode == 1223)
+            catch (OperationCanceledException)
             {
                 throw new InvalidOperationException($"Elevated patchJson for '{filePath}' was cancelled by the user.");
             }
-            finally
-            {
-                TryDelete(tempScriptPath);
-            }
+
+            if (exitCode != 0)
+                throw new InvalidOperationException(
+                    string.IsNullOrWhiteSpace(message)
+                        ? $"Elevated patchJson for '{filePath}' failed with exit code {exitCode}."
+                        : message.Trim());
         }
         finally
         {
             TryDelete(tempPath);
-            TryDelete(tempResultPath);
-        }
-    }
-
-    /// <summary>Reads the <c>message</c> field from the JSON result file written by the elevated script, or returns <see langword="null"/> if the file is missing or unreadable.</summary>
-    private static string? ReadElevatedResultMessage(string resultPath)
-    {
-        if (!File.Exists(resultPath))
-            return null;
-
-        try
-        {
-            var node = JsonNode.Parse(File.ReadAllText(resultPath));
-            return node?["message"]?.GetValue<string?>();
-        }
-        catch
-        {
-            return null;
         }
     }
 
