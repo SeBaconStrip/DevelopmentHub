@@ -4,6 +4,13 @@ on:
   pull_request:
     branches:
       - main
+    # Release-please PRs only bump these files. Runs on its bot PRs need a manual
+    # approval that nobody gives, so they expired as failures; the release itself
+    # is built by release-please.yml after the merge.
+    paths-ignore:
+      - CHANGELOG.md
+      - .release-please-manifest.json
+      - version.txt
   release:
     types: [published]
   workflow_call:
