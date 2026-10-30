@@ -272,20 +272,24 @@ public static class BackendHost
             await next();
         });
 
+        // index.html must always be revalidated: it references the hashed bundles of the installed
+        // version, and a cached copy keeps showing the old UI after an update.
+        var spaFileOptions = new StaticFileOptions
+        {
+            OnPrepareResponse = ctx =>
+            {
+                if (ctx.File.Name.EndsWith(".html", StringComparison.OrdinalIgnoreCase))
+                    ctx.Context.Response.Headers["Cache-Control"] = "no-cache";
+            }
+        };
+
         if (app.Environment.IsDevelopment())
         {
         }
         else if (Directory.Exists(wwwroot))
         {
             app.UseDefaultFiles();
-            app.UseStaticFiles(new StaticFileOptions
-            {
-                OnPrepareResponse = ctx =>
-                {
-                    if (ctx.File.Name.EndsWith(".html", StringComparison.OrdinalIgnoreCase))
-                        ctx.Context.Response.Headers["Cache-Control"] = "no-cache";
-                }
-            });
+            app.UseStaticFiles(spaFileOptions);
         }
 
         // ── Plugin middleware/routes ──────────────────────────────────────────
@@ -332,7 +336,9 @@ public static class BackendHost
 
         if (!app.Environment.IsDevelopment() && Directory.Exists(wwwroot))
         {
-            app.MapFallbackToFile("index.html");
+            // "/" and client-side routes are served by this fallback endpoint, not by UseStaticFiles,
+            // so it needs the same no-cache header.
+            app.MapFallbackToFile("index.html", spaFileOptions);
         }
 
         return app;

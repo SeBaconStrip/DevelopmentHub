@@ -304,6 +304,7 @@ public partial class MainWindow : Window
 
         var env = await CoreWebView2Environment.CreateAsync(null, userDataFolder);
         await WebView.EnsureCoreWebView2Async(env);
+        await ClearCacheAfterUpdateAsync(userDataFolder);
         WebView.ZoomFactor = 1.0;
 
         WebView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = _isDev;
@@ -345,6 +346,24 @@ public partial class MainWindow : Window
         }
 
         WebView.Source = new Uri(AppUrl);
+    }
+
+    // The WebView cache of the previous version can keep serving its index.html and bundles, so the
+    // UI stays on the old version after an update. Clear it once whenever the app version changes.
+    private async Task ClearCacheAfterUpdateAsync(string userDataFolder)
+    {
+        var version = typeof(MainWindow).Assembly.GetName().Version?.ToString() ?? string.Empty;
+        var markerPath = Path.Combine(userDataFolder, "app-version.txt");
+        try
+        {
+            if (File.Exists(markerPath) && File.ReadAllText(markerPath) == version)
+                return;
+
+            await WebView.CoreWebView2.Profile.ClearBrowsingDataAsync(
+                CoreWebView2BrowsingDataKinds.DiskCache | CoreWebView2BrowsingDataKinds.CacheStorage);
+            File.WriteAllText(markerPath, version);
+        }
+        catch { /* best-effort: a stale cache only delays the new UI */ }
     }
 
     private static async Task WaitForBackendAsync()
