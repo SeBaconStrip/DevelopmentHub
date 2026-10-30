@@ -13,6 +13,17 @@ from [Conventional Commits](https://www.conventionalcommits.org/).
 
 ---
 
+## [1.4.1](https://github.com/SeBaconStrip/DevelopmentHub/compare/v1.4.0...v1.4.1) (2026-10-30)
+
+
+### Bug Fixes
+
+* correct what the integration tooltips claim ([#65](https://github.com/SeBaconStrip/DevelopmentHub/issues/65)) ([179f708](https://github.com/SeBaconStrip/DevelopmentHub/commit/179f708e13ff73178ffbee77689896295b1fc44c))
+* restore-on-drag position and auto-hide taskbar ([#67](https://github.com/SeBaconStrip/DevelopmentHub/issues/67)) ([609e81a](https://github.com/SeBaconStrip/DevelopmentHub/commit/609e81a8e72f382d00ac298ec00f93024d4e38f6))
+* show the new UI right after an update ([#64](https://github.com/SeBaconStrip/DevelopmentHub/issues/64)) ([a773bda](https://github.com/SeBaconStrip/DevelopmentHub/commit/a773bda3b6afa9c1850fa5360dde6916cfd56c04))
+* show why a plugin bundle failed to run ([#66](https://github.com/SeBaconStrip/DevelopmentHub/issues/66)) ([3c225ce](https://github.com/SeBaconStrip/DevelopmentHub/commit/3c225ce7e3bcb4a54e98f56e806ee12d8443a992))
+* stop running elevated workflow scripts from %TEMP% ([#63](https://github.com/SeBaconStrip/DevelopmentHub/issues/63)) ([4100500](https://github.com/SeBaconStrip/DevelopmentHub/commit/4100500cb73afd1ec567fcf35c571ccb0a8c64e2))
+
 ## [1.4.0](https://github.com/SeBaconStrip/DevelopmentHub/compare/v1.3.0...v1.4.0) (2026-10-30)
 
 
