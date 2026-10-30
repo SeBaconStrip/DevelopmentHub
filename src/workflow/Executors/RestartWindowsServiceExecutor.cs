@@ -1,11 +1,6 @@
 using DevelopmentHub.Workflow.Steps;
-using System.ComponentModel;
-using System.Diagnostics;
-using System.Globalization;
 using System.Runtime.Versioning;
 using System.ServiceProcess;
-using System.Text;
-using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 
 namespace DevelopmentHub.Workflow.Executors;
@@ -60,23 +55,17 @@ public sealed class RestartWindowsServiceExecutor : WorkflowStepExecutor<Restart
     }
 
     /// <summary>
-    /// Writes a temporary PowerShell script, runs it in an elevated process via UAC, then reads the
-    /// JSON result file to surface any error message back to the caller.
-    /// The service name is validated by the caller to contain only safe characters.
+    /// Restarts the service in an elevated PowerShell process via UAC and surfaces any error message
+    /// back to the caller. The service name is validated by the caller to contain only safe characters.
     /// </summary>
     private static void ExecuteElevated(string serviceName, bool waitForRunning, int timeoutSeconds)
     {
-        var tempScriptPath = Path.Combine(Path.GetTempPath(), $"developmenthub-elevated-{Guid.NewGuid():N}.ps1");
-        var tempResultPath = Path.Combine(Path.GetTempPath(), $"developmenthub-elevated-{Guid.NewGuid():N}.json");
+        var waitForRunningLiteral = waitForRunning ? "$true" : "$false";
 
-        try
-        {
-            var waitForRunningLiteral = waitForRunning ? "$true" : "$false";
-
-            // The service name is assigned to a PowerShell variable once (single-quoted, with
-            // any embedded single-quotes doubled) so that subsequent usages never touch
-            // user-controlled data directly in command text.
-            var script = $$"""
+        // The service name is assigned to a PowerShell variable once (single-quoted, with
+        // any embedded single-quotes doubled) so that subsequent usages never touch
+        // user-controlled data directly in command text.
+        var script = $$"""
 $ErrorActionPreference = 'Stop'
 $ServiceName = '{{WorkflowHelpers.EscapePowerShell(serviceName)}}'
 
@@ -86,84 +75,30 @@ try {
         $svc = Get-Service -Name $ServiceName
         $svc.WaitForStatus([System.ServiceProcess.ServiceControllerStatus]::Running, [TimeSpan]::FromSeconds({{timeoutSeconds}}))
     }
-
-    @{
-        success = $true
-        message = ''
-    } | ConvertTo-Json -Compress | Set-Content -Path '{{WorkflowHelpers.EscapePowerShellPath(tempResultPath)}}' -Encoding UTF8
-
     exit 0
 }
 catch {
-    @{
-        success = $false
-        message = $_ | Out-String
-    } | ConvertTo-Json -Compress | Set-Content -Path '{{WorkflowHelpers.EscapePowerShellPath(tempResultPath)}}' -Encoding UTF8
-
+    Send-Result ($_ | Out-String)
     exit 1
 }
 """;
-            File.WriteAllText(tempScriptPath, script, Encoding.UTF8);
 
-            var psi = new ProcessStartInfo
-            {
-                FileName = "powershell.exe",
-                Arguments = string.Format(
-                    CultureInfo.InvariantCulture,
-                    "-NoProfile -ExecutionPolicy Bypass -File \"{0}\"",
-                    tempScriptPath),
-                UseShellExecute = true,
-                Verb = "runas",
-                WindowStyle = ProcessWindowStyle.Hidden
-            };
-
-            using var process = Process.Start(psi)
-                ?? throw new InvalidOperationException(
-                    $"Elevated restart for service '{serviceName}' could not be started.");
-            process.WaitForExit();
-
-            if (process.ExitCode != 0)
-            {
-                var detailedError = ReadElevatedResultMessage(tempResultPath);
-                throw new InvalidOperationException(
-                    string.IsNullOrWhiteSpace(detailedError)
-                        ? $"Elevated restart for service '{serviceName}' failed with exit code {process.ExitCode}."
-                        : detailedError.Trim());
-            }
+        int exitCode;
+        string? message;
+        try
+        {
+            (exitCode, message) = ElevatedPowerShell.Run(script);
         }
-        catch (Win32Exception ex) when (ex.NativeErrorCode == 1223)
+        catch (OperationCanceledException)
         {
             throw new InvalidOperationException(
                 $"Elevated restart for service '{serviceName}' was cancelled by the user.");
         }
-        finally
-        {
-            TryDelete(tempScriptPath);
-            TryDelete(tempResultPath);
-        }
-    }
 
-    /// <summary>Reads the <c>message</c> field from the JSON result file written by the elevated script, or returns <see langword="null"/> if the file is missing or unreadable.</summary>
-    private static string? ReadElevatedResultMessage(string resultPath)
-    {
-        if (!File.Exists(resultPath))
-            return null;
-
-        try
-        {
-            var node = JsonNode.Parse(File.ReadAllText(resultPath));
-            return node?["message"]?.GetValue<string?>();
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    /// <summary>Deletes <paramref name="path"/> if it exists; silently ignores any errors (best-effort cleanup).</summary>
-    private static void TryDelete(string path)
-    {
-        try { if (File.Exists(path)) File.Delete(path); }
-        catch { /* best-effort cleanup */ }
+        if (exitCode != 0)
+            throw new InvalidOperationException(
+                string.IsNullOrWhiteSpace(message)
+                    ? $"Elevated restart for service '{serviceName}' failed with exit code {exitCode}."
+                    : message.Trim());
     }
 }
