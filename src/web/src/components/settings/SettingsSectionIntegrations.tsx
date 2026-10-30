@@ -40,7 +40,7 @@ const PULL_REQUEST_PROVIDER_OPTIONS: {
           <>
             <p>Your Azure DevOps organization name as it appears in the URL:</p>
             <code>dev.azure.com/<strong>organization</strong></code>
-            <p className="tooltip-used-by">Used by: Pull Requests · Workflows</p>
+            <p className="tooltip-used-by">Used by: Pull Requests · Contributors · Workflows (default)</p>
           </>
         ),
       },
@@ -50,8 +50,8 @@ const PULL_REQUEST_PROVIDER_OPTIONS: {
         placeholder: "MyProject",
         tooltip: (
           <>
-            <p>The Azure DevOps project to fetch pull requests from.</p>
-            <p className="tooltip-used-by">Used by: Pull Requests · Workflows</p>
+            <p>The Azure DevOps project whose repositories and pull requests are loaded. Workflow steps use it unless they set their own project.</p>
+            <p className="tooltip-used-by">Used by: Pull Requests · Contributors · Workflows (default)</p>
           </>
         ),
       },
@@ -76,11 +76,10 @@ const PULL_REQUEST_PROVIDER_OPTIONS: {
             <p>Personal Access Token for Azure DevOps authentication.</p>
             <p><strong>Required scopes:</strong></p>
             <ul>
-              <li><strong>Code – Read</strong> · pull requests, repository list</li>
+              <li><strong>Code – Read</strong> · pull requests, repositories, contributor stats</li>
               <li><strong>Build – Read</strong> · workflow pipeline artifact downloads</li>
-              <li><strong>Profile – Read</strong> · user identity</li>
             </ul>
-            <p className="tooltip-used-by">Used by: Pull Requests · Workflows</p>
+            <p className="tooltip-used-by">Used by: Pull Requests · Contributors · Workflows</p>
           </>
         ),
       },
@@ -138,11 +137,11 @@ const PULL_REQUEST_PROVIDER_OPTIONS: {
             </ul>
             <p><strong>Fine-grained permissions:</strong></p>
             <ul>
-              <li><strong>Pull requests – Read</strong> · PR list and details</li>
+              <li><strong>Pull requests – Read</strong> · PR list, contributor stats</li>
               <li><strong>Contents – Read</strong> · release asset downloads</li>
               <li><strong>Metadata – Read</strong> · required for all repos</li>
             </ul>
-            <p className="tooltip-used-by">Used by: Pull Requests · Workflows</p>
+            <p className="tooltip-used-by">Used by: Pull Requests · Contributors · Workflows</p>
           </>
         ),
       },
