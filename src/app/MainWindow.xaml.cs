@@ -26,9 +26,43 @@ public partial class MainWindow : Window
     [DllImport("user32.dll")] static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
     [DllImport("user32.dll")] static extern bool GetCursorPos(out POINT pt);
 
+    [DllImport("user32.dll")] static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint dwFlags);
+    [DllImport("user32.dll")] static extern IntPtr MonitorFromRect(ref RECT lprc, uint dwFlags);
+    [DllImport("user32.dll")] static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO lpmi);
+    [DllImport("user32.dll")] static extern bool IsZoomed(IntPtr hWnd);
+
     [StructLayout(LayoutKind.Sequential)]
     private struct POINT { public int X, Y; }
 
+    [StructLayout(LayoutKind.Sequential)]
+    private struct RECT { public int Left, Top, Right, Bottom; }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MINMAXINFO
+    {
+        public POINT ptReserved, ptMaxSize, ptMaxPosition, ptMinTrackSize, ptMaxTrackSize;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MONITORINFO
+    {
+        public int cbSize;
+        public RECT rcMonitor, rcWork;
+        public uint dwFlags;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct WINDOWPOS
+    {
+        public IntPtr hwnd, hwndInsertAfter;
+        public int x, y, cx, cy;
+        public uint flags;
+    }
+
+    private const int WM_GETMINMAXINFO = 0x0024;
+    private const int WM_WINDOWPOSCHANGING = 0x0046;
+    private const uint SWP_NOSIZE = 0x0001, SWP_NOMOVE = 0x0002;
+    private const uint MONITOR_DEFAULTTONEAREST = 2;
     private const int WM_NCLBUTTONDOWN = 0xA1;
     private const int HTCAPTION = 2;
 
@@ -147,7 +181,55 @@ public partial class MainWindow : Window
             ToggleFromHotkey();
             handled = true;
         }
-return IntPtr.Zero;
+        else if (msg == WM_GETMINMAXINFO)
+        {
+            LimitMaximizedBoundsToWorkArea(hwnd, lParam);
+        }
+        else if (msg == WM_WINDOWPOSCHANGING)
+        {
+            ClampMaximizedPositionToWorkArea(hwnd, lParam);
+        }
+        return IntPtr.Zero;
+    }
+
+    // Windows scales ptMaxSize by the size difference to the primary monitor when it covers the
+    // primary monitor, so on a larger secondary monitor the maximized window would overshoot again.
+    // Clamp the final maximized rect to the work area of the monitor it lands on.
+    private static void ClampMaximizedPositionToWorkArea(IntPtr hwnd, IntPtr lParam)
+    {
+        if (!IsZoomed(hwnd)) return;
+
+        var pos = Marshal.PtrToStructure<WINDOWPOS>(lParam);
+        if ((pos.flags & (SWP_NOSIZE | SWP_NOMOVE)) != 0) return;
+
+        var target = new RECT { Left = pos.x, Top = pos.y, Right = pos.x + pos.cx, Bottom = pos.y + pos.cy };
+        var info = new MONITORINFO { cbSize = Marshal.SizeOf<MONITORINFO>() };
+        if (!GetMonitorInfo(MonitorFromRect(ref target, MONITOR_DEFAULTTONEAREST), ref info)) return;
+
+        pos.x = info.rcWork.Left;
+        pos.y = info.rcWork.Top;
+        pos.cx = info.rcWork.Right - info.rcWork.Left;
+        pos.cy = info.rcWork.Bottom - info.rcWork.Top;
+        Marshal.StructureToPtr(pos, lParam, false);
+    }
+
+    // A borderless window maximizes to the full monitor plus its resize border, so Windows
+    // treats it as fullscreen and drops the taskbar below other windows. Clamp the maximized
+    // bounds to the work area of the monitor the window is on.
+    private static void LimitMaximizedBoundsToWorkArea(IntPtr hwnd, IntPtr lParam)
+    {
+        var monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+        if (monitor == IntPtr.Zero) return;
+
+        var info = new MONITORINFO { cbSize = Marshal.SizeOf<MONITORINFO>() };
+        if (!GetMonitorInfo(monitor, ref info)) return;
+
+        var mmi = Marshal.PtrToStructure<MINMAXINFO>(lParam);
+        mmi.ptMaxPosition.X = info.rcWork.Left - info.rcMonitor.Left;
+        mmi.ptMaxPosition.Y = info.rcWork.Top - info.rcMonitor.Top;
+        mmi.ptMaxSize.X = info.rcWork.Right - info.rcWork.Left;
+        mmi.ptMaxSize.Y = info.rcWork.Bottom - info.rcWork.Top;
+        Marshal.StructureToPtr(mmi, lParam, false);
     }
 
     public void ToggleFromHotkey()
