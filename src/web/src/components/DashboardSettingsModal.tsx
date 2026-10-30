@@ -13,6 +13,7 @@ import { SettingsSectionIntegrations } from "./settings/SettingsSectionIntegrati
 import { SettingsSectionAppearance } from "./settings/SettingsSectionAppearance";
 import { SettingsSectionPlugins } from "./settings/SettingsSectionPlugins";
 import { SettingsSectionPluginDetail } from "./settings/SettingsSectionPluginDetail";
+import { SettingsSectionServices } from "./settings/SettingsSectionServices";
 import { SettingsSectionAbout } from "./settings/SettingsSectionAbout";
 import type { PluginManifest } from "../plugins/PluginLoader";
 import "./DashboardSettingsModal.css";
@@ -27,6 +28,7 @@ type NavPage =
   | "integrations"
   | "appearance"
   | "plugins"
+  | "services"
   | "about"
   | `plugin:${string}`;
 
@@ -39,6 +41,7 @@ const STATIC_NAV_ITEMS: { id: NavPage; icon: string; label: string }[] = [
   { id: "todos", icon: "✅", label: "Todos" },
   { id: "integrations", icon: "🔌", label: "Integrations" },
   { id: "appearance", icon: "🎨", label: "Appearance" },
+  { id: "services", icon: "⚡", label: "Services" },
   { id: "plugins", icon: "🔌", label: "Plugins" },
 ];
 
@@ -64,6 +67,7 @@ function normalizeConfig(config: AppConfig): AppConfig {
     workflowDefinitionsPath: config.workflowDefinitionsPath ?? "",
     pluginsFolderPath: config.pluginsFolderPath ?? "",
     pluginSettings: config.pluginSettings ?? {},
+    windowsServicePatterns: config.windowsServicePatterns ?? [],
     pullRequestProviders: {
       ...existingProviders,
       azureDevOps: {
@@ -276,6 +280,8 @@ export function DashboardSettingsModal({ onClose }: Props) {
         );
       case "appearance":
         return <SettingsSectionAppearance />;
+      case "services":
+        return <SettingsSectionServices form={form} setField={setField} />;
       case "about":
         return <SettingsSectionAbout />;
       case "plugins":

@@ -1,0 +1,84 @@
+.wsw-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.wsw-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* Inherit workflow-card layout, override only what's different */
+.wsw-card {
+  padding: 10px 12px;
+}
+
+/* ── status badge ── */
+.wsw-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.wsw-badge--running {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.wsw-badge--stopped {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.wsw-badge--pending {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+/* ── action buttons ── */
+.wsw-btns {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+  align-items: center;
+}
+
+.wsw-btn {
+  padding: 4px 8px !important;
+  min-width: 28px;
+  font-size: 12px;
+}
+
+.wsw-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.wsw-btn--grant {
+  color: #d97706;
+}
+
+/* ── spinner ── */
+.wsw-spinner {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: wsw-spin 0.7s linear infinite;
+}
+
+@keyframes wsw-spin {
+  to { transform: rotate(360deg); }
+}

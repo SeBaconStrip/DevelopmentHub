@@ -11,6 +11,7 @@ import RepositoryCoveragePage from "./pages/contributors/RepositoryCoveragePage"
 import TodosPage from "./pages/todos/TodosPage";
 import WorkflowsPage from "./pages/workflows/WorkflowsPage";
 import QuickLinksPage from "./pages/quick-links/QuickLinksPage";
+import WindowsServicesPage from "./pages/windows-services/WindowsServicesPage";
 import { initPluginLoader, loadAllPlugins } from "./plugins/PluginLoader";
 import { pluginRegistry } from "./plugins/PluginRegistry";
 import { PluginRoute } from "./plugins/PluginRoute";
@@ -41,6 +42,7 @@ export default function App() {
             <Route path="/todos" element={<TodosPage />} />
             <Route path="/workflows" element={<WorkflowsPage />} />
             <Route path="/quick-links" element={<QuickLinksPage />} />
+            <Route path="/windows-services" element={<WindowsServicesPage />} />
             {pluginRoutes.map((r) => (
               <Route key={r.path} path={r.path} element={<PluginRoute path={r.path} />} />
             ))}
